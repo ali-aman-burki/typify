@@ -38,7 +38,7 @@ class LibraryBuilder:
                 self.build_module(path, package_table)
         print()
 
-    def build_module(self, file_path, package_table):
+    def build_module(self, file_path: Path, package_table: PackageTable):
         module_name = file_path.stem
         module_table = ModuleTable(module_name)
         package_table.add_module(module_table)
