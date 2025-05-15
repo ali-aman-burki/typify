@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 import ast
-from src.contanier_types import Type
+from src.contanier_types import TypeAnnotation
 
 class Table:
 	def __init__(self, key):
@@ -19,18 +19,12 @@ class Table:
 		self.globals = set()
 		self.nonlocals = set()
 		self.parent: Table = None
-		self.type: Type = None
+		self.type: TypeAnnotation = None
 
 	def to_dict(self):
 		data = {}
-		if self.type:
-			data["type"] = repr(self.type)
-		if self.definitions:
-			if len(self.definitions) > 1:
-				data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
-			else:
-				key, value = next(iter(self.definitions.items()))
-				data[key] = value.to_dict()
+		if self.type: data["type"] = repr(self.type)
+		if self.definitions: data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
 		if self.globals: data["globals"] = list(self.globals)
 		if self.packages: data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}
 		if self.modules: data["modules"] = {key: value.to_dict() for key, value in self.modules.items()}

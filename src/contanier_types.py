@@ -1,5 +1,4 @@
 import ast
-from src.symbol_table import Table
 
 class TypeAnnotation:
 

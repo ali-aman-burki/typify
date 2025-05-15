@@ -9,6 +9,8 @@ class Analyzer(ast.NodeVisitor):
 		self.module_table = module_table
 		self.current_table = module_table
 
+		self.unresolved = {}
+
 	def visit_Import(self, node):
 		self.current_table.get_latest_definition().imports.append(node)
 		self.generic_visit(node)
@@ -62,36 +64,31 @@ class Analyzer(ast.NodeVisitor):
 
 	def visit_AnnAssign(self, node):
 		ct = self.current_table
+		mt = self.module_table
+		lt = self.library_table
+		context = Context(lt, mt, ct)
 
-		if isinstance(node.target, ast.Name):
-			name = node.target.id
-			if name not in ct.get_latest_definition().variables:
-				ct.get_latest_definition().add_variable(VariableTable(name))
-			lhs = ct.get_latest_definition().variables[name]
+		lhs = context.verify_lhs(node.target)
+		if lhs:
 			nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
 			nd.type = AnnotationConverter().visit(node.annotation)
 		self.generic_visit(node)
-		pass
 
 	def visit_Assign(self, node):
 		ct = self.current_table
 		mt = self.module_table
 		lt = self.library_table
 		context = Context(lt, mt, ct)
-		rhs = context.resolve(node.value)
+		rhs_type = context.resolve_type(node.value)
 
 		for target in node.targets:
 			if isinstance(target, ast.Tuple):
 				pass
 			else:
-				lhs = context.resolve(target)
-				if not lhs:
-					if isinstance(target, ast.Name):
-						name = target.id
-						if name not in ct.get_latest_definition().variables:
-							ct.get_latest_definition().add_variable(VariableTable(name))
-						lhs = ct.get_latest_definition().variables[name]
-				if rhs:
+				lhs = context.verify_lhs(target)
+				if lhs and rhs_type:
 					nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
-					nd.type = rhs
+					nd.type = rhs_type
+				else:
+					self.unresolved[(target.lineno, target.col_offset)] = (context, lhs if lhs else target, rhs_type if rhs_type else node.value)
 		self.generic_visit(node)
