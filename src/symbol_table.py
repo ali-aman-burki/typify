@@ -13,7 +13,9 @@ class Table:
 		self.variables: dict[str, Table] = {}
 		self.instance_variables: dict[str, Table] = {}
 		self.definitions: dict[str, Table] = {}
-		self.imports: list = []
+		self.instances: list[Table] = []
+		self.points_to: set[Table] = []
+		self.imports: list[ast.AST] = []
 		self.bases: list = []
 		self.params: list = []
 		self.globals = set()
@@ -133,6 +135,10 @@ class FunctionTable(Table):
 		super().__init__(key)
 
 class VariableTable(Table):
+	def __init__(self, key):
+		super().__init__(key)
+
+class InstanceTable(Table):
 	def __init__(self, key):
 		super().__init__(key)
 
