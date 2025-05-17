@@ -1,6 +1,7 @@
 from src.builtins_ctn import *
 from src.contanier_types import *
 from src.symbol_table import Table
+from src.chain import Chain
 
 class Context:
 	def __init__(self, library_table: Table, module_table: Table, current_table: Table):
@@ -9,24 +10,40 @@ class Context:
 		self.current_table = current_table
 
 	def build_chain(self, node: ast.AST):
-		chain = []
+		raw_chain = []
 		while True:
 			if isinstance(node, ast.Attribute):
-				chain.append(node)
+				raw_chain.append(node)
 				node = node.value
 			elif isinstance(node, ast.Call):
-				chain.append(node)
+				raw_chain.append(node)
 				node = node.func
 			elif isinstance(node, ast.Subscript):
-				chain.append(node)
-				break
+				raw_chain.append(node)
+				node = node.value
 			elif isinstance(node, ast.Name):
-				chain.append(node)
+				raw_chain.append(node)
 				break
 			else:
-				chain.append(node)
+				raw_chain.append(node)
 				break
-		return list(reversed(chain))
+		raw_chain = list(reversed(raw_chain))
+		processed_chain = []
+		attribute_indices = []
+		for i in range(len(raw_chain)):
+			n = raw_chain[i]
+			if isinstance(n, ast.Name): attribute_indices.append(i)
+			if isinstance(n, ast.Attribute): attribute_indices.append(i)
+
+		for i in range(len(attribute_indices)):
+			current_index = attribute_indices[i]
+			next_index = attribute_indices[i + 1] if i + 1 < len(attribute_indices) else len(raw_chain)
+			processed_chain.append([])
+			for j in range(current_index, next_index):
+				processed_chain[i].append(raw_chain[j])
+
+		return processed_chain
+
 
 	def verify_lhs(self, node: ast.AST):
 		if isinstance(node, ast.Name):
@@ -55,16 +72,5 @@ class Context:
 			value_type = TypeAnnotation.unify([self.resolve_type(v) for v in node.values if v is not None])
 			return DictType(key_type, value_type)
 		else:
-			chain = self.build_chain(node)
-			for n in chain:
-				if isinstance(n, ast.Name):
-					print(f"Name: {n.id}")
-				elif isinstance(n, ast.Call):
-					print(f"Call: ()")
-				elif isinstance(n, ast.Attribute):
-					print(f"Attr: {n.attr}")
-				elif isinstance(n, ast.Subscript):
-					print(f"Subscript: (skipping deeper traversal)")
-				else:
-					print(f"Other: {ast.dump(n)}")
+			print(Chain(node))
 			return None
