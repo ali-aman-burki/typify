@@ -8,6 +8,26 @@ class Context:
 		self.module_table = module_table
 		self.current_table = current_table
 
+	def build_chain(self, node: ast.AST):
+		chain = []
+		while True:
+			if isinstance(node, ast.Attribute):
+				chain.append(node)
+				node = node.value
+			elif isinstance(node, ast.Call):
+				chain.append(node)
+				node = node.func
+			elif isinstance(node, ast.Subscript):
+				chain.append(node)
+				break
+			elif isinstance(node, ast.Name):
+				chain.append(node)
+				break
+			else:
+				chain.append(node)
+				break
+		return list(reversed(chain))
+
 	def verify_lhs(self, node: ast.AST):
 		if isinstance(node, ast.Name):
 			name = node.id
@@ -34,4 +54,17 @@ class Context:
 			key_type = TypeAnnotation.unify([self.resolve_type(k) for k in node.keys if k is not None])
 			value_type = TypeAnnotation.unify([self.resolve_type(v) for v in node.values if v is not None])
 			return DictType(key_type, value_type)
-		return None
+		else:
+			chain = self.build_chain(node)
+			for n in chain:
+				if isinstance(n, ast.Name):
+					print(f"Name: {n.id}")
+				elif isinstance(n, ast.Call):
+					print(f"Call: ()")
+				elif isinstance(n, ast.Attribute):
+					print(f"Attr: {n.attr}")
+				elif isinstance(n, ast.Subscript):
+					print(f"Subscript: (skipping deeper traversal)")
+				else:
+					print(f"Other: {ast.dump(n)}")
+			return None
