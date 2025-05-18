@@ -1,10 +1,9 @@
-from src.symbol_table import *
+from src.symbol_table import LibraryTable, PackageTable, ModuleTable
 from src.inferencing import Analyzer
 import ast
 import sys
 from pathlib import Path
 import traceback
-import os
 
 class LibraryBuilder:
 
@@ -50,8 +49,7 @@ class LibraryBuilder:
             tree = ast.parse(code)
             analyzer.visit(tree)
             
-            self.export_module_json(file_path, module_table)
-            
+            self.export_module_json(analyzer, file_path, module_table)
             self.processed_modules += 1
             print(f"\rProcessed [{self.processed_modules}/{self.total_modules}] modules.", end="", flush=True)
         except Exception as e:
@@ -82,8 +80,9 @@ class LibraryBuilder:
                 else:
                     pass
 
-    def export_module_json(self, file_path, module_table):
+    def export_module_json(self, analyzer, file_path, module_table):
         rel_path = file_path.relative_to(self.working_directory)
         output_path = self.export_path / rel_path.parent
         output_path.parent.mkdir(parents=True, exist_ok=True)
         module_table.export_to_json(output_path, module_table.key)
+        analyzer.export_type_data(output_path, module_table.key + "-types")

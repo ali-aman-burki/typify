@@ -1,4 +1,4 @@
-from src.symbol_table import *
+from src.symbol_table import ModuleTable, ClassTable
 
 builtins = ModuleTable("builtins")
 object_table = builtins.add_class(ClassTable("object"))

@@ -1,36 +1,15 @@
 import ast
 
 class TypeAnnotation:
-
-	@staticmethod
-	def unify(types):
-		seen = []
-		def add_unique(t):
-			if isinstance(t, UnionType):
-				for subtype in t.types:
-					if subtype not in seen: seen.append(subtype)
-			elif t not in seen:
-				seen.append(t)
-
-		for t in types:
-			add_unique(t)
-
-		if len(seen) > 1:
-			return UnionType(seen)
-		elif seen:
-			return seen[0]
-		else:
-			return AnyType()
-
 	def __eq__(self, value):
 		return repr(self) == repr(value)
 
 class UnresolvedType(TypeAnnotation):
-	def __init__(self, annotation):
-		self.annotation = annotation
+	def __init__(self, identifier):
+		self.identifier = identifier
 
 	def __repr__(self):
-		return ast.unparse(self.annotation)
+		return ast.unparse(self.identifier)
 
 class Type(TypeAnnotation):
 	def __init__(self, type_rep):

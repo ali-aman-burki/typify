@@ -2,6 +2,11 @@ import ast
 from src.symbol_table import *
 from src.context import Context
 from src.annotation_converter import AnnotationConverter
+from src.contanier_types import UnresolvedType
+
+import json
+import copy
+from pathlib import Path
 
 class Analyzer(ast.NodeVisitor):
 	def __init__(self, library_table: Table, module_table: Table):
@@ -9,7 +14,10 @@ class Analyzer(ast.NodeVisitor):
 		self.module_table = module_table
 		self.current_table = module_table
 
-		self.unresolved = {}
+		self.type_data = {
+			"vassignments": {},
+			"functions": {}
+		}
 
 	def visit_Import(self, node):
 		self.current_table.get_latest_definition().imports.append(node)
@@ -69,9 +77,12 @@ class Analyzer(ast.NodeVisitor):
 		context = Context(lt, mt, ct)
 
 		lhs = context.verify_lhs(node.target)
+		inf_type = AnnotationConverter().visit(node.annotation)
 		if lhs:
 			nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
-			nd.type = AnnotationConverter().visit(node.annotation)
+			nd.type = inf_type
+
+		self.type_data["vassignments"][(node.target.lineno, node.target.col_offset)] = (context, node.target, node.value, inf_type)
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):
@@ -79,16 +90,46 @@ class Analyzer(ast.NodeVisitor):
 		mt = self.module_table
 		lt = self.library_table
 		context = Context(lt, mt, ct)
-		rhs_type = context.resolve_type(node.value)
+		inf_type = context.resolve_type(node.value)
 
 		for target in node.targets:
 			if isinstance(target, ast.Tuple):
 				pass
 			else:
 				lhs = context.verify_lhs(target)
-				if lhs and rhs_type:
+				if lhs:
 					nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
-					nd.type = rhs_type
-				else:
-					self.unresolved[(target.lineno, target.col_offset)] = (context, lhs if lhs else target, rhs_type if rhs_type else node.value)
+					nd.type = inf_type
+				
+				self.type_data["vassignments"][(target.lineno, target.col_offset)] = (context, target, node.value, inf_type)
 		self.generic_visit(node)
+	
+	def visit_AugAssign(self, node):
+		toAssign = ast.Assign(
+			targets=[node.target],
+			value=ast.BinOp(
+				left=copy.deepcopy(node.target),
+				op=node.op,
+				right=node.value
+			)
+		)
+		ast.copy_location(toAssign, node)
+		ast.copy_location(toAssign.value, node)
+
+		toAssign = ast.fix_missing_locations(toAssign)
+
+		self.visit_Assign(toAssign)
+
+	def export_type_data(self, directory: Path, file_name: str):
+		directory.mkdir(parents=True, exist_ok=True)
+		file_path = directory / f"{file_name}.json"
+		output_data = {
+			"vassignments": {},
+			"functions": {}
+		}
+		for key, value in self.type_data["vassignments"].items():
+			lhs = ast.unparse(value[1]) 
+			inf_type = value[3] if not isinstance(value[3], UnresolvedType) else "$unresolved$"
+			output_data["vassignments"][f"{key[0]}:{key[1]}"] = f"{lhs}: {inf_type}"
+		with file_path.open("w", encoding="utf-8") as f:
+			json.dump(output_data, f, indent='\t')

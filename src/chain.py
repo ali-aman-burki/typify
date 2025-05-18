@@ -24,7 +24,7 @@ class Segment:
 				except Exception:
 					return "[?]"
 			else:
-				return ast.dump(n)
+				return f"({ast.unparse(n)})"
 
 		return "".join(node_str(n) for n in self.trail)
 
@@ -49,19 +49,16 @@ class Chain:
 			elif isinstance(node, ast.Subscript):
 				raw_chain.append(node)
 				node = node.value
-			elif isinstance(node, ast.Name):
-				raw_chain.append(node)
-				break
 			else:
 				raw_chain.append(node)
 				break
 
 		raw_chain = list(reversed(raw_chain))
 
-		attribute_indices = [
-			i for i, n in enumerate(raw_chain)
-			if isinstance(n, (ast.Name, ast.Attribute))
-		]
+		attribute_indices = []
+		for i, n in enumerate(raw_chain):
+			if isinstance(n, (ast.Name, ast.Attribute)) or i == 0:
+				attribute_indices.append(i)
 
 		processed_chain = []
 		for i, current_index in enumerate(attribute_indices):
@@ -71,3 +68,4 @@ class Chain:
 			processed_chain.append(Segment(anchor=anchor, trail=trail))
 
 		return processed_chain
+
