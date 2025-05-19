@@ -129,7 +129,7 @@ class Analyzer(ast.NodeVisitor):
 		}
 		for key, value in self.type_data["vassignments"].items():
 			lhs = ast.unparse(value[1]) 
-			inf_type = value[3] if not isinstance(value[3], UnresolvedType) else "$unresolved$"
+			inf_type = value[3]
 			output_data["vassignments"][f"{key[0]}:{key[1]}"] = f"{lhs}: {inf_type}"
 		with file_path.open("w", encoding="utf-8") as f:
 			json.dump(output_data, f, indent='\t')

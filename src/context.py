@@ -2,6 +2,7 @@ from src.builtins_ctn import builtins
 from src.symbol_table import Table, VariableTable
 from src.contanier_types import *
 from src.typeutils import TypeUtils
+from src.chain import Chain
 import ast
 
 class Context:
@@ -10,8 +11,23 @@ class Context:
 		self.module_table = module_table
 		self.current_table = current_table
 
-	def lookup(self, identifier: str):
+	def lookup(self, defTable: Table, identifier: str):
+		if identifier in defTable.variables:
+			return defTable.variables[identifier]
+		elif identifier in defTable.functions:
+			return defTable.functions[identifier]
+		elif identifier in defTable.classes:
+			return defTable.classes[identifier]
+		else:
+			return None
 
+	def climb_lookup(self, identifier: str):
+		current = self.current_table
+		while current:
+			defTable = current.get_latest_definition()
+			resolved = self.lookup(defTable, identifier)
+			if resolved: return resolved																																																								
+			current = current.get_enclosing_table()
 		pass
 
 	def verify_lhs(self, node: ast.AST):
@@ -21,6 +37,14 @@ class Context:
 				self.current_table.get_latest_definition().add_variable(VariableTable(name))
 			return self.current_table.get_latest_definition().variables[name]
 		return None
+
+	def resolve(self, node: ast.AST):
+		chain = Chain(node)
+		for segment in chain.segments:
+			identifier = ast.unparse(segment.anchor)
+			vtable = self.climb_lookup(identifier)
+				
+			pass
 
 	def resolve_type(self, node: ast.AST):
 		if isinstance(node, ast.Constant):
@@ -42,11 +66,5 @@ class Context:
 			key_type = TypeUtils.unify([self.resolve_type(k) for k in node.keys if k is not None])
 			value_type = TypeUtils.unify([self.resolve_type(v) for v in node.values if v is not None])
 			return DictType(key_type, value_type)
-		elif isinstance(node, ast.Name):
-			pass
-		elif isinstance(node, ast.Call):
-			pass
-		elif isinstance(node, ast.Attribute):
-			pass
-
-		return UnresolvedType(node)
+		else:
+			return UnresolvedType(node)

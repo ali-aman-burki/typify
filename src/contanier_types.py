@@ -9,7 +9,7 @@ class UnresolvedType(TypeAnnotation):
 		self.identifier = identifier
 
 	def __repr__(self):
-		return ast.unparse(self.identifier)
+		return "$unresolved$"
 
 class Type(TypeAnnotation):
 	def __init__(self, type_rep):
