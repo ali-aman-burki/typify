@@ -44,17 +44,24 @@ class Context:
 	def resolve_start_symbol(self, start_segment: Segment):
 		start_id = ast.unparse(start_segment.anchor)
 		points_to = []
+		types = []
 
 		if isinstance(start_segment.trail[-1], ast.Call):
-			solved_class = self.climb_lookup(start_id, ["classes"])
-			if solved_class: points_to.append(solved_class.create_instance())
+			solved = self.climb_lookup(start_id, ["classes"])
+			if solved: 
+				points_to.append(solved.create_instance())
+				types.append(Type(solved))
+		elif isinstance(start_segment.trail[-1], ast.Name):
+			solved_name = self.climb_lookup(start_id, ["classes"])
+			if solved_name: 
+				points_to.append(solved_name)
+				types.append(Type(builtins.classes["type"]))
 		
-		return points_to
+		return (types, points_to)
 
 	def resolve(self, node: ast.AST):
 		chain = Chain(node)
-		points_to = self.resolve_start_symbol(chain.segments[0])
-		return points_to
+		return self.resolve_start_symbol(chain.segments[0])
 		
 	def resolve_type(self, node: ast.AST):
 		if isinstance(node, ast.Constant):
@@ -84,7 +91,6 @@ class Context:
 			d = builtins.classes["dict"]
 			return (DictType(key_type, value_type), [d.create_instance()])
 		else:
-			points_to = self.resolve(node)
-			types = [Type(pt.class_pointer) for pt in points_to]
-			inf_type = TypeUtils.unify(types) if types else UnresolvedType(node) 
+			(types, points_to) = self.resolve(node)
+			inf_type = TypeUtils.unify(types) if types else UnresolvedType(node)
 			return [inf_type, points_to]

@@ -16,7 +16,7 @@ class Table:
 		self.definitions: dict[str, Table] = {}
 		self.instances: list[Table] = []
 		self.points_to: list[Table] = []
-		self.class_pointer: Table = None
+		self.class_pointer: Table = self
 		self.imports: list[ast.AST] = []
 		self.bases: list = []
 		self.params: list = []

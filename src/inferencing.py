@@ -42,6 +42,8 @@ class Analyzer(ast.NodeVisitor):
 			enclosing_definition.add_class(class_table)
 		else:
 			class_table = enclosing_definition.classes[class_name]
+		
+		cdvt.points_to.append(class_table)
 		class_table.add_definition(DefinitionTable(class_table.generate_path(), node.lineno, node.col_offset))
 		self.current_table = class_table
 		self.generic_visit(node)
@@ -64,6 +66,7 @@ class Analyzer(ast.NodeVisitor):
 			enclosing_definition.add_function(function_table)
 		else:
 			function_table = enclosing_definition.functions[function_name]
+
 		function_table.add_definition(DefinitionTable(function_table.generate_path(), node.lineno, node.col_offset))
 		self.current_table = function_table
 		self.generic_visit(node)
