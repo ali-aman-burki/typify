@@ -47,15 +47,16 @@ class Context:
 		types = []
 
 		if isinstance(start_segment.trail[-1], ast.Call):
-			solved = self.climb_lookup(start_id, ["classes"])
+			solved = self.climb_lookup(start_id, ["variables"])
 			if solved: 
-				points_to.append(solved.create_instance())
-				types.append(Type(solved))
+				points_to += [i.class_pointer.create_instance() for i in solved.get_latest_definition().points_to]
+				types += [Type(pt.class_pointer) for pt in points_to]
+
 		elif isinstance(start_segment.trail[-1], ast.Name):
-			solved_name = self.climb_lookup(start_id, ["classes"])
-			if solved_name: 
-				points_to.append(solved_name)
-				types.append(Type(builtins.classes["type"]))
+			solved = self.climb_lookup(start_id, ["variables"])
+			if solved: 
+				points_to += solved.get_latest_definition().points_to
+				types.append(solved.get_latest_definition().type)
 		
 		return (types, points_to)
 
