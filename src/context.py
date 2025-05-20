@@ -88,4 +88,3 @@ class Context:
 			types = [Type(pt.class_pointer) for pt in points_to]
 			inf_type = TypeUtils.unify(types) if types else UnresolvedType(node) 
 			return [inf_type, points_to]
-		return UnresolvedType(node)

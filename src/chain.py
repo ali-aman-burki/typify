@@ -1,9 +1,7 @@
 import ast
-from dataclasses import dataclass
 from typing import List
 
 class Segment:
-
 	def __init__(self, anchor: ast.AST, trail: list[ast.AST]):
 		self.anchor = anchor
 		self.trail = trail
