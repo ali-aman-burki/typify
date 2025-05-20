@@ -43,18 +43,18 @@ class Context:
 
 	def resolve_start_symbol(self, start_segment: Segment):
 		start_id = ast.unparse(start_segment.anchor)
-		start_fork = []
+		points_to = []
 
 		if isinstance(start_segment.trail[-1], ast.Call):
 			solved_class = self.climb_lookup(start_id, ["classes"])
-			if solved_class: start_fork.append(solved_class.create_instance())
+			if solved_class: points_to.append(solved_class.create_instance())
 		
-		return start_fork
+		return points_to
 
 	def resolve(self, node: ast.AST):
 		chain = Chain(node)
-		start_fork = self.resolve_start_symbol(chain.segments[0])
-		return start_fork
+		points_to = self.resolve_start_symbol(chain.segments[0])
+		return points_to
 		
 	def resolve_type(self, node: ast.AST):
 		if isinstance(node, ast.Constant):
