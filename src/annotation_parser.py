@@ -2,9 +2,9 @@ from src.builtins_ctn import builtins
 from src.contanier_types import *
 import ast
 
-class AnnotationConverter(ast.NodeVisitor):
+class AnnotationParser(ast.NodeVisitor):
 	def visit_Name(self, node):
-		if node.id in builtins.classes:
+		if node.id in builtins.classes and node.id not in ["list", "List", "set", "Set", "tuple", "Tuple", "dict", "Dict", "Union"]:
 			return Type(builtins.classes[node.id])
 		return UnresolvedType(node)
 

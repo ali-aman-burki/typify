@@ -2,9 +2,10 @@ import json
 from pathlib import Path
 import ast
 from src.contanier_types import TypeAnnotation
+import copy
 
 class Table:
-	def __init__(self, key):
+	def __init__(self, key: str):
 		self.key = key
 		self.packages: dict[str, Table] = {}
 		self.modules: dict[str, Table] = {}
@@ -14,15 +15,36 @@ class Table:
 		self.instance_variables: dict[str, Table] = {}
 		self.definitions: dict[str, Table] = {}
 		self.instances: list[Table] = []
-		self.points_to: set[Table] = []
+		self.points_to: list[Table] = []
 		self.class_pointer: Table = None
 		self.imports: list[ast.AST] = []
 		self.bases: list = []
 		self.params: list = []
-		self.globals = set()
-		self.nonlocals = set()
+		self.globals: ast.AST = set()
+		self.nonlocals: ast.AST = set()
 		self.parent: Table = None
 		self.type: TypeAnnotation = None
+
+	def copy(self):
+		new_table = Table(self.key)
+
+		new_table.packages = {k: v.copy() for k, v in self.packages.items()}
+		new_table.modules = {k: v.copy() for k, v in self.modules.items()}
+		new_table.classes = {k: v.copy() for k, v in self.classes.items()}
+		new_table.functions = {k: v.copy() for k, v in self.functions.items()}
+		new_table.variables = {k: v.copy() for k, v in self.variables.items()}
+		new_table.instance_variables = {k: v.copy() for k, v in self.instance_variables.items()}
+		new_table.definitions = {k: v.copy() for k, v in self.definitions.items()}
+		new_table.instances = [inst.copy() for inst in self.instances]
+		new_table.points_to = {pt.copy() for pt in self.points_to}
+		new_table.imports = copy.deepcopy(self.imports)
+		new_table.bases = copy.deepcopy(self.bases)
+		new_table.params = copy.deepcopy(self.params)
+		new_table.globals = copy.deepcopy(self.globals)
+		new_table.nonlocals = copy.deepcopy(self.nonlocals)
+		new_table.class_pointer = self.class_pointer.copy() if self.class_pointer else None
+		new_table.type = self.type
+		return new_table
 
 	def to_dict(self):
 		data = {}
@@ -40,6 +62,19 @@ class Table:
 		if self.instance_variables: data["instance_variables"] = {key: value.to_dict() for key, value in self.instance_variables.items()}
 		return data
 	
+	def create_instance(self):
+		instance = InstanceTable(self.key)
+		instance.class_pointer = self
+		for var in self.variables.values():
+			nv = VariableTable(var.key)
+			df = nv.add_definition(DefinitionTable(self.generate_path(), 0, 0))
+			df.type = var.get_latest_definition().type
+			df.points_to = {pt.copy() for pt in var.get_latest_definition().points_to}
+			instance.add_variable(nv)
+		
+		self.instances.append(instance)
+		return instance
+
 	def __str__(self):
 		path = self.generate_path()
 		return path + "." + self.key if path != "builtins" else self.key
@@ -57,7 +92,7 @@ class Table:
 			if isinstance(current_table, (ModuleTable, PackageTable)):
 				path.append(current_table.key)
 			current_table = current_table.get_enclosing_table()
-		return "/".join(path[::-1])
+		return ".".join(path[::-1])
 	
 	def get_enclosing_table(self):
 		result = self.parent

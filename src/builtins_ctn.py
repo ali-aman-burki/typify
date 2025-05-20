@@ -2,6 +2,20 @@ from src.symbol_table import ModuleTable, ClassTable
 
 builtins = ModuleTable("builtins")
 object_table = builtins.add_class(ClassTable("object"))
+type_table = builtins.add_class(ClassTable("type"))
+function_table = builtins.add_class(ClassTable("function"))
+
+list_table = builtins.add_class(ClassTable("list"))
+list_table.bases.append(object_table)
+
+set_table = builtins.add_class(ClassTable("set"))
+set_table.bases.append(object_table)
+
+dict_table = builtins.add_class(ClassTable("dict"))
+dict_table.bases.append(object_table)
+
+tuple_table = builtins.add_class(ClassTable("tuple"))
+tuple_table.bases.append(object_table)
 
 str_table = builtins.add_class(ClassTable("str"))
 str_table.bases.append(object_table)

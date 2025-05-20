@@ -2,10 +2,11 @@ import ast
 from dataclasses import dataclass
 from typing import List
 
-@dataclass
 class Segment:
-	anchor: ast.AST
-	trail: List[ast.AST]
+
+	def __init__(self, anchor: ast.AST, trail: list[ast.AST]):
+		self.anchor = anchor
+		self.trail = trail
 
 	def __str__(self):
 		def node_str(n):
@@ -34,7 +35,12 @@ class Chain:
 		self.segments: list[Segment] = self.build_chain(node)
 
 	def __str__(self):
-		return " ➜ ".join(str(segment) for segment in self.segments)
+		parts = []
+		for segment in self.segments:
+			segment_str = str(segment)
+			parts.append(f"{segment_str}")
+		
+		return " ➜ ".join(parts)
 
 	def build_chain(self, node: ast.AST) -> List[Segment]:
 		raw_chain = []
@@ -57,15 +63,15 @@ class Chain:
 
 		attribute_indices = []
 		for i, n in enumerate(raw_chain):
-			if isinstance(n, (ast.Name, ast.Attribute)) or i == 0:
+			if isinstance(n, (ast.Name, ast.Attribute, ast.Subscript)) or i == 0:
 				attribute_indices.append(i)
+				
 
 		processed_chain = []
 		for i, current_index in enumerate(attribute_indices):
 			next_index = attribute_indices[i + 1] if i + 1 < len(attribute_indices) else len(raw_chain)
 			anchor = raw_chain[current_index]
 			trail = raw_chain[current_index:next_index]
-			processed_chain.append(Segment(anchor=anchor, trail=trail))
+			processed_chain.append(Segment(anchor, trail))
 
 		return processed_chain
-

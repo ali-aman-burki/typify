@@ -2,7 +2,7 @@ from src.builtins_ctn import builtins
 from src.symbol_table import Table, VariableTable
 from src.contanier_types import *
 from src.typeutils import TypeUtils
-from src.chain import Chain
+from src.chain import Chain, Segment
 import ast
 
 class Context:
@@ -11,24 +11,27 @@ class Context:
 		self.module_table = module_table
 		self.current_table = current_table
 
-	def lookup(self, defTable: Table, identifier: str):
-		if identifier in defTable.variables:
-			return defTable.variables[identifier]
-		elif identifier in defTable.functions:
-			return defTable.functions[identifier]
-		elif identifier in defTable.classes:
-			return defTable.classes[identifier]
-		else:
-			return None
+	def lookup(self, identifier: str, defTable: Table, where: list[str]):
+		mapping = {
+			"variables": defTable.variables,
+			"functions": defTable.functions,
+			"classes": defTable.classes,
+		}
+		for key in where:
+			dictionary = mapping.get(key)
+			if dictionary and identifier in dictionary:
+				return dictionary[identifier]
 
-	def climb_lookup(self, identifier: str):
+		return None
+
+
+	def climb_lookup(self, identifier: str, where: list[str]):
 		current = self.current_table
 		while current:
 			defTable = current.get_latest_definition()
-			resolved = self.lookup(defTable, identifier)
+			resolved = self.lookup(identifier, defTable, where)
 			if resolved: return resolved																																																								
 			current = current.get_enclosing_table()
-		pass
 
 	def verify_lhs(self, node: ast.AST):
 		if isinstance(node, ast.Name):
@@ -38,33 +41,51 @@ class Context:
 			return self.current_table.get_latest_definition().variables[name]
 		return None
 
+	def resolve_start_symbol(self, start_segment: Segment):
+		start_id = ast.unparse(start_segment.anchor)
+		start_fork = []
+
+		if isinstance(start_segment.trail[-1], ast.Call):
+			solved_class = self.climb_lookup(start_id, ["classes"])
+			if solved_class: start_fork.append(solved_class.create_instance())
+		
+		return start_fork
+
 	def resolve(self, node: ast.AST):
 		chain = Chain(node)
-		for segment in chain.segments:
-			identifier = ast.unparse(segment.anchor)
-			vtable = self.climb_lookup(identifier)
-				
-			pass
-
+		start_fork = self.resolve_start_symbol(chain.segments[0])
+		return start_fork
+		
 	def resolve_type(self, node: ast.AST):
 		if isinstance(node, ast.Constant):
-			return Type(builtins.classes[type(node.value).__name__])
+			c = builtins.classes[type(node.value).__name__]
+			return (Type(c), [c.create_instance()])
 		elif isinstance(node, ast.JoinedStr):
-			return Type(builtins.classes["str"])
+			s = builtins.classes["str"]
+			return (Type(s), [s.create_instance()])
 		elif isinstance(node, ast.BoolOp):
-			return Type(builtins.classes["bool"])
+			b = builtins.classes["bool"]
+			return (Type(b), [b.create_instance])
 		elif isinstance(node, ast.List):
-			element_types = [self.resolve_type(el) for el in node.elts]
-			return ListType(TypeUtils.unify(element_types))
+			element_types = [self.resolve_type(el)[0] for el in node.elts]
+			l = builtins.classes["list"]
+			return (ListType(TypeUtils.unify(element_types)), [l.create_instance()])
 		elif isinstance(node, ast.Set):
-			element_types = [self.resolve_type(el) for el in node.elts]
-			return SetType(TypeUtils.unify(element_types))
+			element_types = [self.resolve_type(el)[0] for el in node.elts]
+			s = builtins.classes["set"]
+			return (SetType(TypeUtils.unify(element_types)), [s.create_instance()])
 		elif isinstance(node, ast.Tuple):
-			element_types = [self.resolve_type(el) for el in node.elts]
-			return TupleType(element_types)
+			element_types = [self.resolve_type(el)[0] for el in node.elts]
+			t = builtins.classes["tuple"]
+			return (TupleType(element_types), [t.create_instance()])
 		elif isinstance(node, ast.Dict):
-			key_type = TypeUtils.unify([self.resolve_type(k) for k in node.keys if k is not None])
-			value_type = TypeUtils.unify([self.resolve_type(v) for v in node.values if v is not None])
-			return DictType(key_type, value_type)
+			key_type = TypeUtils.unify([self.resolve_type(k)[0] for k in node.keys if k is not None])
+			value_type = TypeUtils.unify([self.resolve_type(v)[0] for v in node.values if v is not None])
+			d = builtins.classes["dict"]
+			return (DictType(key_type, value_type), [d.create_instance()])
 		else:
-			return UnresolvedType(node)
+			points_to = self.resolve(node)
+			types = [Type(pt.class_pointer) for pt in points_to]
+			inf_type = TypeUtils.unify(types) if types else UnresolvedType(node) 
+			return [inf_type, points_to]
+		return UnresolvedType(node)

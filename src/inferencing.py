@@ -1,8 +1,9 @@
 import ast
 from src.symbol_table import *
 from src.context import Context
-from src.annotation_converter import AnnotationConverter
-from src.contanier_types import UnresolvedType
+from src.annotation_parser import AnnotationParser
+from src.contanier_types import Type
+from src.builtins_ctn import builtins
 
 import json
 import copy
@@ -30,6 +31,12 @@ class Analyzer(ast.NodeVisitor):
 	def visit_ClassDef(self, node):
 		enclosing_definition = self.current_table.get_latest_definition()
 		class_name = node.name
+		
+		if class_name not in enclosing_definition.variables: enclosing_definition.add_variable(VariableTable(class_name))
+		cvt = enclosing_definition.variables[class_name]
+		cdvt = cvt.add_definition(DefinitionTable(cvt.generate_path(), node.lineno, node.col_offset))
+		cdvt.type = Type(builtins.classes["type"])
+
 		if class_name not in enclosing_definition.classes:
 			class_table = ClassTable(class_name)
 			enclosing_definition.add_class(class_table)
@@ -46,6 +53,12 @@ class Analyzer(ast.NodeVisitor):
 	def visit_FunctionDef(self, node):
 		enclosing_definition = self.current_table.get_latest_definition()
 		function_name = node.name
+
+		if function_name not in enclosing_definition.variables: enclosing_definition.add_variable(VariableTable(function_name))
+		fvt = enclosing_definition.variables[function_name]
+		fdvt = fvt.add_definition(DefinitionTable(fvt.generate_path(), node.lineno, node.col_offset))
+		fdvt.type = Type(builtins.classes["function"])
+
 		if function_name not in enclosing_definition.functions:
 			function_table = FunctionTable(function_name)
 			enclosing_definition.add_function(function_table)
@@ -77,7 +90,7 @@ class Analyzer(ast.NodeVisitor):
 		context = Context(lt, mt, ct)
 
 		lhs = context.verify_lhs(node.target)
-		inf_type = AnnotationConverter().visit(node.annotation)
+		inf_type = AnnotationParser().visit(node.annotation)
 		if lhs:
 			nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
 			nd.type = inf_type
@@ -90,7 +103,9 @@ class Analyzer(ast.NodeVisitor):
 		mt = self.module_table
 		lt = self.library_table
 		context = Context(lt, mt, ct)
-		inf_type = context.resolve_type(node.value)
+		inf = context.resolve_type(node.value)
+		inf_type = inf[0]
+		points_to = inf[1]
 
 		for target in node.targets:
 			if isinstance(target, ast.Tuple):
@@ -100,6 +115,7 @@ class Analyzer(ast.NodeVisitor):
 				if lhs:
 					nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
 					nd.type = inf_type
+					nd.points_to = points_to
 				
 				self.type_data["vassignments"][(target.lineno, target.col_offset)] = (context, target, node.value, inf_type)
 		self.generic_visit(node)
