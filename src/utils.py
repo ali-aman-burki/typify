@@ -23,6 +23,7 @@ class Utils:
 	def scan_and_export(project_path, export_path):
 		library = LibraryBuilder(project_path, export_path)
 		library.build()
+		library.export()
 
 		print("\rExporting...", end="", flush=True)
 		print(f"\rAnalysis complete and data exported successfully. {library.errors} file errors found. Press (r) to rescan or (x) to exit:", end=" ")

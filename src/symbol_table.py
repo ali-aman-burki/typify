@@ -15,15 +15,19 @@ class Table:
 		self.instance_variables: dict[str, Table] = {}
 		self.definitions: dict[str, Table] = {}
 		self.instances: list[Table] = []
-		self.points_to: list[Table] = []
-		self.class_pointer: Table = self
+
 		self.imports: list[ast.AST] = []
 		self.bases: list = []
 		self.params: list = []
 		self.globals: ast.AST = set()
 		self.nonlocals: ast.AST = set()
 		self.parent: Table = None
+
+		self.collected_types: list[TypeAnnotation] = []
 		self.type: TypeAnnotation = None
+		self.points_to: list[Table] = []
+		self.returns: list[Table] = []
+		self.template_used: Table = None
 
 	def copy(self):
 		new_table = Table(self.key)
@@ -42,7 +46,6 @@ class Table:
 		new_table.params = copy.deepcopy(self.params)
 		new_table.globals = copy.deepcopy(self.globals)
 		new_table.nonlocals = copy.deepcopy(self.nonlocals)
-		new_table.class_pointer = self.class_pointer.copy() if self.class_pointer else None
 		new_table.type = self.type
 		return new_table
 
@@ -62,17 +65,23 @@ class Table:
 		if self.instance_variables: data["instance_variables"] = {key: value.to_dict() for key, value in self.instance_variables.items()}
 		return data
 	
-	def create_instance(self):
+	def get_type_class(self):
+		if isinstance(self, DefinitionTable):
+			if isinstance(self.parent, ClassTable):
+				return self.parent
+		elif isinstance(self, ClassTable):
+			return self
+		else:
+			return None
+	
+	def create_instance(self, template_def):
 		instance = InstanceTable(self.key)
-		instance.class_pointer = self
-		for var in self.variables.values():
+		instance.template_used = template_def
+		for var in template_def.variables.values():
 			nv = VariableTable(var.key)
-			df = nv.add_definition(DefinitionTable(self.generate_path(), 0, 0))
-			df.type = var.get_latest_definition().type
-			df.points_to = {pt.copy() for pt in var.get_latest_definition().points_to}
 			instance.add_variable(nv)
 		
-		self.instances.append(instance)
+		template_def.instances.append(instance)
 		return instance
 
 	def __str__(self):

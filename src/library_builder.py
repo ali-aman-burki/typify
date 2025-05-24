@@ -14,6 +14,7 @@ class LibraryBuilder:
         self.processed_modules = 0
         self.errors = 0
         self.ignore_errors = False
+        self.modules_to_export = []
 
     def build(self):
         self.library_table = LibraryTable(self.working_directory.name)
@@ -48,8 +49,9 @@ class LibraryBuilder:
             code = file_path.read_text()
             tree = ast.parse(code)
             analyzer.visit(tree)
-            
-            self.export_module_json(analyzer, file_path, module_table)
+
+            self.modules_to_export.append((analyzer, file_path, module_table))
+
             self.processed_modules += 1
             print(f"\rProcessed [{self.processed_modules}/{self.total_modules}] modules.", end="", flush=True)
         except Exception as e:
@@ -80,9 +82,11 @@ class LibraryBuilder:
                 else:
                     pass
 
-    def export_module_json(self, analyzer, file_path, module_table):
-        rel_path = file_path.relative_to(self.working_directory)
-        output_path = self.export_path / rel_path.parent
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        module_table.export_to_json(output_path, module_table.key)
-        analyzer.export_type_data(output_path, module_table.key + "-types")
+    def export(self):
+        for analyzer, file_path, module_table in self.modules_to_export:
+            rel_path = file_path.relative_to(self.working_directory)
+            output_path = self.export_path / rel_path.parent
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            module_table.export_to_json(output_path, module_table.key)
+            analyzer.export_type_data(output_path, module_table.key + "-types")

@@ -12,25 +12,25 @@ class UnresolvedType(TypeAnnotation):
 		return "$unresolved$"
 
 class Type(TypeAnnotation):
-	def __init__(self, type_rep):
-		self.type_rep = type_rep
+	def __init__(self, type_def):
+		self.type_def = type_def
 	
 	def __repr__(self):
-		return str(self.type_rep)
+		return str(self.type_def)
 
 class UnionType(TypeAnnotation):
 	def __init__(self, types):
 		self.types = types
 
 	def __repr__(self):
-		return f"Union[{', '.join(repr(t) for t in self.types)}]"
+		return f"{' | '.join(repr(t) for t in self.types)}"
 
 class ListType(TypeAnnotation):
 	def __init__(self, element_type):
 		self.element_type = element_type
 
 	def __repr__(self):
-		return f"List[{repr(self.element_type)}]"
+		return f"list[{repr(self.element_type)}]"
 
 class DictType(TypeAnnotation):
 	def __init__(self, key_type, value_type):
@@ -38,21 +38,21 @@ class DictType(TypeAnnotation):
 		self.value_type = value_type
 
 	def __repr__(self):
-		return f"Dict[{repr(self.key_type)}, {repr(self.value_type)}]"
+		return f"dict[{repr(self.key_type)}, {repr(self.value_type)}]"
 
 class TupleType(TypeAnnotation):
 	def __init__(self, element_types):
 		self.element_types = element_types
 
 	def __repr__(self):
-		return f"Tuple[{', '.join(repr(t) for t in self.element_types)}]"
+		return f"tuple[{', '.join(repr(t) for t in self.element_types)}]"
 
 class SetType(TypeAnnotation):
 	def __init__(self, element_type):
 		self.element_type = element_type
 
 	def __repr__(self):
-		return f"Set[{repr(self.element_type)}]"
+		return f"set[{repr(self.element_type)}]"
 
 class OptionalType(TypeAnnotation):
 	def __init__(self, element_type):

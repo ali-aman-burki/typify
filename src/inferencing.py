@@ -4,6 +4,7 @@ from src.context import Context
 from src.annotation_parser import AnnotationParser
 from src.contanier_types import Type
 from src.builtins_ctn import builtins
+from src.typeutils import TypeUtils
 
 import json
 import copy
@@ -35,16 +36,20 @@ class Analyzer(ast.NodeVisitor):
 		if class_name not in enclosing_definition.variables: enclosing_definition.add_variable(VariableTable(class_name))
 		cvt = enclosing_definition.variables[class_name]
 		cdvt = cvt.add_definition(DefinitionTable(cvt.generate_path(), node.lineno, node.col_offset))
-		cdvt.type = Type(builtins.classes["type"])
+		t = builtins.classes["type"]
+		cdvt.type = Type(t)
+		tinstnace = t.create_instance(t)
+		cdvt.points_to.append(tinstnace)
 
 		if class_name not in enclosing_definition.classes:
 			class_table = ClassTable(class_name)
 			enclosing_definition.add_class(class_table)
 		else:
 			class_table = enclosing_definition.classes[class_name]
-		
-		cdvt.points_to.append(class_table)
-		class_table.add_definition(DefinitionTable(class_table.generate_path(), node.lineno, node.col_offset))
+
+		cd = class_table.add_definition(DefinitionTable(class_table.generate_path(), node.lineno, node.col_offset))
+		tinstnace.returns.append(cd)
+
 		self.current_table = class_table
 		self.generic_visit(node)
 		self.current_table = self.current_table.get_enclosing_table()
@@ -57,22 +62,45 @@ class Analyzer(ast.NodeVisitor):
 		function_name = node.name
 
 		if function_name not in enclosing_definition.variables: enclosing_definition.add_variable(VariableTable(function_name))
+		
 		fvt = enclosing_definition.variables[function_name]
 		fdvt = fvt.add_definition(DefinitionTable(fvt.generate_path(), node.lineno, node.col_offset))
-		fdvt.type = Type(builtins.classes["function"])
+		f = builtins.classes["function"]
+		fdvt.type = Type(f)
+		finstance = f.create_instance(f)
+		fdvt.points_to.append(finstance)
 
 		if function_name not in enclosing_definition.functions:
 			function_table = FunctionTable(function_name)
 			enclosing_definition.add_function(function_table)
 		else:
 			function_table = enclosing_definition.functions[function_name]
+		
+		fd = function_table.add_definition(DefinitionTable(function_table.generate_path(), node.lineno, node.col_offset))
+		finstance.returns.append(fd)
 
-		function_table.add_definition(DefinitionTable(function_table.generate_path(), node.lineno, node.col_offset))
 		self.current_table = function_table
 		self.generic_visit(node)
 		self.current_table = self.current_table.get_enclosing_table()
 
 	def visit_Return(self, node):
+		ct = self.current_table
+		mt = self.module_table
+		lt = self.library_table
+		
+		context = Context(lt, mt, ct)
+		function_name = self.current_table.key
+		enclosing_definition = self.current_table.get_enclosing_table().get_latest_definition()
+
+		ft = enclosing_definition.functions[function_name]
+		fdt = ft.get_latest_definition()
+
+		type_bundle = context.resolve_type(node.value)
+		
+		fdt.collected_types.append(type_bundle[0])
+		fdt.points_to += type_bundle[1]
+		fdt.type = TypeUtils.unify([t for t in fdt.collected_types])
+
 		self.generic_visit(node)
 
 	def visit_Global(self, node):
@@ -96,7 +124,7 @@ class Analyzer(ast.NodeVisitor):
 		inf_type = AnnotationParser().visit(node.annotation)
 		if lhs:
 			nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
-			nd.type = inf_type
+			nd.var_type = inf_type
 
 		self.type_data["vassignments"][(node.target.lineno, node.target.col_offset)] = (context, node.target, node.value, inf_type)
 		self.generic_visit(node)
@@ -107,20 +135,19 @@ class Analyzer(ast.NodeVisitor):
 		lt = self.library_table
 		context = Context(lt, mt, ct)
 		inf = context.resolve_type(node.value)
-		inf_type = inf[0]
-		points_to = inf[1]
 
 		for target in node.targets:
+			nd = None
 			if isinstance(target, ast.Tuple):
 				pass
 			else:
 				lhs = context.verify_lhs(target)
 				if lhs:
 					nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
-					nd.type = inf_type
-					nd.points_to = points_to
+					nd.type = inf[0]
+					nd.points_to = inf[1]
 				
-				self.type_data["vassignments"][(target.lineno, target.col_offset)] = (context, target, node.value, inf_type)
+				self.type_data["vassignments"][(target.lineno, target.col_offset)] = (context, target, node.value, nd.type if nd else "$unresolved$")
 		self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):
