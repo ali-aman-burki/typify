@@ -86,7 +86,7 @@ class Table:
 
 	def __str__(self):
 		path = self.generate_path()
-		return path + "." + self.key if path != "builtins" else self.key
+		return ("" if not path or path == "builtins" else path + ".") + self.key
 
 	def export_to_json(self, directory: Path, file_name: str):
 		directory.mkdir(parents=True, exist_ok=True)
@@ -98,7 +98,7 @@ class Table:
 		path = []
 		current_table = self
 		while current_table and not isinstance(current_table, LibraryTable):
-			if isinstance(current_table, (ModuleTable, PackageTable)):
+			if isinstance(current_table, (ModuleTable, PackageTable, ClassTable, FunctionTable)) and current_table != self:
 				path.append(current_table.key)
 			current_table = current_table.get_enclosing_table()
 		return ".".join(path[::-1])

@@ -69,12 +69,13 @@ class Context:
 				numcalls = self.count_calls(start_segment.trail[-1])
 
 				for _ in range(numcalls):
-					tdefs = [tdef for instance in points_to for tdef in instance.returns]
-					points_to = [pt for tdef in tdefs for pt in self.call(tdef)[1]]
-					types = [self.call(tdef)[0] for tdef in tdefs]
+					results = [self.call(tdef) for instance in points_to for tdef in instance.returns]
+					types = [res[0] for res in results]
+					points_to = [pt for res in results for pt in res[1]]
 
 				inferred_type = TypeUtils.unify(types)
 				return (inferred_type, points_to)
+
 		return (UnresolvedType(None), [])
 
 
