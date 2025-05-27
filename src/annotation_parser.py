@@ -1,12 +1,22 @@
 from src.builtins_ctn import builtins
 from src.contanier_types import *
+from src.context import Context
+from src.typeutils import TypeUtils
 import ast
 
 class AnnotationParser(ast.NodeVisitor):
+	def __init__(self, context: Context):
+		super().__init__()
+		self.context = context
+
 	def visit_Name(self, node):
 		if node.id in builtins.classes and node.id not in ["list", "List", "set", "Set", "tuple", "Tuple", "dict", "Dict", "Union"]:
 			return Type(builtins.classes[node.id])
-		return UnresolvedType(node)
+		
+		type_bundle = self.context.resolve_type(node)
+		points_to = type_bundle[1]
+		types = [Type(r) for pt in points_to for r in pt.returns]
+		return TypeUtils.unify(types) if types else UnresolvedType(node)
 
 	def visit_Constant(self, node):
 		return Type(builtins.classes[type(node.value).__name__])
@@ -25,13 +35,13 @@ class AnnotationParser(ast.NodeVisitor):
 
 		if isinstance(base, UnresolvedType):
 			name = ast.unparse(node.value)
-			if name == "list":
+			if name in ["list", "List"]:
 				return ListType(args[0])
-			elif name == "set":
+			elif name in ["set", "Set"]:
 				return SetType(args[0])
-			elif name == "tuple":
+			elif name in ["tuple", "Tuple"]:
 				return TupleType(args)
-			elif name == "dict":
+			elif name in ["dict", "Dict"]:
 				return DictType(args[0], args[1])
 			elif name == "Union":
 				return UnionType(args)

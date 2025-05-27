@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 import ast
-from src.contanier_types import TypeAnnotation
 import copy
 
 class Table:
@@ -23,31 +22,13 @@ class Table:
 		self.nonlocals: ast.AST = set()
 		self.parent: Table = None
 
-		self.collected_types: list[TypeAnnotation] = []
-		self.type: TypeAnnotation = None
+		self.collected_types: list = []
+		self.type = None
 		self.points_to: list[Table] = []
 		self.returns: list[Table] = []
+		self.return_nodes: list[ast.AST] = []
 		self.template_used: Table = None
-
-	def copy(self):
-		new_table = Table(self.key)
-
-		new_table.packages = {k: v.copy() for k, v in self.packages.items()}
-		new_table.modules = {k: v.copy() for k, v in self.modules.items()}
-		new_table.classes = {k: v.copy() for k, v in self.classes.items()}
-		new_table.functions = {k: v.copy() for k, v in self.functions.items()}
-		new_table.variables = {k: v.copy() for k, v in self.variables.items()}
-		new_table.instance_variables = {k: v.copy() for k, v in self.instance_variables.items()}
-		new_table.definitions = {k: v.copy() for k, v in self.definitions.items()}
-		new_table.instances = [inst.copy() for inst in self.instances]
-		new_table.points_to = {pt.copy() for pt in self.points_to}
-		new_table.imports = copy.deepcopy(self.imports)
-		new_table.bases = copy.deepcopy(self.bases)
-		new_table.params = copy.deepcopy(self.params)
-		new_table.globals = copy.deepcopy(self.globals)
-		new_table.nonlocals = copy.deepcopy(self.nonlocals)
-		new_table.type = self.type
-		return new_table
+		self.vassignments: list[tuple] = []
 
 	def to_dict(self):
 		data = {}

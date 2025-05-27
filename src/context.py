@@ -21,8 +21,9 @@ class Context:
 
 	def call(self, callable_def: Table):
 		parent = callable_def.get_enclosing_table()
-		if isinstance(parent, ClassTable): return (Type(parent), [parent.create_instance(callable_def)])
-		elif isinstance(parent, FunctionTable): 
+		if isinstance(parent, ClassTable): 
+			return (Type(callable_def), [parent.create_instance(callable_def)])
+		elif isinstance(parent, FunctionTable):
 			return (callable_def.type, callable_def.points_to)
 		return (UnresolvedType(None), [])
 
@@ -38,7 +39,6 @@ class Context:
 				return dictionary[identifier]
 
 		return None
-
 
 	def climb_lookup(self, identifier: str, where: list[str]):
 		current = self.current_table
@@ -56,7 +56,7 @@ class Context:
 			return self.current_table.get_latest_definition().variables[name]
 		return None
 
-	def resolve_start(self, start_segment: Segment) -> tuple[Type, list[Table]]:
+	def resolve_start(self, start_segment: Segment) -> tuple[TypeAnnotation, list[Table]]:
 		starting_identifier = ast.unparse(start_segment.anchor)
 		found = self.climb_lookup(starting_identifier, ["variables"])
 		
@@ -79,20 +79,23 @@ class Context:
 		return (UnresolvedType(None), [])
 
 
-	def resolve(self, node: ast.AST) -> tuple[Type, list[Table]]:
+	def resolve(self, node: ast.AST) -> tuple[TypeAnnotation, list[Table]]:
 		chain = Chain(node)
 		return self.resolve_start(chain.segments[0])
 		
-	def resolve_type(self, node: ast.AST) -> tuple[Type, list[Table]]:
+	def resolve_type(self, node: ast.AST) -> tuple[TypeAnnotation, list[Table]]:
 		if isinstance(node, ast.Constant):
 			c = builtins.classes[type(node.value).__name__]
-			return (Type(c), [c])
+			cinstance = c.create_instance(c)
+			return (Type(c), [cinstance])
 		elif isinstance(node, ast.JoinedStr):
 			s = builtins.classes["str"]
-			return (Type(s), [s])
+			sinstance = s.create_instance(s)
+			return (Type(s), [sinstance])
 		elif isinstance(node, ast.BoolOp):
 			b = builtins.classes["bool"]
-			return (Type(b), [b])
+			binstance = b.create_instance(b)
+			return (Type(b), [binstance])
 		elif isinstance(node, ast.List):
 			element_types = [self.resolve_type(el)[0] for el in node.elts]
 			l = builtins.classes["list"]
@@ -118,6 +121,9 @@ class Context:
 			inf_type = DictType(key_type, value_type)
 			dinstance = d.create_instance(d)
 			return (inf_type, [dinstance])
+		elif isinstance(node, ast.BinOp):
+			resolved = self.resolve_type(node.left)
+			return resolved
 		else:
 			resolved = self.resolve(node)
 			return resolved

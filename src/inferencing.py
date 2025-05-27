@@ -80,6 +80,7 @@ class Analyzer(ast.NodeVisitor):
 		finstance.returns.append(fd)
 
 		self.current_table = function_table
+
 		self.generic_visit(node)
 		self.current_table = self.current_table.get_enclosing_table()
 
@@ -100,6 +101,7 @@ class Analyzer(ast.NodeVisitor):
 		fdt.collected_types.append(type_bundle[0])
 		fdt.points_to += type_bundle[1]
 		fdt.type = TypeUtils.unify([t for t in fdt.collected_types])
+		fdt.return_nodes.append(node.value)
 
 		self.generic_visit(node)
 
@@ -121,12 +123,21 @@ class Analyzer(ast.NodeVisitor):
 		context = Context(lt, mt, ct)
 
 		lhs = context.verify_lhs(node.target)
-		inf_type = AnnotationParser().visit(node.annotation)
+		
+		annotated_type_bundle = (annotated_type := AnnotationParser(context).visit(node.annotation), TypeUtils.instantiate(annotated_type))
+		inferred_type_bundle = context.resolve_type(node.value)
+
+		eventual_bundle = TypeUtils.select_more_resolved_type(annotated_type_bundle, inferred_type_bundle)
+
+		nd = None
+
 		if lhs:
 			nd = lhs.add_definition(DefinitionTable(lhs.generate_path(), node.lineno, node.col_offset))
-			nd.var_type = inf_type
+			nd.type = eventual_bundle[0]
+			nd.points_to = eventual_bundle[1]
 
-		self.type_data["vassignments"][(node.target.lineno, node.target.col_offset)] = (context, node.target, node.value, inf_type)
+		vassignment = self.type_data["vassignments"][(node.target.lineno, node.target.col_offset)] = (context, node.target, node.value, nd.type if nd else "$unresolved$")
+		if isinstance(self.current_table, FunctionTable): self.current_table.get_latest_definition().vassignments.append(vassignment)
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):
@@ -147,7 +158,8 @@ class Analyzer(ast.NodeVisitor):
 					nd.type = inf[0]
 					nd.points_to = inf[1]
 				
-				self.type_data["vassignments"][(target.lineno, target.col_offset)] = (context, target, node.value, nd.type if nd else "$unresolved$")
+				vassignment = self.type_data["vassignments"][(target.lineno, target.col_offset)] = (context, target, node.value, nd.type if nd else "$unresolved$")
+				if isinstance(self.current_table, FunctionTable): self.current_table.get_latest_definition().vassignments.append(vassignment)
 		self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):
