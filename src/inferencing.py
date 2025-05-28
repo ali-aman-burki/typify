@@ -79,11 +79,10 @@ class Analyzer(ast.NodeVisitor):
 		fdt = function_table.add_definition(DefinitionTable(function_table.generate_path(), node.lineno, node.col_offset))
 		finstance.returns.append(fdt)
 
+		self.type_data["functions"][(fdt.line, fdt.column)] = (function_name, Type(builtins.classes["NoneType"]))
+
 		self.current_table = function_table
-
 		self.generic_visit(node)
-
-		self.type_data["functions"][(node.lineno, node.col_offset)] = (function_name, fdt.type)
 		self.current_table = self.current_table.get_enclosing_table()
 
 	def visit_Return(self, node):
@@ -104,6 +103,8 @@ class Analyzer(ast.NodeVisitor):
 		fdt.points_to += type_bundle[1]
 		fdt.type = TypeUtils.unify([t for t in fdt.collected_types])
 		fdt.return_nodes.append(node.value)
+
+		self.type_data["functions"][(fdt.line, fdt.column)] = (function_name, fdt.type)
 
 		self.generic_visit(node)
 
@@ -138,8 +139,7 @@ class Analyzer(ast.NodeVisitor):
 			nd.type = eventual_bundle[0]
 			nd.points_to = eventual_bundle[1]
 
-		vassignment = self.type_data["vassignments"][(node.target.lineno, node.target.col_offset)] = (context, node.target, node.value, nd.type if nd else "$unresolved$")
-		if isinstance(self.current_table, FunctionTable): self.current_table.get_latest_definition().vassignments.append(vassignment)
+		self.type_data["vassignments"][(nd.line, nd.column)] = (node.target, nd.type if nd else "$unresolved$")
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):
@@ -160,8 +160,7 @@ class Analyzer(ast.NodeVisitor):
 					nd.type = inf[0]
 					nd.points_to = inf[1]
 				
-				vassignment = self.type_data["vassignments"][(target.lineno, target.col_offset)] = (context, target, node.value, nd.type if nd else "$unresolved$")
-				if isinstance(self.current_table, FunctionTable): self.current_table.get_latest_definition().vassignments.append(vassignment)
+				self.type_data["vassignments"][(nd.line, nd.column)] = (target, nd.type if nd else "$unresolved$")
 		self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):
@@ -188,8 +187,8 @@ class Analyzer(ast.NodeVisitor):
 			"functions": {}
 		}
 		for key, value in self.type_data["vassignments"].items():
-			lhs = ast.unparse(value[1]) 
-			inf_type = value[3]
+			lhs = ast.unparse(value[0]) 
+			inf_type = value[1]
 			output_data["vassignments"][f"{key[0]}:{key[1]}"] = f"{lhs}: {inf_type}"
 		
 		for key, value in self.type_data["functions"].items():
