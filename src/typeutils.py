@@ -78,9 +78,9 @@ class TypeUtils:
 
 	@staticmethod
 	def select_more_resolved_type(
-		annotated_bundle: tuple[TypeAnnotation, list],
-		inferred_bundle: tuple[TypeAnnotation, list]
-	) -> tuple[TypeAnnotation, list]:
+		annotated_bundle: tuple[TypeAnnotation, list[Table]],
+		inferred_bundle: tuple[TypeAnnotation, list[Table]]
+	) -> tuple[TypeAnnotation, list[Table]]:
 		annotated_type, _ = annotated_bundle
 		inferred_type, _ = inferred_bundle
 

@@ -76,12 +76,14 @@ class Analyzer(ast.NodeVisitor):
 		else:
 			function_table = enclosing_definition.functions[function_name]
 		
-		fd = function_table.add_definition(DefinitionTable(function_table.generate_path(), node.lineno, node.col_offset))
-		finstance.returns.append(fd)
+		fdt = function_table.add_definition(DefinitionTable(function_table.generate_path(), node.lineno, node.col_offset))
+		finstance.returns.append(fdt)
 
 		self.current_table = function_table
 
 		self.generic_visit(node)
+
+		self.type_data["functions"][(node.lineno, node.col_offset)] = (function_name, fdt.type)
 		self.current_table = self.current_table.get_enclosing_table()
 
 	def visit_Return(self, node):
@@ -189,5 +191,9 @@ class Analyzer(ast.NodeVisitor):
 			lhs = ast.unparse(value[1]) 
 			inf_type = value[3]
 			output_data["vassignments"][f"{key[0]}:{key[1]}"] = f"{lhs}: {inf_type}"
+		
+		for key, value in self.type_data["functions"].items():
+			func_name, func_type = value
+			output_data["functions"][f"{key[0]}:{key[1]}"] = f"{func_name}() -> {func_type}"
 		with file_path.open("w", encoding="utf-8") as f:
 			json.dump(output_data, f, indent='\t')
