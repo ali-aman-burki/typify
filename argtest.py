@@ -1,43 +1,58 @@
-import ast
-import json
+def tarjan(graph):
+	index = 0
+	indices = {}
+	low_links = {}
+	on_stack = set()
+	stack = []
+	result = []
 
-from src.call_utils import CallerContext, ParameterSpec
+	def strongconnect(node):
+		nonlocal index
+		indices[node] = index
+		low_links[node] = index
+		index += 1
+		stack.append(node)
+		on_stack.add(node)
 
-def ast_node_to_str(node: ast.AST | None) -> str | None:
-    if node is None:
-        return None
-    try:
-        return ast.unparse(node)
-    except Exception:
-        return ast.dump(node)
+		for neighbor in graph.get(node, []):
+			if neighbor not in indices:
+				strongconnect(neighbor)
+				low_links[node] = min(low_links[node], low_links[neighbor])
+			elif neighbor in on_stack:
+				low_links[node] = min(low_links[node], indices[neighbor])
 
+		if low_links[node] == indices[node]:
+			scc = []
+			while True:
+				popped_node = stack.pop()
+				on_stack.remove(popped_node)
+				scc.append(popped_node)
+				if popped_node == node:
+					break
+			result.append(scc)
 
-def convert_param_spec_to_jsonable(param_spec: dict[str, ParameterSpec]) -> dict:
-    def convert(value):
-        if isinstance(value, list):
-            return [ast_node_to_str(v) for v in value]
-        elif isinstance(value, dict):
-            return {k: ast_node_to_str(v.node) for k, v in value.items()}
-        else:
-            return ast_node_to_str(value)
-    return {k: convert(spec.node) for k, spec in param_spec.items()}
+	for node in graph:
+		if node not in indices:
+			strongconnect(node)
 
+	return result
 
-def pretty_print_param_spec(param_spec: dict[str, ParameterSpec]):
-    jsonable = convert_param_spec_to_jsonable(param_spec)
-    print(json.dumps(jsonable, indent=2))
+def generate_resolving_sequence(sccs):
+	resolving_sequence = []
+	for scc in sccs:
+		for i in range(len(scc)):
+			for i in range(len(scc)):
+				resolving_sequence.append(scc[i])
+	
+	return resolving_sequence
 
-src = '''
-def f(x, z, /, y=2, w=4, *args, k1, k2=20, **extras): pass
-f(10, 42, 99, 88, k1='A', extra1=1, extra2=2)
-'''
-tree = ast.parse(src)
-func_def = tree.body[0]
-call = tree.body[1].value
+graph = {
+	"a": ["b"],
+	"b": ["c"],
+	"c": ["a"]
+}
 
-cc = CallerContext(None)
-
-map = cc.build_parameter_map(func_def)
-applied = cc.map_args_to_params(map, call)
-pretty_print_param_spec(applied)
-
+sccs = tarjan(graph)
+print("Strongly Connected Components:", sccs)
+resolving_sequence = generate_resolving_sequence(sccs)
+print(f"Resolving Sequence: {resolving_sequence}")

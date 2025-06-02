@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 import ast
-import copy
 
 class Table:
 	def __init__(self, key: str):
@@ -11,7 +10,6 @@ class Table:
 		self.classes: dict[str, Table] = {}
 		self.functions: dict[str, Table] = {}
 		self.variables: dict[str, Table] = {}
-		self.instance_variables: dict[str, Table] = {}
 		self.definitions: dict[str, Table] = {}
 		self.instances: list[Table] = []
 
@@ -43,7 +41,6 @@ class Table:
 		if self.classes: data["classes"] = {key: value.to_dict() for key, value in self.classes.items()}
 		if self.functions: data["functions"] = {key: value.to_dict() for key, value in self.functions.items()}
 		if self.variables: data["variables"] = {key: value.to_dict() for key, value in self.variables.items()}
-		if self.instance_variables: data["instance_variables"] = {key: value.to_dict() for key, value in self.instance_variables.items()}
 		return data
 	
 	def get_type_class(self):
@@ -67,6 +64,7 @@ class Table:
 
 	def __str__(self):
 		path = self.generate_path()
+		if self.key == "__init__": return ("" if not path or path == "builtins" else path)
 		return ("" if not path or path == "builtins" else path + ".") + self.key
 
 	def export_to_json(self, directory: Path, file_name: str):
@@ -75,15 +73,33 @@ class Table:
 		with file_path.open("w", encoding="utf-8") as f:
 			json.dump(self.to_dict(), f, indent=4)
 
+	def fully_qualified_file_name(self):
+		path = self.generate_path()
+		return ("" if not path or path == "builtins" else path + ".") + self.key
+
+	def fully_qualified_name(self):
+		path = self.generate_path()
+		if self.key == "__init__": return ("" if not path or path == "builtins" else path)
+		return ("" if not path or path == "builtins" else path + ".") + self.key
+
 	def generate_path(self):
 		path = []
 		current_table = self
-		while current_table and not isinstance(current_table, LibraryTable):
-			if isinstance(current_table, (ModuleTable, PackageTable, ClassTable, FunctionTable)) and current_table != self:
+		while not isinstance(current_table, LibraryTable):
+			if isinstance(current_table, (ModuleTable, PackageTable)) and current_table != self:
 				path.append(current_table.key)
 			current_table = current_table.get_enclosing_table()
 		return ".".join(path[::-1])
 	
+	def get_path_chain(self):
+		path_chain = []
+		current_table = self
+		while current_table:
+			if isinstance(current_table, (ModuleTable, PackageTable, LibraryTable)):
+				path_chain.append(current_table)
+			current_table = current_table.get_enclosing_table()
+		return list(reversed(path_chain[::-1]))
+
 	def get_enclosing_table(self):
 		result = self.parent
 		if isinstance(result, DefinitionTable):
@@ -127,11 +143,6 @@ class Table:
 
 	def add_variable(self, variable_table):
 		self.variables[variable_table.key] = variable_table
-		variable_table.parent = self
-		return variable_table
-	
-	def add_instance_variable(self, variable_table):
-		self.instance_variables[variable_table.key] = variable_table
 		variable_table.parent = self
 		return variable_table
 

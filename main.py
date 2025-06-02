@@ -1,5 +1,6 @@
 import argparse
 from src.utils import Utils
+from src.preprocessing.preprocessor import Preprocessor
 import os
 
 parser = argparse.ArgumentParser(description="Build and export type bindings for a Python project.")
@@ -21,11 +22,7 @@ export_path = args.export_path
 
 print(Utils.title)
 
-Utils.scan_and_export(project_path, export_path)
+pp = Preprocessor(project_path)
 
-while True:
-    choice = input().strip().lower()
-    if choice == "r":
-        Utils.scan_and_export(project_path, export_path)
-    else:
-        break
+for m, dependencies in pp.dependency_graph.items():
+	print(f"{m} -> {[str(d) for d in dependencies]}")

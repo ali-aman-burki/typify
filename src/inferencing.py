@@ -139,7 +139,7 @@ class Analyzer(ast.NodeVisitor):
 			nd.type = eventual_bundle[0]
 			nd.points_to = eventual_bundle[1]
 
-		self.type_data["vassignments"][(nd.line, nd.column)] = (node.target, nd.type if nd else "$unresolved$")
+		self.type_data["vassignments"][(node.target.lineno), node.target.col_offset] = (node.target, nd.type if nd else "$unresolved$")
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):
@@ -160,7 +160,7 @@ class Analyzer(ast.NodeVisitor):
 					nd.type = inf[0]
 					nd.points_to = inf[1]
 				
-				self.type_data["vassignments"][(nd.line, nd.column)] = (target, nd.type if nd else "$unresolved$")
+				self.type_data["vassignments"][(target.lineno, target.col_offset)] = (target, nd.type if nd else "$unresolved$")
 		self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):
