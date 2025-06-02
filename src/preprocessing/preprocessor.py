@@ -3,6 +3,7 @@ from src.preprocessing.import_mapper import ImportMapper
 from src.preprocessing.attribute_collector import Collector
 from pathlib import Path
 from src.preprocessing.module_meta import ModuleMeta
+from src.preprocessing.graph_utils import GraphUtils
 
 class Preprocessor:
 
@@ -12,7 +13,6 @@ class Preprocessor:
 		self.meta_map: dict[ModuleTable, ModuleMeta] = {}
 		self.dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
 		self.build_library()
-		self.build_graph()
 	
 	def build_library(self):
 		package_map = {self.working_directory: self.library_table}
@@ -40,3 +40,9 @@ class Preprocessor:
 	def build_graph(self):
 		for m in self.meta_map.values():
 			self.dependency_graph[m] = ImportMapper.collect_dependencies(self.meta_map, m)
+	
+	def generate_resolving_sequence(self):
+		self.build_graph()
+		sccs = GraphUtils.tarjan(self.dependency_graph)
+		resolving_sequence = GraphUtils.generate_resolving_sequence(sccs)
+		return resolving_sequence

@@ -24,6 +24,9 @@ export_path = args.export_path
 print(Utils.title)
 
 pp = Preprocessor(project_path)
+resolving_sequence = pp.generate_resolving_sequence()
 
 for m, dependencies in pp.dependency_graph.items():
 	print(f"{m} -> {[d for d in dependencies]}")
+
+print(f"Resolving Sequence: {resolving_sequence}")
