@@ -13,7 +13,7 @@ class ModuleMeta:
 		self.dependency_map: dict[str, list[tuple[list[ModuleMeta], int]]] = {}
 		self.dependencies: set[ModuleMeta] = set()
 
-	def __str__(self):
+	def __repr__(self):
 		return self.table.fully_qualified_name()
 
 	@staticmethod

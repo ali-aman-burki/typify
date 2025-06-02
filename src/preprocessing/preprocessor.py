@@ -3,19 +3,18 @@ from src.preprocessing.import_mapper import ImportMapper
 from src.preprocessing.attribute_collector import Collector
 from pathlib import Path
 from src.preprocessing.module_meta import ModuleMeta
-import ast
 
 class Preprocessor:
 
 	def __init__(self, working_directory):
 		self.working_directory = Path(working_directory).resolve()
+		self.library_table = LibraryTable(self.working_directory.name)
 		self.meta_map: dict[ModuleTable, ModuleMeta] = {}
 		self.dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
 		self.build_library()
 		self.build_graph()
 	
 	def build_library(self):
-		self.library_table = LibraryTable(self.working_directory.name)
 		package_map = {self.working_directory: self.library_table}
 
 		for path in self.working_directory.rglob("*"):
