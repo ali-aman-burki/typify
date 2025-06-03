@@ -1,5 +1,6 @@
 import os
-from src.library_builder import LibraryBuilder
+from src.library_processing import LibraryProcessor
+from src.preprocessing.preprocessor import Preprocessor
 
 class Utils:
 	
@@ -21,11 +22,8 @@ class Utils:
 
 	@staticmethod
 	def scan_and_export(project_path, export_path):
-		library = LibraryBuilder(project_path, export_path)
+		library = LibraryProcessor(project_path, export_path)
 		library.build()
+		library.infer()
 		library.export()
-
-		print("\rExporting...", end="", flush=True)
-		print(f"\rAnalysis complete and data exported successfully. {library.errors} file errors found. Press (r) to rescan or (x) to exit:", end=" ")
-
-	
+		print(f"\rAnalysis complete and data exported successfully. Press (r) to rescan or (x) to exit:", end=" ")

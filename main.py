@@ -22,11 +22,11 @@ export_path = args.export_path
 
 print(Utils.title)
 
-pp = Preprocessor(project_path)
-resolving_sequence = pp.generate_resolving_sequence()
+Utils.scan_and_export(project_path, export_path)
 
-for m, dependencies in pp.dependency_graph.items():
-	print(f"{m} -> {[d for d in dependencies]}")
-
-sequence = "\n-> ".join([str(m) for m in resolving_sequence])
-print(f"Resolving Sequence:\n-> {sequence}")
+while True:
+    choice = input().strip().lower()
+    if choice == "r":
+        Utils.scan_and_export(project_path, export_path)
+    else:
+        break

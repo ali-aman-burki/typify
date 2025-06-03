@@ -5,9 +5,9 @@ import ast
 
 class ModuleMeta:
 
-	def __init__(self, src_path: Path, ast_rep: ast.AST, table: ModuleTable, library_table: Table):
+	def __init__(self, src_path: Path, tree: ast.AST, table: ModuleTable, library_table: Table):
 		self.src_path = src_path
-		self.ast_rep = ast_rep
+		self.tree = tree
 		self.table = table
 		self.library_table = library_table
 		self.dependency_map: dict[str, list[tuple[list[ModuleMeta], int]]] = {}
@@ -20,7 +20,7 @@ class ModuleMeta:
 	def from_source(src_path: Path, library_table: Table):
 		with open(src_path, "r", encoding="utf-8") as file:
 			source_code = file.read()
-		ast_rep = ast.parse(source_code)
+		tree = ast.parse(source_code)
 		table = ModuleTable(src_path.stem)
-		meta = ModuleMeta(src_path, ast_rep, table, library_table)
+		meta = ModuleMeta(src_path, tree, table, library_table)
 		return meta

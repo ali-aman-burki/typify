@@ -6,7 +6,7 @@ class ImportMapper:
 	@staticmethod
 	def collect_dependencies(meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta) -> set[ModuleTable]:
 		traverser = ImporTraverser(meta_map, module_meta)
-		traverser.visit(module_meta.ast_rep)
+		traverser.visit(module_meta.tree)
 		return module_meta.dependencies
 
 class ImporTraverser(ast.NodeVisitor):

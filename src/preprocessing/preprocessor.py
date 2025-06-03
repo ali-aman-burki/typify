@@ -1,9 +1,9 @@
 from src.symbol_table import LibraryTable, PackageTable, ModuleTable
 from src.preprocessing.import_mapper import ImportMapper
 from src.preprocessing.attribute_collector import Collector
-from pathlib import Path
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.graph_utils import GraphUtils
+from pathlib import Path
 
 class Preprocessor:
 
@@ -12,9 +12,8 @@ class Preprocessor:
 		self.library_table = LibraryTable(self.working_directory.name)
 		self.meta_map: dict[ModuleTable, ModuleMeta] = {}
 		self.dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
-		self.build_library()
 	
-	def build_library(self):
+	def build(self):
 		package_map = {self.working_directory: self.library_table}
 
 		for path in self.working_directory.rglob("*"):
@@ -34,7 +33,7 @@ class Preprocessor:
 				package_table = package_map.get(path.parent, self.library_table)
 				meta = ModuleMeta.from_source(path, self.library_table)
 				package_table.add_module(meta.table)
-				Collector(meta).visit(meta.ast_rep)
+				Collector(meta).visit(meta.tree)
 				self.meta_map[meta.table] = meta
 
 	def build_graph(self):
@@ -46,3 +45,12 @@ class Preprocessor:
 		sccs = GraphUtils.tarjan(self.dependency_graph)
 		resolving_sequence = GraphUtils.generate_resolving_sequence(sccs)
 		return resolving_sequence
+
+	def export(self, export_path: Path):
+		for table, meta in self.meta_map.items():
+			file_path = meta.src_path
+			rel_path = file_path.relative_to(self.working_directory)
+			output_path = export_path / rel_path.parent
+			output_path.parent.mkdir(parents=True, exist_ok=True)
+
+			table.export_to_json(output_path, table.key)

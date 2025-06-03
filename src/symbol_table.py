@@ -85,7 +85,7 @@ class Table:
 	def generate_path(self):
 		path = []
 		current_table = self
-		while not isinstance(current_table, LibraryTable):
+		while current_table and not isinstance(current_table, LibraryTable):
 			if isinstance(current_table, (ModuleTable, PackageTable)) and current_table != self:
 				path.append(current_table.key)
 			current_table = current_table.get_enclosing_table()
@@ -94,7 +94,7 @@ class Table:
 	def get_path_chain(self):
 		path_chain = []
 		current_table = self
-		while current_table:
+		while current_table and current_table:
 			if isinstance(current_table, (ModuleTable, PackageTable, LibraryTable)):
 				path_chain.append(current_table)
 			current_table = current_table.get_enclosing_table()
