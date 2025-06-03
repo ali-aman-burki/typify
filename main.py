@@ -2,7 +2,6 @@ import argparse
 from src.utils import Utils
 from src.preprocessing.preprocessor import Preprocessor
 import os
-from pathlib import Path
 
 parser = argparse.ArgumentParser(description="Build and export type bindings for a Python project.")
 parser.add_argument("project_path", help="Path to the Python project directory.")
@@ -29,4 +28,5 @@ resolving_sequence = pp.generate_resolving_sequence()
 for m, dependencies in pp.dependency_graph.items():
 	print(f"{m} -> {[d for d in dependencies]}")
 
-print(f"Resolving Sequence: {resolving_sequence}")
+sequence = "\n-> ".join([str(m) for m in resolving_sequence])
+print(f"Resolving Sequence:\n-> {sequence}")

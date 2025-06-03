@@ -51,8 +51,7 @@ class ImporTraverser(ast.NodeVisitor):
 					table_list[i] = table.modules["__init__"]
 		return chains
 
-	def collect(self, import_chain: list[str]) -> set[Table]:
-		chains = self.resolve(import_chain)
+	def collect(self, chains: list[tuple[list[Table], int]]) -> set[Table]:
 		resolved_chains = self.filter(chains)
 		modules: set[Table] = set()
 
@@ -69,12 +68,39 @@ class ImporTraverser(ast.NodeVisitor):
 	def visit_Import(self, node):
 		for alias in node.names:
 			import_chain = alias.name.split('.')
-			per_import_denepdencies = self.resolve(import_chain)
-			self.module_meta.dependency_map[alias.name] = per_import_denepdencies
-			collected = self.collect(import_chain)
+			chains = self.resolve(import_chain)
+			collected = self.collect(chains)
+			self.module_meta.dependency_map[alias.name] = chains
 			self.module_meta.dependencies.update(self.as_metas(collected))
 
 		self.generic_visit(node)
 
 	def visit_ImportFrom(self, node):
+		if node.module and not node.level:
+			import_chain = node.module.split('.')
+			identifiers = [alias.name for alias in node.names]
+			chains = self.resolve(import_chain)
+			if "*" in identifiers:
+				collected = self.collect(chains)
+				self.module_meta.dependency_map[node.module] = chains
+				self.module_meta.dependencies.update(self.as_metas(collected))
+				return
+			results = []
+			for chain in chains:
+				end_point = chain[0][-1]
+				if isinstance(end_point, ModuleTable):
+					if all(identifier in end_point.variables for identifier in identifiers):
+						results.append(chain)
+				elif isinstance(end_point, PackageTable):
+					module_names = end_point.modules.keys()
+					init_vars = end_point.modules["__init__"].variables.keys() if "__init__" in end_point.modules else set()
+					search_space = module_names | init_vars
+					if all(identifier in search_space for identifier in identifiers):
+						results.append(chain)
+			
+			collected = self.collect(results)
+			self.module_meta.dependency_map[node.module] = results
+			self.module_meta.dependencies.update(self.as_metas(collected))
+		else:
+			pass
 		self.generic_visit(node)

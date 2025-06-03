@@ -41,10 +41,4 @@ class GraphUtils:
 		return result
 
 	def generate_resolving_sequence(sccs):
-		resolving_sequence = []
-		for scc in sccs:
-			for i in range(len(scc)):
-				for i in range(len(scc)):
-					resolving_sequence.append(scc[i])
-		
-		return resolving_sequence
+		return [module for scc in sccs for module in scc]

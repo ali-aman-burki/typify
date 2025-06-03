@@ -1,5 +1,4 @@
 import ast
-from typing import List
 
 class Segment:
 	def __init__(self, anchor: ast.AST, trail: list[ast.AST]):
@@ -40,7 +39,7 @@ class Chain:
 		
 		return " ➜ ".join(parts)
 
-	def build_chain(self, node: ast.AST) -> List[Segment]:
+	def build_chain(self, node: ast.AST) -> list[Segment]:
 		raw_chain = []
 
 		while True:
