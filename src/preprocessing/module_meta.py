@@ -14,8 +14,8 @@ class ModuleMeta:
 		self.library_table = library_table
 		self.dependency_map: dict[str, list[tuple[list[ModuleMeta], int]]] = {}
 		self.dependencies: set[ModuleMeta] = set()
-		self.var_type_slots: dict[tuple[int, int], TypeAnnotation] = {}
-		self.func_type_slots: dict[tuple[int, int], tuple[dict[str, ParameterSpec], TypeAnnotation]] = {}
+		self.vslots: dict[tuple[int, int], tuple[str, TypeAnnotation]] = {}
+		self.fslots: dict[tuple[int, int], tuple[str, dict[str, ParameterSpec], TypeAnnotation]] = {}
 
 	def __repr__(self):
 		return self.table.fully_qualified_name()

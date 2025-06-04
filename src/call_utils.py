@@ -12,11 +12,10 @@ class ParameterSpec:
 		self.annotation = annotation
 		self.type_bundle: tuple[TypeAnnotation, list[Table]] = (UnresolvedType(None), [])
 
-class CallerContext:
-	def __init__(self, context: Context):
-		self.context = context
+class CallUtils:
 	
-	def build_parameter_map(self, funcdef: ast.FunctionDef) -> dict[str, ParameterSpec]:
+	@staticmethod
+	def build_parameter_map(funcdef: ast.FunctionDef) -> dict[str, ParameterSpec]:
 		args = funcdef.args
 		param_map: dict[str, ParameterSpec] = {}
 
@@ -66,7 +65,8 @@ class CallerContext:
 
 		return param_map
 
-	def map_args_to_params(self, param_map: dict[str, ParameterSpec], call: ast.Call) -> dict[str, ParameterSpec]:
+	@staticmethod
+	def map_args_to_params(param_map: dict[str, ParameterSpec], call: ast.Call) -> dict[str, ParameterSpec]:
 		if any(isinstance(arg, ast.Starred) for arg in call.args):
 			return deepcopy(param_map)
 		if any(kw.arg is None for kw in call.keywords):

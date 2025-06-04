@@ -13,7 +13,7 @@ class InferenceProcessor:
 		self.sequence_length = 0
 		self.errors = 0
 		self.ignore_errors = False
-		self.progress: dict[ModuleMeta, Inferencer] = {}
+		self.progress: list[ModuleMeta] = []
 		self.working_directory = self.preprocessor.working_directory
 	
 	def infer(self):
@@ -26,7 +26,7 @@ class InferenceProcessor:
 
 		try:
 			inferencer.visit(module_meta.tree)
-			self.progress[module_meta] = inferencer
+			self.progress.append(module_meta)
 			print(f"\rInferred [{len(self.progress)}/{self.sequence_length}].", end="", flush=True)
 		except Exception as e:
 			self.errors += 1
@@ -55,12 +55,3 @@ class InferenceProcessor:
 					self.ignore_errors = True
 				else:
 					pass
-		
-	def export(self, export_path: Path):
-		for meta, inferencer in self.progress.items():
-			module_table = meta.table
-			file_path = meta.src_path
-			rel_path = file_path.relative_to(self.working_directory)
-			output_path = export_path / rel_path.parent
-			output_path.parent.mkdir(parents=True, exist_ok=True)
-			inferencer.export_type_data(output_path, module_table.key + "-types")

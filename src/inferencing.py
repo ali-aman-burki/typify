@@ -2,7 +2,7 @@ import ast
 from src.symbol_table import *
 from src.context import Context
 from src.annotation_parser import AnnotationParser
-from src.contanier_types import Type
+from src.annotation_types import Type
 from src.builtins_ctn import builtins
 from src.typeutils import TypeUtils
 from src.preprocessing.module_meta import ModuleMeta
@@ -16,11 +16,6 @@ class Inferencer(ast.NodeVisitor):
 		self.library_table = module_meta.library_table
 		self.module_table = module_meta.table
 		self.current_table = module_meta.table
-
-		self.type_data = {
-			"vassignments": {},
-			"functions": {}
-		}
 
 	def visit_Import(self, node):
 		self.current_table.get_latest_definition().imports.append(node)
@@ -74,21 +69,3 @@ class Inferencer(ast.NodeVisitor):
 		toAssign = ast.fix_missing_locations(toAssign)
 
 		self.visit_Assign(toAssign)
-
-	def export_type_data(self, directory: Path, file_name: str):
-		directory.mkdir(parents=True, exist_ok=True)
-		file_path = directory / f"{file_name}.json"
-		output_data = {
-			"vassignments": {},
-			"functions": {}
-		}
-		for key, value in self.type_data["vassignments"].items():
-			lhs = ast.unparse(value[0]) 
-			inf_type = value[1]
-			output_data["vassignments"][f"{key[0]}:{key[1]}"] = f"{lhs}: {inf_type}"
-		
-		for key, value in self.type_data["functions"].items():
-			func_name, func_type = value
-			output_data["functions"][f"{key[0]}:{key[1]}"] = f"{func_name}() -> {func_type}"
-		with file_path.open("w", encoding="utf-8") as f:
-			json.dump(output_data, f, indent='\t')

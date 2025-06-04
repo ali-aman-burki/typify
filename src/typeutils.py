@@ -1,4 +1,4 @@
-from src.contanier_types import *
+from src.annotation_types import *
 from src.builtins_ctn import builtins
 from src.symbol_table import Table
 

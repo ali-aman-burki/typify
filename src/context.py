@@ -1,6 +1,6 @@
 from src.builtins_ctn import builtins
 from src.symbol_table import Table, VariableTable, ClassTable, FunctionTable
-from src.contanier_types import *
+from src.annotation_types import *
 from src.typeutils import TypeUtils
 from src.chain import Chain, Segment
 import ast

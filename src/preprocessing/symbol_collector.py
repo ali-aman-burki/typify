@@ -1,7 +1,7 @@
 import ast
 from src.symbol_table import VariableTable, ClassTable, FunctionTable, DefinitionTable
 from src.builtins_ctn import builtins
-from src.contanier_types import Type
+from src.annotation_types import Type
 from src.preprocessing.module_meta import ModuleMeta
 
 class Collector(ast.NodeVisitor):
