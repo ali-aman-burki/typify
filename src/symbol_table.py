@@ -24,9 +24,8 @@ class Table:
 		self.type = None
 		self.points_to: list[Table] = []
 		self.returns: list[Table] = []
-		self.return_nodes: list[ast.AST] = []
 		self.template_used: Table = None
-		self.vassignments: list[tuple] = []
+		self.tree: ast.FunctionDef = None		
 
 	def to_dict(self):
 		data = {}

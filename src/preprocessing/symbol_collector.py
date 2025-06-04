@@ -9,6 +9,7 @@ class Collector(ast.NodeVisitor):
 		self.library_table = module_meta.library_table
 		self.module_table = module_meta.table
 		self.current_table = self.module_table
+		self.function_depth = 0
 
 	def visit_ClassDef(self, node):
 		enclosing_definition = self.current_table.get_latest_definition()
@@ -58,22 +59,8 @@ class Collector(ast.NodeVisitor):
 			function_table = enclosing_definition.functions[function_name]
 		
 		fdt = function_table.add_definition(DefinitionTable(function_table.generate_path(), node.lineno, node.col_offset))
+		fdt.tree = node
 		finstance.returns.append(fdt)
-
-		self.current_table = function_table
-		self.generic_visit(node)
-		self.current_table = self.current_table.get_enclosing_table()
-	
-	def visit_Global(self, node):
-		self.current_table.globals.update(node.names)
-		self.generic_visit(node)
-
-	def visit_Nonlocal(self, node):
-		self.current_table.nonlocals.update(node.names)
-		self.generic_visit(node)
-
-	def visit_Call(self, node):
-		self.generic_visit(node)
 
 	def visit_AnnAssign(self, node):
 		if isinstance(node.target, ast.Tuple):

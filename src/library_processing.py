@@ -1,6 +1,4 @@
-from src.inferencing import Inferencer
 from src.preprocessing.preprocessor import Preprocessor
-from src.preprocessing.module_meta import ModuleMeta
 from src.inference_processor import InferenceProcessor
 from pathlib import Path
 
@@ -20,4 +18,4 @@ class LibraryProcessor:
 
 	def export(self):
 		self.preprocessor.export(self.export_path)
-		# self.inference_processor.export(self.export_path)
+		self.inference_processor.export(self.export_path)

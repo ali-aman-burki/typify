@@ -24,6 +24,6 @@ class Utils:
 	def scan_and_export(project_path, export_path):
 		library = LibraryProcessor(project_path, export_path)
 		library.build()
-		library.infer()
+		# library.infer()
 		library.export()
 		print(f"\rAnalysis complete and data exported successfully. Press (r) to rescan or (x) to exit:", end=" ")

@@ -15,7 +15,7 @@ class ParameterSpec:
 class CallerContext:
 	def __init__(self, context: Context):
 		self.context = context
-
+	
 	def build_parameter_map(self, funcdef: ast.FunctionDef) -> dict[str, ParameterSpec]:
 		args = funcdef.args
 		param_map: dict[str, ParameterSpec] = {}

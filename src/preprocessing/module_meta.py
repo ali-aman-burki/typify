@@ -1,4 +1,6 @@
 from src.symbol_table import Table, ModuleTable
+from src.typeutils import TypeAnnotation
+from src.call_utils import ParameterSpec
 from pathlib import Path
 
 import ast
@@ -12,6 +14,8 @@ class ModuleMeta:
 		self.library_table = library_table
 		self.dependency_map: dict[str, list[tuple[list[ModuleMeta], int]]] = {}
 		self.dependencies: set[ModuleMeta] = set()
+		self.var_type_slots: dict[tuple[int, int], TypeAnnotation] = {}
+		self.func_type_slots: dict[tuple[int, int], tuple[dict[str, ParameterSpec], TypeAnnotation]] = {}
 
 	def __repr__(self):
 		return self.table.fully_qualified_name()

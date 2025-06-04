@@ -1,6 +1,6 @@
 from src.symbol_table import LibraryTable, PackageTable, ModuleTable
 from src.preprocessing.import_mapper import ImportMapper
-from src.preprocessing.attribute_collector import Collector
+from src.preprocessing.symbol_collector import Collector
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.graph_utils import GraphUtils
 from pathlib import Path
@@ -21,8 +21,8 @@ class Preprocessor:
 				if "__pycache__" in path.parts:
 					continue
 
-				has_python_files = any((p.suffix == ".py") for p in path.rglob("*"))
-				if has_python_files:
+				should_process = any((p.suffix == ".py") for p in path.rglob("*"))
+				if should_process:
 					package_table = PackageTable(path.name)
 					package_map[path] = package_table
 					parent_table = package_map.get(path.parent, self.library_table)
@@ -35,6 +35,7 @@ class Preprocessor:
 				package_table.add_module(meta.table)
 				Collector(meta).visit(meta.tree)
 				self.meta_map[meta.table] = meta
+		
 
 	def build_graph(self):
 		for m in self.meta_map.values():

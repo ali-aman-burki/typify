@@ -40,7 +40,7 @@ class Inferencer(ast.NodeVisitor):
 		self.generic_visit(node)
 
 	def visit_Return(self, node):
-		pass
+		self.generic_visit(node)
 
 	def visit_Global(self, node):
 		self.current_table.globals.update(node.names)
