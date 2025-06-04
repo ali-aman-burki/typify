@@ -17,5 +17,7 @@ class LibraryProcessor:
 		self.inference_processor.infer()
 
 	def export(self):
-		self.preprocessor.export(self.export_path)
-		self.inference_processor.export(self.export_path)
+		meta_map = self.preprocessor.meta_map
+		for meta in meta_map.values():
+			meta.export_symbols(self.working_directory, self.export_path)
+			meta.export_typeslots(self.working_directory, self.export_path)

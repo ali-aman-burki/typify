@@ -66,9 +66,7 @@ class Table:
 		if self.key == "__init__": return ("" if not path or path == "builtins" else path)
 		return ("" if not path or path == "builtins" else path + ".") + self.key
 
-	def export_to_json(self, directory: Path, file_name: str):
-		directory.mkdir(parents=True, exist_ok=True)
-		file_path = directory / f"{file_name}.json"
+	def export_to_json(self, file_path: Path):
 		with file_path.open("w", encoding="utf-8") as f:
 			json.dump(self.to_dict(), f, indent=4)
 

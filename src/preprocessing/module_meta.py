@@ -4,6 +4,7 @@ from src.call_utils import ParameterSpec
 from pathlib import Path
 
 import ast
+import json
 
 class ModuleMeta:
 
@@ -28,3 +29,30 @@ class ModuleMeta:
 		table = ModuleTable(src_path.stem)
 		meta = ModuleMeta(src_path, tree, table, library_table)
 		return meta
+	
+	def mirror_export_path(self, working_directory: Path, export_path: Path, suffix: str = "") -> Path:
+		file_path = self.src_path
+		rel_path = file_path.relative_to(working_directory)
+		dash = f"-{suffix}" if suffix else ""
+		return export_path / rel_path.parent / f"{self.table.key}{dash}.json"
+	
+	def export_symbols(self, working_directory: Path, export_path: Path):
+		output_path = self.mirror_export_path(working_directory, export_path, suffix="symbols")
+		output_path.parent.mkdir(parents=True, exist_ok=True)
+		self.table.export_to_json(output_path)
+
+	def export_typeslots(self, working_directory: Path, export_path: Path):
+		output_path = self.mirror_export_path(working_directory, export_path, suffix="types")
+		output_path.parent.mkdir(parents=True, exist_ok=True)
+
+		output = {
+			"vdefs": {
+				f"{k[0]}:{k[1]}": f"{v[0]}: {v[1]}" for k, v in self.vslots.items()
+			},
+			"fdefs": {
+				f"{k[0]}:{k[1]}": f"{v[0]}(...) -> {v[2]}" for k, v in self.fslots.items()
+			}
+		}
+
+		with output_path.open("w", encoding="utf-8") as f:
+			json.dump(output, f, indent="\t")

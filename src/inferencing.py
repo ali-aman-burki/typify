@@ -1,15 +1,8 @@
 import ast
 from src.symbol_table import *
-from src.context import Context
-from src.annotation_parser import AnnotationParser
-from src.annotation_types import Type
-from src.builtins_ctn import builtins
-from src.typeutils import TypeUtils
 from src.preprocessing.module_meta import ModuleMeta
 
-import json
 import copy
-from pathlib import Path
 
 class Inferencer(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
