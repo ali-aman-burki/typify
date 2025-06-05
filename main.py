@@ -1,6 +1,5 @@
 import argparse
 from src.utils import Utils
-from src.preprocessing.preprocessor import Preprocessor
 import os
 
 parser = argparse.ArgumentParser(description="Build and export type bindings for a Python project.")

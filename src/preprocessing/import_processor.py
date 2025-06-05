@@ -2,20 +2,14 @@ import ast
 from src.symbol_table import Table, ModuleTable, PackageTable
 from src.preprocessing.module_meta import ModuleMeta
 
-class ImportMapper:
-	@staticmethod
-	def collect_dependencies(meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta) -> set[ModuleTable]:
-		traverser = ImporTraverser(meta_map, module_meta)
-		traverser.visit(module_meta.tree)
-		return module_meta.dependencies
-
-class ImporTraverser(ast.NodeVisitor):
+class ImportCollector(ast.NodeVisitor):
 	def __init__(self, meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta):
 		self.meta_map = meta_map
 		self.library_table = module_meta.library_table
 		self.module_meta = module_meta
 		self.module_table = module_meta.table
 		self.path_chain: list[Table] = self.module_table.get_path_chain()
+		self.in_function = False
 
 	def resolve(self, import_chain: list[str]) -> list[tuple[list[Table], int]]:
 		starting_points: list[tuple[list[Table], int]] = []
@@ -42,20 +36,19 @@ class ImporTraverser(ast.NodeVisitor):
 
 		return result
 	
-	def filter(self, chains: list[tuple[list[Table], int]]) -> list[tuple[list[Table], int]]:
+	def filter(self, chain_tuples: list[tuple[list[Table], int]]) -> list[tuple[list[Table], int]]:
 		module_table = self.module_meta.table
-		for table_list, _ in chains:
+		for table_list, _ in chain_tuples:
 			for i in range(len(table_list)):
 				table = table_list[i]
 				if isinstance(table, PackageTable) and "__init__" in table.modules and table.modules["__init__"] != module_table:
 					table_list[i] = table.modules["__init__"]
-		return chains
+		return chain_tuples
 
-	def collect(self, chains: list[tuple[list[Table], int]]) -> set[Table]:
-		resolved_chains = self.filter(chains)
+	def collect(self, resolved_chain_tuples: list[tuple[list[Table], int]]) -> set[Table]:
 		modules: set[Table] = set()
 
-		for table_list, _ in resolved_chains:
+		for table_list, _ in resolved_chain_tuples:
 			for table in table_list:
 				if not isinstance(table, PackageTable):
 					modules.add(table)
@@ -65,28 +58,47 @@ class ImporTraverser(ast.NodeVisitor):
 	def as_metas(self, modules: set[Table]) -> set[ModuleMeta]:
 		return {self.meta_map[table] for table in modules if table in self.meta_map}
 
-	def visit_Import(self, node):
+	def visit_FunctionDef(self, node):
+		was_in_function = self.in_function
+		self.in_function = True
+		self.generic_visit(node)
+		self.in_function = was_in_function
+
+	def visit_AsyncFunctionDef(self, node):
+		self.visit_FunctionDef(node)
+
+	def visit_Import(self, node: ast.Import):
 		for alias in node.names:
 			import_chain = alias.name.split('.')
-			chains = self.resolve(import_chain)
-			collected = self.collect(chains)
-			self.module_meta.dependency_map[alias.name] = chains
-			self.module_meta.dependencies.update(self.as_metas(collected))
+			chain_tuples = self.resolve(import_chain)
+			resolved_chain_tuples = self.filter(chain_tuples)
+			collected = self.collect(resolved_chain_tuples)
+			
+			self.module_meta.dependency_map[alias.name] = {
+				(self.meta_map[chain_tuple[0][-1]], chain_tuple[1]) for chain_tuple in resolved_chain_tuples
+			}
 
-		self.generic_visit(node)
+			if not self.in_function:
+				self.module_meta.dependencies.update(self.as_metas(collected))
 
-	def visit_ImportFrom(self, node):
+	def visit_ImportFrom(self, node: ast.ImportFrom):
 		if node.module and not node.level:
 			import_chain = node.module.split('.')
 			identifiers = [alias.name for alias in node.names]
-			chains = self.resolve(import_chain)
+			chain_tuples = self.resolve(import_chain)
+			resolved_chain_tuples = self.filter(chain_tuples)
+
 			if "*" in identifiers:
-				collected = self.collect(chains)
-				self.module_meta.dependency_map[node.module] = chains
-				self.module_meta.dependencies.update(self.as_metas(collected))
+				collected = self.collect(resolved_chain_tuples)
+				self.module_meta.dependency_map[node.module] = {
+					(self.meta_map[chain_tuple[0][-1]], chain_tuple[1]) for chain_tuple in resolved_chain_tuples
+				}
+				if not self.in_function:
+					self.module_meta.dependencies.update(self.as_metas(collected))
 				return
+
 			results = []
-			for chain in chains:
+			for chain in chain_tuples:
 				end_point = chain[0][-1]
 				if isinstance(end_point, ModuleTable):
 					if all(identifier in end_point.variables for identifier in identifiers):
@@ -97,10 +109,18 @@ class ImporTraverser(ast.NodeVisitor):
 					search_space = module_names | init_vars
 					if all(identifier in search_space for identifier in identifiers):
 						results.append(chain)
-			
-			collected = self.collect(results)
-			self.module_meta.dependency_map[node.module] = results
-			self.module_meta.dependencies.update(self.as_metas(collected))
-		else:
+
+			chains_to_use = results if results else chain_tuples
+			filtered_results = self.filter(chains_to_use)
+			collected = self.collect(filtered_results)
+			self.module_meta.dependency_map[node.module] = {
+				(self.meta_map[chain_tuple[0][-1]], chain_tuple[1]) for chain_tuple in filtered_results
+			}
+
+			if not self.in_function:
+				self.module_meta.dependencies.update(self.as_metas(collected))
+		else: 
 			pass
+
 		self.generic_visit(node)
+

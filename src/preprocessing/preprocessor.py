@@ -1,10 +1,14 @@
-from src.symbol_table import LibraryTable, PackageTable, ModuleTable
-from src.preprocessing.import_mapper import ImportMapper
-from src.preprocessing.symbol_collector import Collector
-from src.preprocessing.typeslots_collector import SlotsCollector
+from pathlib import Path
+
+from src.symbol_table import (
+    LibraryTable,
+    PackageTable,
+    ModuleTable,
+)
+from src.preprocessing.symbol_slot_collector import SymbolSlotCollector
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.graph_utils import GraphUtils
-from pathlib import Path
+from src.preprocessing.import_processor import ImportCollector
 
 class Preprocessor:
 
@@ -29,19 +33,18 @@ class Preprocessor:
 					parent_table = package_map.get(path.parent, self.library_table)
 					parent_table.add_package(package_table)
 
-
 			elif path.suffix == ".py":
 				package_table = package_map.get(path.parent, self.library_table)
 				meta = ModuleMeta.from_source(path, self.library_table)
 				package_table.add_module(meta.table)
-				Collector(meta).visit(meta.tree)
 				self.meta_map[meta.table] = meta
+				
+				SymbolSlotCollector(meta).visit(meta.tree)
+
+		for m in self.meta_map.values():
+			ImportCollector(self.meta_map, m).visit(m.tree)
 
 	def generate_resolving_sequence(self):
-		for m in self.meta_map.values():
-			self.dependency_graph[m] = ImportMapper.collect_dependencies(self.meta_map, m)
-		for m in self.meta_map.values():
-			SlotsCollector(m).visit(m.tree)
 		sccs = GraphUtils.tarjan(self.dependency_graph)
 		resolving_sequence = GraphUtils.generate_resolving_sequence(sccs)
 		return resolving_sequence

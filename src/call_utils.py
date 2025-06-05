@@ -1,6 +1,5 @@
 import ast
 
-from src.context import Context
 from copy import deepcopy
 from src.symbol_table import Table
 from src.typeutils import TypeAnnotation, UnresolvedType

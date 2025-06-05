@@ -13,7 +13,7 @@ class ModuleMeta:
 		self.tree = tree
 		self.table = table
 		self.library_table = library_table
-		self.dependency_map: dict[str, list[tuple[list[ModuleMeta], int]]] = {}
+		self.dependency_map: dict[str, set[tuple[ModuleMeta, int]]] = {}
 		self.dependencies: set[ModuleMeta] = set()
 		self.vslots: dict[tuple[int, int], tuple[str, TypeAnnotation]] = {}
 		self.fslots: dict[tuple[int, int], tuple[str, dict[str, ParameterSpec], TypeAnnotation]] = {}
@@ -46,13 +46,23 @@ class ModuleMeta:
 		output_path.parent.mkdir(parents=True, exist_ok=True)
 
 		output = {
+			"dependency_map": {
+				
+			},
 			"vdefs": {
 				f"{k[0]}:{k[1]}": f"{v[0]}: {v[1]}" for k, v in self.vslots.items()
 			},
 			"fdefs": {
-				f"{k[0]}:{k[1]}": f"{v[0]}(...) -> {v[2]}" for k, v in self.fslots.items()
+				f"{k[0]}:{k[1]}": f"def {v[0]}(...) -> {v[2]}" for k, v in self.fslots.items()
 			}
 		}
+		
+		for k, v in self.dependency_map.items():
+			key = k
+			sorted_value_list = sorted(v, key=lambda t: t[1], reverse=True)
+			formatted_list = [repr(t[0]) for t in sorted_value_list]
+			output["dependency_map"][key] = ", ".join(formatted_list)
 
 		with output_path.open("w", encoding="utf-8") as f:
 			json.dump(output, f, indent="\t")
+
