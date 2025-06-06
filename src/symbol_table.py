@@ -16,8 +16,8 @@ class Table:
 		self.imports: list[ast.AST] = []
 		self.bases: list = []
 		self.params: list = []
-		self.globals: ast.AST = set()
-		self.nonlocals: ast.AST = set()
+		self.globals: set[ast.AST] = set()
+		self.nonlocals: set[ast.AST] = set()
 		self.parent: Table = None
 
 		self.collected_types: list = []
