@@ -4,6 +4,7 @@ builtins = ModuleTable("builtins")
 object_table = builtins.add_class(ClassTable("object"))
 type_table = builtins.add_class(ClassTable("type"))
 function_table = builtins.add_class(ClassTable("function"))
+module_table = builtins.add_class(ClassTable("module"))
 
 list_table = builtins.add_class(ClassTable("list"))
 list_table.bases.append(object_table)

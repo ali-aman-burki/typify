@@ -10,14 +10,6 @@ class Inferencer(ast.NodeVisitor):
 		self.module_table = module_meta.table
 		self.current_table = module_meta.table
 
-	def visit_Import(self, node):
-		self.current_table.get_latest_definition().imports.append(node)
-		self.generic_visit(node)
-
-	def visit_ImportFrom(self, node):
-		self.current_table.get_latest_definition().imports.append(node)
-		self.generic_visit(node)
-
 	def visit_ClassDef(self, node):
 		self.generic_visit(node)
 
@@ -28,14 +20,6 @@ class Inferencer(ast.NodeVisitor):
 		self.generic_visit(node)
 
 	def visit_Return(self, node):
-		self.generic_visit(node)
-
-	def visit_Global(self, node):
-		self.current_table.globals.update(node.names)
-		self.generic_visit(node)
-
-	def visit_Nonlocal(self, node):
-		self.current_table.nonlocals.update(node.names)
 		self.generic_visit(node)
 
 	def visit_Call(self, node):

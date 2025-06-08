@@ -22,8 +22,8 @@ class Table:
 
 		self.collected_types: list = []
 		self.type = None
-		self.points_to: list[Table] = []
-		self.returns: list[Table] = []
+		self.points_to: set[Table] = set()
+		self.returns: set[Table] = set()
 		self.template_used: Table = None
 		self.tree: ast.FunctionDef = None		
 
@@ -42,6 +42,12 @@ class Table:
 		if self.variables: data["variables"] = {key: value.to_dict() for key, value in self.variables.items()}
 		return data
 	
+	@staticmethod
+	def module_shallow_copy(src: "Table", dst: "Table"):
+		dst.variables.update(src.variables)
+		dst.classes.update(src.classes)
+		dst.functions.update(src.functions)
+
 	def get_type_class(self):
 		if isinstance(self, DefinitionTable):
 			if isinstance(self.parent, ClassTable):
@@ -54,10 +60,6 @@ class Table:
 	def create_instance(self, template_def):
 		instance = InstanceTable(self.key)
 		instance.template_used = template_def
-		for var in template_def.variables.values():
-			nv = VariableTable(var.key)
-			instance.add_variable(nv)
-		
 		template_def.instances.append(instance)
 		return instance
 
@@ -177,15 +179,7 @@ class InstanceTable(Table):
 		super().__init__(key)
 
 class DefinitionTable(Table):
-	def __init__(self, path, line, column):
-		super().__init__(f"{path}:{line}:{column}")
-		self.path = path
-		self.line = line
-		self.column = column
-	
-	def parse(key):
-		data = key.split(":")
-		path = data[0]
-		line = int(data[1])
-		column = int(data[2])
-		return DefinitionTable(path, line, column)
+	def __init__(self, module: Table, position: tuple[int, int]):
+		super().__init__(f"{module.fully_qualified_name()}:{position[0]}:{position[1]}")
+		self.module = module
+		self.position = position

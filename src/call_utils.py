@@ -5,14 +5,15 @@ from src.symbol_table import Table
 from src.typeutils import TypeAnnotation, UnresolvedType
 
 class ParameterSpec:
-	def __init__(self, node: ast.expr | list[ast.expr] | dict[str, ast.expr] | None, kind: str, annotation: ast.AST | None = None):
+	def __init__(self, position: tuple[int, int], node: ast.expr | list[ast.expr] | dict[str, ast.expr] | None, kind: str, annotation: ast.AST | None = None):
 		self.node = node
+		self.position = position
 		self.kind = kind
 		self.annotation = annotation
 		self.type_bundle: tuple[TypeAnnotation, list[Table]] = (UnresolvedType(None), [])
 
 class CallUtils:
-	
+
 	@staticmethod
 	def build_parameter_map(funcdef: ast.FunctionDef) -> dict[str, ParameterSpec]:
 		args = funcdef.args
@@ -26,7 +27,9 @@ class CallUtils:
 
 		for i, arg in enumerate(args.posonlyargs):
 			default = defaults[i - default_offset] if i >= default_offset else None
+			position = (arg.lineno, arg.col_offset)
 			param_map[arg.arg] = ParameterSpec(
+				position=position,
 				node=default,
 				kind="posonly",
 				annotation=arg.annotation
@@ -35,34 +38,43 @@ class CallUtils:
 		for i, arg in enumerate(args.args):
 			j = i + num_posonly
 			default = defaults[j - default_offset] if j >= default_offset else None
+			position = (arg.lineno, arg.col_offset)
 			param_map[arg.arg] = ParameterSpec(
+				position=position,
 				node=default,
 				kind="pos_or_kw",
 				annotation=arg.annotation
 			)
 
 		if args.vararg:
+			position = (args.vararg.lineno, args.vararg.col_offset)
 			param_map[f"*{args.vararg.arg}"] = ParameterSpec(
+				position=position,
 				node=[],
 				kind="vararg",
 				annotation=args.vararg.annotation
 			)
 
 		for kwarg, default in zip(args.kwonlyargs, args.kw_defaults):
+			position = (kwarg.lineno, kwarg.col_offset)
 			param_map[kwarg.arg] = ParameterSpec(
+				position=position,
 				node=default,
 				kind="kwonly",
 				annotation=kwarg.annotation
 			)
 
 		if args.kwarg:
+			position = (args.kwarg.lineno, args.kwarg.col_offset)
 			param_map[f"**{args.kwarg.arg}"] = ParameterSpec(
+				position=position,
 				node=None,
 				kind="kwarg",
 				annotation=args.kwarg.annotation
 			)
 
 		return param_map
+
 
 	@staticmethod
 	def map_args_to_params(param_map: dict[str, ParameterSpec], call: ast.Call) -> dict[str, ParameterSpec]:
