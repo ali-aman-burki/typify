@@ -118,7 +118,7 @@ class ImportCollector():
 
 	def process_import(self, import_tuple: tuple[ast.Import, Table, bool]):
 		node = import_tuple[0]
-		dt = import_tuple[1]
+		enclosing_definition = import_tuple[1]
 		in_function = import_tuple[2]
 		node_str = ast.unparse(node)
 		tofill = self.module_meta.dependency_map[node_str] = set()
@@ -167,11 +167,12 @@ class ImportCollector():
 			if not in_function:
 				self.module_meta.dependencies.update(self.as_metas(collected))
 		
-		for var in tofill: dt.incorporate_variable(var)
+		for var in tofill:
+			enclosing_definition.incorporate_variable(var)
 		
 	def process_import_from(self, import_tuple: tuple[ast.ImportFrom, Table, bool]):
 		node = import_tuple[0]
-		dt = import_tuple[1]
+		enclosing_definition = import_tuple[1]
 		in_function = import_tuple[2]
 		m = builtins.classes["module"]
 		node_str = ast.unparse(node)
@@ -260,6 +261,6 @@ class ImportCollector():
 				vdt = var.get_latest_definition()
 				vdt.type = TypeUtils.unify(vdt.collected_types)
 		
-		for var in tofill: dt.incorporate_variable(var)
+		for var in tofill: enclosing_definition.incorporate_variable(var)
 		if in_function:
 			self.module_meta.dependencies.update(metas)
