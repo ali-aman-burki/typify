@@ -7,12 +7,13 @@ import ast
 class ScopeManager:
 
 	@staticmethod
-	def class_table(node: ast.ClassDef, enclosing: Table):
+	def class_table(node: ast.ClassDef, enclosing: Table, symbols: set[Table]):
 		position = (node.lineno, node.col_offset)
 		class_name = node.name
 		
 		if class_name not in enclosing.variables: 
-			enclosing.add_variable(VariableTable(class_name))
+			symbols.add(enclosing.add_variable(VariableTable(class_name)))
+			
 		cvt = enclosing.variables[class_name]
 		cdvt = cvt.add_definition(DefinitionTable(cvt.get_enclosing_module(), position))
 		t = builtins.classes["type"]
@@ -23,6 +24,7 @@ class ScopeManager:
 		if class_name not in enclosing.classes:
 			result = ClassTable(class_name)
 			enclosing.add_class(result)
+			symbols.add(result)
 		else:
 			result = enclosing.classes[class_name]
 
@@ -30,12 +32,12 @@ class ScopeManager:
 		tinstnace.returns.add(cd)
 		return cd
 
-	def function_table(node: ast.FunctionDef, enclosing: Table):
+	def function_table(node: ast.FunctionDef, enclosing: Table, symbols: set[Table]):
 		position = (node.lineno, node.col_offset)
 		function_name = node.name
 
 		if function_name not in enclosing.variables: 
-			enclosing.add_variable(VariableTable(function_name))
+			symbols.add(enclosing.add_variable(VariableTable(function_name)))
 		
 		fvt = enclosing.variables[function_name]
 		fdvt = fvt.add_definition(DefinitionTable(fvt.get_enclosing_module(), position))
@@ -45,12 +47,13 @@ class ScopeManager:
 		fdvt.points_to.add(finstance)
 
 		if function_name not in enclosing.functions:
-			function_table = FunctionTable(function_name)
-			enclosing.add_function(function_table)
+			result = FunctionTable(function_name)
+			enclosing.add_function(result)
+			symbols.add(result)
 		else:
-			function_table = enclosing.functions[function_name]
+			result = enclosing.functions[function_name]
 		
-		fdt = function_table.add_definition(DefinitionTable(function_table.get_enclosing_module(), position))
+		fdt = result.add_definition(DefinitionTable(result.get_enclosing_module(), position))
 		fdt.tree = node
 		finstance.returns.add(fdt)
 		return fdt

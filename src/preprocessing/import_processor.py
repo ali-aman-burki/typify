@@ -12,6 +12,7 @@ class ImportCollector():
 		self.module_meta = module_meta
 		self.module_table = module_meta.table
 		self.path_chain: list[Table] = self.module_table.get_path_chain()
+		self.symbols: set[Table] = set()
 
 	def collect(self):
 		for import_tuple in self.module_meta.imports:
@@ -168,7 +169,8 @@ class ImportCollector():
 				self.module_meta.dependencies.update(self.as_metas(collected))
 		
 		for var in tofill:
-			enclosing_definition.incorporate_variable(var)
+			ivar = enclosing_definition.incorporate_variable(var)
+			self.symbols.add(ivar)
 		
 	def process_import_from(self, import_tuple: tuple[ast.ImportFrom, Table, bool]):
 		node = import_tuple[0]
@@ -261,6 +263,9 @@ class ImportCollector():
 				vdt = var.get_latest_definition()
 				vdt.type = TypeUtils.unify(vdt.collected_types)
 		
-		for var in tofill: enclosing_definition.incorporate_variable(var)
+		for var in tofill: 
+			ivar = enclosing_definition.incorporate_variable(var)
+			self.symbols.add(ivar)
+
 		if in_function:
 			self.module_meta.dependencies.update(metas)

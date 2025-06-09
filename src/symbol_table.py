@@ -10,7 +10,8 @@ class Table:
 		self.classes: dict[str, Table] = {}
 		self.functions: dict[str, Table] = {}
 		self.variables: dict[str, Table] = {}
-		self.definitions: dict[str, Table] = {}
+		self.definitions: dict[Table, dict[str, DefinitionTable]] = {}
+		self.definitions_list: list[DefinitionTable] = []
 		self.instances: list[Table] = []
 
 		self.imports: list[ast.AST] = []
@@ -30,7 +31,12 @@ class Table:
 	def to_dict(self):
 		data = {}
 		if self.type: data["type"] = repr(self.type)
-		if self.definitions: data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
+		if self.definitions:
+			data["definitions"] = {}
+			for m in self.definitions:
+				subdict = self.definitions[m]
+				for k, v in subdict.items():
+					data["definitions"][k] = v.to_dict()
 		if self.globals: data["globals"] = list(self.globals)
 		if self.packages: data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}
 		if self.modules: data["modules"] = {key: value.to_dict() for key, value in self.modules.items()}
@@ -115,8 +121,11 @@ class Table:
 			result = result.get_enclosing_table()
 		return result
 
-	def get_latest_definition(self):
-		return next(reversed(self.definitions.values())) if self.definitions else self
+	def get_latest_definition(self) -> "DefinitionTable":
+		if not self.definitions:
+			return self
+		last_module_dict = next(reversed(self.definitions.values()))
+		return next(reversed(last_module_dict.values()))
 
 	def add_package(self, package_table):
 		self.packages[package_table.key] = package_table
@@ -143,18 +152,36 @@ class Table:
 		variable_table.parent = self
 		return variable_table
 
-	def add_definition(self, definition_table):
-		self.definitions[definition_table.key] = definition_table
+	def add_definition(self, definition_table: "DefinitionTable", module_precedence: list["Table"] | None = None) -> "DefinitionTable":
+		if definition_table.module not in self.definitions:
+			self.definitions[definition_table.module] = {}
+
+		self.definitions[definition_table.module][definition_table.key] = definition_table
+			 
 		definition_table.parent = self
 		return definition_table
 	
+	def order_definitions(self, module_order: list["ModuleTable"]) -> dict["ModuleTable", dict[str, "DefinitionTable"]]:
+		ordered_definitions = {}
+    
+		for module in module_order:
+			if module in self.definitions:
+				ordered_subdict = dict(
+					sorted(self.definitions[module].items(), key=lambda item: item[1].position)
+				)
+				ordered_definitions[module] = ordered_subdict
+
+		return ordered_definitions
+	
 	def incorporate_variable(self, variable_table: "VariableTable"):
 		if variable_table.key in self.variables:
-			self.variables[variable_table.key].definitions.update(variable_table.definitions)
-			for d in variable_table.definitions.values():
-				d.parent = self.variables[variable_table.key]
+			for topdict in variable_table.definitions.values():
+				for d in topdict.values():
+					self.variables[variable_table.key].add_definition(d)
+					d.parent = self.variables[variable_table.key]
+			return self.variables[variable_table.key]
 		else:
-			self.add_variable(variable_table)
+			return self.add_variable(variable_table)
 	
 class LibraryTable(Table):
 	def __init__(self, key):

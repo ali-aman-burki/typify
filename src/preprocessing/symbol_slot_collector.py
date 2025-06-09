@@ -23,6 +23,7 @@ class SymbolSlotCollector(ast.NodeVisitor):
 
 		self.function_depth = 0
 		self.imports = module_meta.imports
+		self.symbols: set[Table] = set()
 
 	def visit_Import(self, node):
 		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth==0))
@@ -34,7 +35,7 @@ class SymbolSlotCollector(ast.NodeVisitor):
 
 	def visit_ClassDef(self, node):
 		enclosing = self.current_table.get_latest_definition()
-		self.push(ScopeManager.class_table(node, enclosing))
+		self.push(ScopeManager.class_table(node, enclosing, self.symbols))
 		self.generic_visit(node)
 		self.pop()
 
@@ -45,7 +46,7 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		self.fslots[key] = value
 
 		enclosing = self.current_table.get_latest_definition()
-		self.push(ScopeManager.function_table(node, enclosing))
+		self.push(ScopeManager.function_table(node, enclosing, self.symbols))
 		self.function_depth += 1
 		self.generic_visit(node)
 		self.function_depth -= 1

@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from src.symbol_table import (
-    LibraryTable,
+    Table,
+	LibraryTable,
     PackageTable,
     ModuleTable,
 )
@@ -16,7 +17,8 @@ class Preprocessor:
 		self.working_directory = Path(working_directory).resolve()
 		self.library_table = LibraryTable(self.working_directory.name)
 		self.meta_map: dict[ModuleTable, ModuleMeta] = {}
-		self.dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
+		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
+		self.symbols: set[Table] = set()
 	
 	def build(self):
 		package_map = {self.working_directory: self.library_table}
@@ -39,10 +41,15 @@ class Preprocessor:
 				package_table.add_module(meta.table)
 				self.meta_map[meta.table] = meta
 				
-				SymbolSlotCollector(meta).visit(meta.tree)
-
-		for m in self.meta_map.values():
-			ImportCollector(self.meta_map, m).collect()
+				ssc = SymbolSlotCollector(meta)
+				ssc.visit(meta.tree)
+				self.symbols.update(ssc.symbols)
+		
+		for meta in self.meta_map.values():
+			ic = ImportCollector(self.meta_map, meta)
+			ic.collect()
+			self.symbols.update(ic.symbols)
+			self.dependency_graph[meta] = meta.dependencies
 
 	def generate_resolving_sequence(self):
 		sccs = GraphUtils.tarjan(self.dependency_graph)

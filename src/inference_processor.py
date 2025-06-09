@@ -8,6 +8,7 @@ import traceback
 class InferenceProcessor:
 	def __init__(self, preprocessor: Preprocessor):
 		self.preprocessor = preprocessor
+		self.symbols = preprocessor.symbols
 		self.meta_map = self.preprocessor.meta_map
 		self.sequence = []
 		self.sequence_length = 0
@@ -15,10 +16,16 @@ class InferenceProcessor:
 		self.ignore_errors = False
 		self.progress: list[ModuleMeta] = []
 		self.working_directory = self.preprocessor.working_directory
-	
+
 	def infer(self):
 		self.sequence = self.preprocessor.generate_resolving_sequence()
 		self.sequence_length = len(self.sequence)
+		
+		module_precedence = [meta.table for meta in self.sequence]
+		for t in self.symbols:
+			t.definitions = t.order_definitions(module_precedence)
+			pass
+
 		for module_meta in self.sequence: self.infer_meta(module_meta)
 
 	def infer_meta(self, module_meta: ModuleMeta):
