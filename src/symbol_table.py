@@ -20,7 +20,7 @@ class Table:
 		self.nonlocals: set[ast.AST] = set()
 		self.parent: Table = None
 
-		self.collected_types: list = []
+		self.collected_types: set = set()
 		self.type = None
 		self.points_to: set[Table] = set()
 		self.returns: set[Table] = set()
@@ -43,10 +43,8 @@ class Table:
 		return data
 	
 	@staticmethod
-	def module_shallow_copy(src: "Table", dst: "Table"):
+	def transfer_content(src: "Table", dst: "Table"):
 		dst.variables.update(src.variables)
-		dst.classes.update(src.classes)
-		dst.functions.update(src.functions)
 
 	def get_type_class(self):
 		if isinstance(self, DefinitionTable):
@@ -57,7 +55,7 @@ class Table:
 		else:
 			return None
 	
-	def create_instance(self, template_def):
+	def create_instance(self, template_def: "DefinitionTable"):
 		instance = InstanceTable(self.key)
 		instance.template_used = template_def
 		template_def.instances.append(instance)
@@ -149,6 +147,14 @@ class Table:
 		self.definitions[definition_table.key] = definition_table
 		definition_table.parent = self
 		return definition_table
+	
+	def incorporate_variable(self, variable_table: "VariableTable"):
+		if variable_table.key in self.variables:
+			self.variables[variable_table.key].definitions.update(variable_table.definitions)
+			for d in variable_table.definitions.values():
+				d.parent = self.variables[variable_table.key]
+		else:
+			self.add_variable(variable_table)
 	
 class LibraryTable(Table):
 	def __init__(self, key):

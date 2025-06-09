@@ -13,6 +13,7 @@ class ModuleMeta:
 		self.tree = tree
 		self.table = table
 		self.library_table = library_table
+		self.imports: list[tuple[ast.AST, Table, bool]] = []
 		self.dependency_map: dict[str, set[VariableTable]] = {}
 		self.dependencies: set[ModuleMeta] = set()
 		self.vslots: dict[tuple[int, int], tuple[str, TypeAnnotation]] = {}
@@ -57,9 +58,9 @@ class ModuleMeta:
 			}
 		}
 		
-		for k, v in self.dependency_map.items():
+		for k, s in self.dependency_map.items():
 			key = k
-			formatted_list = [var.key for var in v]
+			formatted_list = [var.key for var in s]
 			output["dependency_map"][key] = ", ".join(formatted_list)
 
 		with output_path.open("w", encoding="utf-8") as f:

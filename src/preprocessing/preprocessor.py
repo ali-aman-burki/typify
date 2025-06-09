@@ -42,7 +42,7 @@ class Preprocessor:
 				SymbolSlotCollector(meta).visit(meta.tree)
 
 		for m in self.meta_map.values():
-			ImportCollector(self.meta_map, m).visit(m.tree)
+			ImportCollector(self.meta_map, m).collect()
 
 	def generate_resolving_sequence(self):
 		sccs = GraphUtils.tarjan(self.dependency_graph)

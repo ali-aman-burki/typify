@@ -23,15 +23,14 @@ class TypeUtils:
 
 	@staticmethod
 	def unify(types, allow_optional: bool = False):
-		seen = []
+		seen = set()
 
 		def add_unique(t):
 			if isinstance(t, UnionType):
 				for subtype in t.types:
-					if subtype not in seen:
-						seen.append(subtype)
-			elif t not in seen:
-				seen.append(t)
+					seen.add(subtype)
+			else:
+				seen.add(t)
 
 		for t in types:
 			add_unique(t)
@@ -40,47 +39,47 @@ class TypeUtils:
 		has_none = none_type in seen
 
 		if has_none:
-			non_none_types = [t for t in seen if t != none_type]
+			non_none_types = {t for t in seen if t != none_type}
 			if non_none_types:
 				unified_non_none = TypeUtils.unify(non_none_types, allow_optional=allow_optional)
-				if allow_optional:
-					return OptionalType(unified_non_none)
-				else:
-					return unified_non_none
+				return OptionalType(unified_non_none) if allow_optional else unified_non_none
 			else:
 				return none_type if allow_optional else AnyType()
 
 		if len(seen) > 1:
 			return UnionType(seen)
 		elif seen:
-			return seen[0]
+			return next(iter(seen))
 		else:
 			return AnyType()
 
-
 	@staticmethod
-	def unwrap(unified_type: TypeAnnotation) -> list[Type]:
+	def unwrap(unified_type: TypeAnnotation) -> set[Type]:
+		none_type = Type(builtins.classes["NoneType"])
 		if isinstance(unified_type, UnionType):
-			return unified_type.types
+			return set(unified_type.types)
 		elif isinstance(unified_type, OptionalType):
 			if isinstance(unified_type.element_type, UnionType):
-				return unified_type.element_type.types + [Type(builtins.classes["NoneType"])]
+				return set(unified_type.element_type.types) | {none_type}
 			else:
-				return [unified_type.element_type, Type(builtins.classes["NoneType"])]
+				return {unified_type.element_type, none_type}
 		else:
-			return [unified_type]
-	
+			return {unified_type}
+
 	@staticmethod
-	def instantiate(unified_type: TypeAnnotation) -> list[Table]:
+	def instantiate(unified_type: TypeAnnotation) -> set[Table]:
 		unwrapped = TypeUtils.unwrap(unified_type)
-		points_to = [t.type_def.get_type_class().create_instance(t.type_def) for t in unwrapped if not isinstance(t, UnresolvedType)]
-		return points_to
+		return {
+			t.type_def.get_type_class().create_instance(t.type_def)
+			for t in unwrapped
+			if not isinstance(t, UnresolvedType)
+		}
 
 	@staticmethod
 	def select_more_resolved_type(
-		annotated_bundle: tuple[TypeAnnotation, list[Table]],
-		inferred_bundle: tuple[TypeAnnotation, list[Table]]
-	) -> tuple[TypeAnnotation, list[Table]]:
+		annotated_bundle: tuple[TypeAnnotation, set[Table]],
+		inferred_bundle: tuple[TypeAnnotation, set[Table]]
+	) -> tuple[TypeAnnotation, set[Table]]:
 		annotated_type, _ = annotated_bundle
 		inferred_type, _ = inferred_bundle
 

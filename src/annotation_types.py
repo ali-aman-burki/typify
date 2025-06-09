@@ -6,6 +6,9 @@ class TypeAnnotation:
 	def __eq__(self, value):
 		return repr(self) == repr(value)
 
+	def __hash__(self):
+		return hash(repr(self))
+
 class UnresolvedType(TypeAnnotation):
 	def __init__(self, identifier):
 		self.identifier = identifier

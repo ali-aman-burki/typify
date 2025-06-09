@@ -19,13 +19,13 @@ class Context:
 			current = current.func
 		return count
 
-	def call(self, callable_def: Table):
+	def call(self, callable_def: Table) -> tuple[TypeAnnotation, set[Table]]:
 		parent = callable_def.get_enclosing_table()
 		if isinstance(parent, ClassTable): 
-			return (Type(callable_def), [parent.create_instance(callable_def)])
+			return (Type(callable_def), {parent.create_instance(callable_def)})
 		elif isinstance(parent, FunctionTable):
 			return (callable_def.type, callable_def.points_to)
-		return (UnresolvedType(None), [])
+		return (UnresolvedType(None), set())
 
 	def lookup(self, identifier: str, defTable: Table, where: list[str]):
 		mapping = {
@@ -56,74 +56,87 @@ class Context:
 			return self.current_table.get_latest_definition().variables[name]
 		return None
 
-	def resolve_start(self, start_segment: Segment) -> tuple[TypeAnnotation, list[Table]]:
+	def resolve_start(self, start_segment: Segment) -> tuple[TypeAnnotation, set[Table]]:
 		starting_identifier = ast.unparse(start_segment.anchor)
 		found = self.climb_lookup(starting_identifier, ["variables"])
-		
+
 		if found:
 			fd = found.get_latest_definition()
+
 			if isinstance(start_segment.trail[-1], ast.Name):
 				return (fd.type, fd.points_to)
+
 			elif isinstance(start_segment.trail[-1], ast.Call):
 				points_to = fd.points_to
 				numcalls = self.count_calls(start_segment.trail[-1])
 
 				for _ in range(numcalls):
-					results = [self.call(tdef) for instance in points_to for tdef in instance.returns]
-					types = [res[0] for res in results]
-					points_to = [pt for res in results for pt in res[1]]
+					results = [
+						self.call(tdef)
+						for instance in points_to
+						for tdef in instance.returns
+					]
+
+					types = {res[0] for res in results}
+					points_to = {pt for _, pts in results for pt in pts}
 
 				inferred_type = TypeUtils.unify(types)
 				return (inferred_type, points_to)
 
-		return (UnresolvedType(None), [])
+		return (UnresolvedType(None), set())
 
 
-	def resolve(self, node: ast.AST) -> tuple[TypeAnnotation, list[Table]]:
+	def resolve(self, node: ast.AST) -> tuple[TypeAnnotation, set[Table]]:
 		chain = Chain(node)
 		return self.resolve_start(chain.segments[0])
 		
-	def resolve_type(self, node: ast.AST) -> tuple[TypeAnnotation, list[Table]]:
+	def resolve_type(self, node: ast.AST) -> tuple[TypeAnnotation, set[Table]]:
 		if isinstance(node, ast.Constant):
 			c = builtins.classes[type(node.value).__name__]
 			cinstance = c.create_instance(c)
-			return (Type(c), [cinstance])
+			return (Type(c), {cinstance})
+		
 		elif isinstance(node, ast.JoinedStr):
 			s = builtins.classes["str"]
 			sinstance = s.create_instance(s)
-			return (Type(s), [sinstance])
+			return (Type(s), {sinstance})
+		
 		elif isinstance(node, ast.BoolOp):
 			b = builtins.classes["bool"]
 			binstance = b.create_instance(b)
-			return (Type(b), [binstance])
+			return (Type(b), {binstance})
+		
 		elif isinstance(node, ast.List):
-			element_types = [self.resolve_type(el)[0] for el in node.elts]
+			element_types = {self.resolve_type(el)[0] for el in node.elts}
 			l = builtins.classes["list"]
 			inf_type = ListType(TypeUtils.unify(element_types))
 			linstance = l.create_instance(l)
-			return (inf_type, [linstance])
+			return (inf_type, {linstance})
+		
 		elif isinstance(node, ast.Set):
-			element_types = [self.resolve_type(el)[0] for el in node.elts]
+			element_types = {self.resolve_type(el)[0] for el in node.elts}
 			inf_type = SetType(TypeUtils.unify(element_types))
 			s = builtins.classes["set"]
 			sinstance = s.create_instance(s)
-			return (inf_type, [sinstance])
+			return (inf_type, {sinstance})
+		
 		elif isinstance(node, ast.Tuple):
 			element_types = [self.resolve_type(el)[0] for el in node.elts]
 			inf_type = TupleType(element_types)
 			t = builtins.classes["tuple"]
 			tinstance = t.create_instance(t)
-			return (inf_type, [tinstance])
+			return (inf_type, {tinstance})
+		
 		elif isinstance(node, ast.Dict):
-			key_type = TypeUtils.unify([self.resolve_type(k)[0] for k in node.keys if k is not None])
-			value_type = TypeUtils.unify([self.resolve_type(v)[0] for v in node.values if v is not None])
+			key_type = TypeUtils.unify({self.resolve_type(k)[0] for k in node.keys if k is not None})
+			value_type = TypeUtils.unify({self.resolve_type(v)[0] for v in node.values if v is not None})
 			d = builtins.classes["dict"]
 			inf_type = DictType(key_type, value_type)
 			dinstance = d.create_instance(d)
-			return (inf_type, [dinstance])
+			return (inf_type, {dinstance})
+		
 		elif isinstance(node, ast.BinOp):
-			resolved = self.resolve_type(node.left)
-			return resolved
+			return self.resolve_type(node.left)
+		
 		else:
-			resolved = self.resolve(node)
-			return resolved
+			return self.resolve(node)
