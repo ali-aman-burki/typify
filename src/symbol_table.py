@@ -161,10 +161,10 @@ class Table:
 		definition_table.parent = self
 		return definition_table
 	
-	def order_definitions(self, module_order: list["ModuleTable"]) -> dict["ModuleTable", dict[str, "DefinitionTable"]]:
+	def order_definitions(self, module_precedence: list["ModuleTable"]) -> dict["ModuleTable", dict[str, "DefinitionTable"]]:
 		ordered_definitions = {}
     
-		for module in module_order:
+		for module in module_precedence:
 			if module in self.definitions:
 				ordered_subdict = dict(
 					sorted(self.definitions[module].items(), key=lambda item: item[1].position)
