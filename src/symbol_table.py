@@ -11,10 +11,8 @@ class Table:
 		self.functions: dict[str, Table] = {}
 		self.variables: dict[str, Table] = {}
 		self.definitions: dict[Table, dict[str, DefinitionTable]] = {}
-		self.definitions_list: list[DefinitionTable] = []
 		self.instances: list[Table] = []
 
-		self.imports: list[ast.AST] = []
 		self.bases: list = []
 		self.params: list = []
 		self.globals: set[ast.AST] = set()
@@ -40,7 +38,6 @@ class Table:
 		if self.globals: data["globals"] = list(self.globals)
 		if self.packages: data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}
 		if self.modules: data["modules"] = {key: value.to_dict() for key, value in self.modules.items()}
-		if self.imports: data["imports"] = [ast.unparse(import_node) for import_node in self.imports]
 		if self.bases: data["bases"] = [base.key if isinstance(base, Table) else "$unresolved$" for base in self.bases]
 		if self.nonlocals: data["nonlocals"] = list(self.nonlocals)
 		if self.classes: data["classes"] = {key: value.to_dict() for key, value in self.classes.items()}
