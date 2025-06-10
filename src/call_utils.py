@@ -1,7 +1,7 @@
 import ast
 
 from copy import deepcopy
-from src.symbol_table import Table
+from src.symbol_table import Table, VariableTable, DefinitionTable, ModuleTable
 from src.typeutils import TypeAnnotation, UnresolvedType
 
 class ParameterSpec:
@@ -15,65 +15,36 @@ class ParameterSpec:
 class CallUtils:
 
 	@staticmethod
-	def build_parameter_map(funcdef: ast.FunctionDef) -> dict[str, ParameterSpec]:
-		args = funcdef.args
-		param_map: dict[str, ParameterSpec] = {}
+	def collect_parameters(fdef: ast.FunctionDef, module_table: ModuleTable) -> dict[str, VariableTable]:
+		args_node = fdef.args
+		parameters: dict[str, VariableTable] = {}
 
-		num_posonly = len(args.posonlyargs)
-		num_pos_or_kw = len(args.args)
-		total_pos = num_posonly + num_pos_or_kw
-		defaults = args.defaults
-		default_offset = total_pos - len(defaults)
-
-		for i, arg in enumerate(args.posonlyargs):
-			default = defaults[i - default_offset] if i >= default_offset else None
+		for arg in args_node.posonlyargs:
+			var = parameters[arg.arg] = VariableTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
-			param_map[arg.arg] = ParameterSpec(
-				position=position,
-				node=default,
-				kind="posonly",
-				annotation=arg.annotation
-			)
+			var.add_definition(DefinitionTable(module_table, position))
 
-		for i, arg in enumerate(args.args):
-			j = i + num_posonly
-			default = defaults[j - default_offset] if j >= default_offset else None
+		for arg in args_node.args:
+			var = parameters[arg.arg] = VariableTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
-			param_map[arg.arg] = ParameterSpec(
-				position=position,
-				node=default,
-				kind="pos_or_kw",
-				annotation=arg.annotation
-			)
+			var.add_definition(DefinitionTable(module_table, position))
 
-		if args.vararg:
-			position = (args.vararg.lineno, args.vararg.col_offset)
-			param_map[f"*{args.vararg.arg}"] = ParameterSpec(
-				position=position,
-				node=[],
-				kind="vararg",
-				annotation=args.vararg.annotation
-			)
+		if args_node.vararg:
+			var = parameters[args_node.vararg.arg] = VariableTable(args_node.vararg.arg)
+			position = (args_node.vararg.lineno, args_node.vararg.col_offset)
+			var.add_definition(DefinitionTable(module_table, position))
 
-		for kwarg, default in zip(args.kwonlyargs, args.kw_defaults):
-			position = (kwarg.lineno, kwarg.col_offset)
-			param_map[kwarg.arg] = ParameterSpec(
-				position=position,
-				node=default,
-				kind="kwonly",
-				annotation=kwarg.annotation
-			)
+		for arg in args_node.kwonlyargs:
+			var = parameters[arg.arg] = VariableTable(arg.arg)
+			position = (arg.lineno, arg.col_offset)
+			var.add_definition(DefinitionTable(module_table, position))
 
-		if args.kwarg:
-			position = (args.kwarg.lineno, args.kwarg.col_offset)
-			param_map[f"**{args.kwarg.arg}"] = ParameterSpec(
-				position=position,
-				node=None,
-				kind="kwarg",
-				annotation=args.kwarg.annotation
-			)
+		if args_node.kwarg:
+			var = parameters[args_node.kwarg.arg] = VariableTable(args_node.kwarg.arg)
+			position = (args_node.kwarg.lineno, args_node.kwarg.col_offset)
+			var.add_definition(DefinitionTable(module_table, position))
 
-		return param_map
+		return parameters
 
 
 	@staticmethod

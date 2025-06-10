@@ -144,7 +144,7 @@ class Table:
 		function_table.parent = self
 		return function_table
 
-	def add_variable(self, variable_table):
+	def override_variable(self, variable_table):
 		self.variables[variable_table.key] = variable_table
 		variable_table.parent = self
 		return variable_table
@@ -170,7 +170,7 @@ class Table:
 
 		return ordered_definitions
 	
-	def incorporate_variable(self, variable_table: "VariableTable"):
+	def add_variable(self, variable_table: "VariableTable"):
 		if variable_table.key in self.variables:
 			for topdict in variable_table.definitions.values():
 				for d in topdict.values():
@@ -178,7 +178,7 @@ class Table:
 					d.parent = self.variables[variable_table.key]
 			return self.variables[variable_table.key]
 		else:
-			return self.add_variable(variable_table)
+			return self.override_variable(variable_table)
 	
 class LibraryTable(Table):
 	def __init__(self, key):

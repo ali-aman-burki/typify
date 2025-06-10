@@ -169,7 +169,7 @@ class ImportCollector():
 				self.module_meta.dependencies.update(self.as_metas(collected))
 		
 		for var in tofill:
-			ivar = enclosing_definition.incorporate_variable(var)
+			ivar = enclosing_definition.add_variable(var)
 			self.symbols.add(ivar)
 		
 	def process_import_from(self, import_tuple: tuple[ast.ImportFrom, Table, bool]):
@@ -264,7 +264,7 @@ class ImportCollector():
 				vdt.type = TypeUtils.unify(vdt.collected_types)
 		
 		for var in tofill: 
-			ivar = enclosing_definition.incorporate_variable(var)
+			ivar = enclosing_definition.add_variable(var)
 			self.symbols.add(ivar)
 
 		if in_function:

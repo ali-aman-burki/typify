@@ -40,13 +40,16 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		self.pop()
 
 	def visit_FunctionDef(self, node):
-		param_map = CallUtils.build_parameter_map(node)
+		parameters = CallUtils.collect_parameters(node, self.module_table)
 		key = (node.lineno, node.col_offset)
-		value = (node.name, param_map, UnresolvedType(None))
+		value = (node.name, parameters, UnresolvedType(None))
 		self.fslots[key] = value
 
 		enclosing = self.current_table.get_latest_definition()
-		self.push(ScopeManager.function_table(node, enclosing, self.symbols))
+		fdef = self.push(ScopeManager.function_table(node, enclosing, self.symbols))
+		for var in parameters.values(): 
+			self.symbols.add(fdef.add_variable(var))
+
 		self.function_depth += 1
 		self.generic_visit(node)
 		self.function_depth -= 1
@@ -87,14 +90,10 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		return self.current_table
 
 	def process_variable(self, name_node: ast.Name):
-		name = name_node.id
 		position = (name_node.lineno, name_node.col_offset)
-		if name not in self.current_table.get_latest_definition().variables:
-			v = self.current_table.get_latest_definition().add_variable(VariableTable(name))
-			v.add_definition(DefinitionTable(v.get_enclosing_module(), position))
-		else:
-			v = self.current_table.get_latest_definition().variables[name]
-			v.add_definition(DefinitionTable(v.get_enclosing_module(), position))
+		var = VariableTable(name_node.id)
+		var.add_definition(DefinitionTable(self.module_table, position))
+		self.symbols.add(self.current_table.get_latest_definition().add_variable(var))
 
 	def process_target(self, target: ast.AST):
 		if isinstance(target, (ast.Tuple, ast.List)):

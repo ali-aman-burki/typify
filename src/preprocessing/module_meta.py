@@ -17,7 +17,7 @@ class ModuleMeta:
 		self.dependency_map: dict[str, set[VariableTable]] = {}
 		self.dependencies: set[ModuleMeta] = set()
 		self.vslots: dict[tuple[int, int], tuple[str, TypeAnnotation]] = {}
-		self.fslots: dict[tuple[int, int], tuple[str, dict[str, ParameterSpec], TypeAnnotation]] = {}
+		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeAnnotation]] = {}
 
 	def __repr__(self):
 		return self.table.fully_qualified_name()
