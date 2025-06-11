@@ -5,19 +5,19 @@ from src.symbol_table import Table
 class TypeUtils:
 
 	@staticmethod
-	def count_unresolved_types(t) -> int:
-		if isinstance(t, UnresolvedType):
+	def count_any_types(t) -> int:
+		if isinstance(t, AnyType):
 			return 1
 		elif isinstance(t, UnionType):
-			return sum(TypeUtils.count_unresolved_types(sub) for sub in t.types)
+			return sum(TypeUtils.count_any_types(sub) for sub in t.types)
 		elif isinstance(t, OptionalType):
-			return TypeUtils.count_unresolved_types(t.element_type)
+			return TypeUtils.count_any_types(t.element_type)
 		elif isinstance(t, (ListType, SetType)):
-			return TypeUtils.count_unresolved_types(t.element_type)
+			return TypeUtils.count_any_types(t.element_type)
 		elif isinstance(t, DictType):
-			return TypeUtils.count_unresolved_types(t.key_type) + TypeUtils.count_unresolved_types(t.value_type)
+			return TypeUtils.count_any_types(t.key_type) + TypeUtils.count_any_types(t.value_type)
 		elif isinstance(t, TupleType):
-			return sum(TypeUtils.count_unresolved_types(el) for el in t.element_types)
+			return sum(TypeUtils.count_any_types(el) for el in t.element_types)
 		else:
 			return 0
 
@@ -51,7 +51,7 @@ class TypeUtils:
 		elif seen:
 			return next(iter(seen))
 		else:
-			return UnresolvedType(None)
+			return AnyType(None)
 
 	@staticmethod
 	def unwrap(unified_type: TypeAnnotation) -> set[Type]:
@@ -72,19 +72,19 @@ class TypeUtils:
 		return {
 			t.type_def.get_type_class().create_instance(t.type_def)
 			for t in unwrapped
-			if not isinstance(t, UnresolvedType)
+			if not isinstance(t, AnyType)
 		}
 
 	@staticmethod
-	def select_more_resolved_type(
+	def select_lease_ambiguous_type(
 		annotated_bundle: tuple[TypeAnnotation, set[Table]],
 		inferred_bundle: tuple[TypeAnnotation, set[Table]]
 	) -> tuple[TypeAnnotation, set[Table]]:
 		annotated_type, _ = annotated_bundle
 		inferred_type, _ = inferred_bundle
 
-		a_u_count = TypeUtils.count_unresolved_types(annotated_type)
-		i_u_count = TypeUtils.count_unresolved_types(inferred_type)
+		a_u_count = TypeUtils.count_any_types(annotated_type)
+		i_u_count = TypeUtils.count_any_types(inferred_type)
 
 		if i_u_count < a_u_count: return inferred_bundle
 		elif a_u_count < i_u_count: return annotated_bundle

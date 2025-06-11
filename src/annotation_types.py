@@ -9,13 +9,6 @@ class TypeAnnotation:
 	def __hash__(self):
 		return hash(repr(self))
 
-class UnresolvedType(TypeAnnotation):
-	def __init__(self, identifier):
-		self.identifier = identifier
-
-	def __repr__(self):
-		return "$unresolved$"
-
 class Type(TypeAnnotation):
 	def __init__(self, type_def):
 		self.type_def = type_def

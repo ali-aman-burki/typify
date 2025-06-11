@@ -15,14 +15,14 @@ class AnnotationParser(ast.NodeVisitor):
 		
 		type_bundle = self.context.resolve_type(node)
 		points_to = type_bundle[1]
-		types = [Type(r) for pt in points_to for r in pt.returns]
-		return TypeUtils.unify(types) if types else UnresolvedType(node)
+		types = { Type(pt.origin) for pt in points_to }
+		return TypeUtils.unify(types)
 
 	def visit_Constant(self, node):
 		return Type(builtins.classes[type(node.value).__name__])
 
 	def visit_Attribute(self, node):
-		return UnresolvedType(node)
+		return AnyType(node)
 
 	def visit_Subscript(self, node):
 		base = self.visit(node.value)
@@ -33,7 +33,7 @@ class AnnotationParser(ast.NodeVisitor):
 		else:
 			args = [self.visit(slice_node)]
 
-		if isinstance(base, UnresolvedType):
+		if isinstance(base, AnyType):
 			name = ast.unparse(node.value)
 			if name in ["list", "List"]:
 				return ListType(args[0])
@@ -48,9 +48,9 @@ class AnnotationParser(ast.NodeVisitor):
 			elif name == "Optional":
 				return OptionalType(args[0])
 			else:
-				return UnresolvedType(node)
+				return AnyType()
 		
-		return UnresolvedType(node)
+		return AnyType()
 
 	def visit_BinOp(self, node):
 		if isinstance(node.op, ast.BitOr):
@@ -64,7 +64,7 @@ class AnnotationParser(ast.NodeVisitor):
 
 			return UnionType(flatten_union(left) + flatten_union(right))
 
-		return UnresolvedType(node)
+		return AnyType()
 
 	def visit(self, node):
 		if node is None:

@@ -25,7 +25,7 @@ class Context:
 			return (Type(callable_def), {parent.create_instance(callable_def)})
 		elif isinstance(parent, FunctionTable):
 			return (callable_def.type, callable_def.points_to)
-		return (UnresolvedType(None), set())
+		return (AnyType(), set())
 
 	def lookup(self, identifier: str, defTable: Table, where: list[str]):
 		mapping = {
@@ -59,7 +59,6 @@ class Context:
 	def resolve_start(self, start_segment: Segment) -> tuple[TypeAnnotation, set[Table]]:
 		starting_identifier = ast.unparse(start_segment.anchor)
 		found = self.climb_lookup(starting_identifier, ["variables"])
-
 		if found:
 			fd = found.get_latest_definition()
 
@@ -71,11 +70,11 @@ class Context:
 				numcalls = self.count_calls(start_segment.trail[-1])
 
 				for _ in range(numcalls):
-					results = [
-						self.call(tdef)
-						for instance in points_to
-						for tdef in instance.returns
-					]
+					results = []
+					for instance in points_to:
+						origin = instance.origin
+						result = self.call(origin)
+						results.append(result)
 
 					types = {res[0] for res in results}
 					points_to = {pt for _, pts in results for pt in pts}
@@ -83,7 +82,8 @@ class Context:
 				inferred_type = TypeUtils.unify(types)
 				return (inferred_type, points_to)
 
-		return (UnresolvedType(None), set())
+		return (AnyType(), set())
+
 
 
 	def resolve(self, node: ast.AST) -> tuple[TypeAnnotation, set[Table]]:

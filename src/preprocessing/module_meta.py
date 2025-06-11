@@ -1,6 +1,5 @@
 from src.symbol_table import Table, ModuleTable, VariableTable
 from src.typeutils import TypeAnnotation
-from src.call_utils import ParameterSpec
 from pathlib import Path
 
 import ast

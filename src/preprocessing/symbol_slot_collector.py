@@ -3,13 +3,14 @@ import copy
 
 from src.symbol_table import (
 	Table,
+	ClassTable,
 	VariableTable,
 	DefinitionTable,
 )
+from src.annotation_types import AnyType
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.scope_manager import ScopeManager
-from src.annotation_types import UnresolvedType
-from src.call_utils import CallUtils
+from src.function_utils import FunctionUtils
 
 class SymbolSlotCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
@@ -35,20 +36,19 @@ class SymbolSlotCollector(ast.NodeVisitor):
 
 	def visit_ClassDef(self, node):
 		enclosing = self.current_table.get_latest_definition()
-		self.push(ScopeManager.class_table(node, enclosing, self.symbols))
+		self.push(ScopeManager.class_table(node, enclosing, self.module_table, self.symbols))
 		self.generic_visit(node)
 		self.pop()
 
 	def visit_FunctionDef(self, node):
-		parameters = CallUtils.collect_parameters(node, self.module_table)
+		parameters = FunctionUtils.collect_parameters(node, self.module_table)
 		key = (node.lineno, node.col_offset)
-		value = (node.name, parameters, UnresolvedType(None))
+		value = (node.name, parameters, AnyType())
 		self.fslots[key] = value
 
 		enclosing = self.current_table.get_latest_definition()
-		fdef = self.push(ScopeManager.function_table(node, enclosing, self.symbols))
-		for var in parameters.values(): 
-			self.symbols.add(fdef.add_variable(var))
+		fdef = self.push(ScopeManager.function_table(node, enclosing, self.module_table, self.symbols))
+		for var in parameters.values(): self.symbols.add(fdef.add_variable(var))
 
 		self.function_depth += 1
 		self.generic_visit(node)
@@ -90,10 +90,17 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		return self.current_table
 
 	def process_variable(self, name_node: ast.Name):
+		enclosing = self.current_table.get_latest_definition()
 		position = (name_node.lineno, name_node.col_offset)
 		var = VariableTable(name_node.id)
 		var.add_definition(DefinitionTable(self.module_table, position))
-		self.symbols.add(self.current_table.get_latest_definition().add_variable(var))
+		var = enclosing.add_variable(var)
+		self.symbols.add(var)
+
+		if isinstance(self.current_table, ClassTable):
+			grandparent = self.current_table.parent
+			cvar = grandparent.variables[self.current_table.key]
+			for pt in cvar.points_to: pt.add_variable(var)
 
 	def process_target(self, target: ast.AST):
 		if isinstance(target, (ast.Tuple, ast.List)):
@@ -101,7 +108,7 @@ class SymbolSlotCollector(ast.NodeVisitor):
 				self.process_target(elt)
 		else:
 			key = (target.lineno, target.col_offset)
-			value = (ast.unparse(target), UnresolvedType(None))
+			value = (ast.unparse(target), AnyType())
 			self.vslots[key] = value
 
 			if isinstance(target, ast.Name):

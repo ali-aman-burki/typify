@@ -19,10 +19,11 @@ class Table:
 		self.nonlocals: set[ast.AST] = set()
 		self.parent: Table = None
 
+		self.kind: str = ""
 		self.collected_types: set = set()
 		self.type = None
 		self.points_to: set[Table] = set()
-		self.returns: set[Table] = set()
+		self.origin: DefinitionTable = None
 		self.template_used: Table = None
 		self.tree: ast.FunctionDef = None		
 
@@ -149,7 +150,7 @@ class Table:
 		variable_table.parent = self
 		return variable_table
 
-	def add_definition(self, definition_table: "DefinitionTable", module_precedence: list["Table"] | None = None) -> "DefinitionTable":
+	def add_definition(self, definition_table: "DefinitionTable") -> "DefinitionTable":
 		if definition_table.module not in self.definitions:
 			self.definitions[definition_table.module] = {}
 
@@ -158,15 +159,23 @@ class Table:
 		definition_table.parent = self
 		return definition_table
 	
+	def lookup_definition(self, key: tuple["ModuleTable", int, int]) -> "DefinitionTable":
+		mtable, line, col = key
+		if mtable in self.definitions:
+			for defn in self.definitions[mtable].values():
+				if defn.position == (line, col):
+					return defn
+		return None
+
 	def order_definitions(self, module_precedence: list["ModuleTable"]) -> dict["ModuleTable", dict[str, "DefinitionTable"]]:
 		ordered_definitions = {}
     
-		for module in module_precedence:
-			if module in self.definitions:
+		for mtable in module_precedence:
+			if mtable in self.definitions:
 				ordered_subdict = dict(
-					sorted(self.definitions[module].items(), key=lambda item: item[1].position)
+					sorted(self.definitions[mtable].items(), key=lambda item: item[1].position)
 				)
-				ordered_definitions[module] = ordered_subdict
+				ordered_definitions[mtable] = ordered_subdict
 
 		return ordered_definitions
 	
