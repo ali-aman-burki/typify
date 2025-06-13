@@ -15,6 +15,7 @@ class Inferencer(ast.NodeVisitor):
 		self.current_table = self.latest_definition.get_enclosing_table()
 	
 	def pop(self):
+		self.latest_definition = self.current_table.parent
 		self.current_table = self.current_table.get_enclosing_table()
 
 	def visit_ClassDef(self, node):

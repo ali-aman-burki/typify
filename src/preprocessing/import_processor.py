@@ -116,22 +116,22 @@ class ImportCollector():
 				for alias in node.names
 			}
 		
-		for var in identifiers.values():
+		for varkey, var in identifiers.items():
 			vdt = var.add_definition(DefinitionTable(self.module_table, position))
 			self.symbols.add(enclosing_definition.add_variable(var))
 			new_chains = []
 			for chain in chains:
-				if var.key in chain[-1].packages:
-					new_import_module = import_module + "." + var.key
-					new_chain = chain + [chain[-1].packages[var.key]]
+				if varkey in chain[-1].packages:
+					new_import_module = import_module + "." + varkey
+					new_chain = chain + [chain[-1].packages[varkey]]
 					new_chains.append(new_chain)
 					if new_import_module not in self.module_meta.dependency_map: 
 						self.module_meta.dependency_map[new_import_module] = []
 					self.module_meta.dependency_map[new_import_module].append(new_chain)
 					vdt.type = Type(m)
-				elif var.key in chain[-1].modules:
-					new_import_module = import_module + "." + var.key
-					new_chain = chain + [chain[-1].modules[var.key]]
+				elif varkey in chain[-1].modules:
+					new_import_module = import_module + "." + varkey
+					new_chain = chain + [chain[-1].modules[varkey]]
 					new_chains.append(new_chain)
 					if new_import_module not in self.module_meta.dependency_map: 
 						self.module_meta.dependency_map[new_import_module] = []
