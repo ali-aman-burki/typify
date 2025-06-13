@@ -3,7 +3,6 @@ from src.symbol_table import VariableTable, Table, ModuleTable, PackageTable, De
 from src.builtins_ctn import builtins
 from src.preprocessing.module_meta import ModuleMeta
 from src.annotation_types import Type
-from src.typeutils import TypeUtils
 
 class ImportCollector():
 	def __init__(self, meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta):
@@ -13,13 +12,14 @@ class ImportCollector():
 		self.module_table = module_meta.table
 		self.path_chain: list[Table] = self.module_table.get_path_chain()
 		self.symbols: set[Table] = set()
-
+	
 	def collect(self):
 		for import_tuple in self.module_meta.imports:
 			if isinstance(import_tuple[0], ast.Import): self.process_import(import_tuple)
 			else: self.process_import_from(import_tuple)
 
-	def resolve_chains(self, import_chain: list[str]) -> list[list[Table]]:
+	def resolve_chains(self, import_module: str) -> list[list[Table]]:
+		import_chain = import_module.split(".")
 		starting_points: list[list[Table]] = []
 		for i in range(len(self.path_chain)):
 			table = self.path_chain[i]
@@ -42,15 +42,22 @@ class ImportCollector():
 				result.append(starting_point)
 
 		return result
-	
+
 	def filter_chains(self, chains: list[list[Table]]) -> list[list[Table]]:
 		module_table = self.module_meta.table
+		new_chains = []
+
 		for chain in chains:
-			for i in range(len(chain)):
-				table = chain[i]
+			new_chain = []
+			for table in chain:
 				if isinstance(table, PackageTable) and "__init__" in table.modules and table.modules["__init__"] != module_table:
-					chain[i] = table.modules["__init__"]
-		return chains
+					new_chain.append(table.modules["__init__"])
+				else:
+					new_chain.append(table)
+			new_chains.append(new_chain)
+
+		return new_chains
+
 
 	def collect_modules(self, resolved_chains: list[list[Table]]) -> set[Table]:
 		modules: set[Table] = set()
@@ -65,121 +72,41 @@ class ImportCollector():
 	def as_metas(self, modules: set[Table]) -> set[ModuleMeta]:
 		return {self.meta_map[table] for table in modules if table in self.meta_map}
 
-	def get_modules(self, level: int, import_chain: list[str], identifiers: set[str]) -> tuple[set[ModuleTable | PackageTable], set[ModuleMeta]]:
-		if import_chain:
-			if level:
-				current = self.path_chain[-level]
-				for i in import_chain[:-1]:
-					current = current.packages[i]
-
-				search_space = current.packages | current.modules
-				current = search_space[import_chain[-1]]
-
-				loaded_tables: set[ModuleTable] = set()
-
-				for table in self.path_chain:
-					if "__init__" in table.modules: loaded_tables.add(table.modules["__init__"])
-					if isinstance(table, ModuleTable): loaded_tables.add(table)
-					if table == current: break
-
-				return ({current}, self.as_metas(loaded_tables))
-			else:
-				chains = self.resolve_chains(import_chain)
-				filtered_chains = self.filter_chains(chains)
-
-				results = []
-				for f_chain in filtered_chains:
-					endpoint = f_chain[-1]
-					if isinstance(endpoint, PackageTable):
-						search_space = endpoint.modules.keys()
-						if identifiers.issubset(search_space): results.append(f_chain)
-					else:
-						var_names = endpoint.variables.keys()
-						module_names = endpoint.get_enclosing_table().modules.keys() if endpoint.key == "__init__" else set()
-						package_names = endpoint.get_enclosing_table().packages.keys() if endpoint.key == "__init__" else set()
-						search_space = var_names | package_names | module_names
-						if identifiers.issubset(search_space): results.append(f_chain)
-
-				results = results if results else filtered_chains
-				collected = self.collect_modules(results)
-				return ({f_chain[-1] for f_chain in filtered_chains}, self.as_metas(collected))
-		else:
-			if level:
-				current = self.path_chain[-level]
-				loaded_tables: set[ModuleTable] = set()
-
-				for table in self.path_chain:
-					if "__init__" in table.modules: loaded_tables.add(table.modules["__init__"])
-					if isinstance(table, ModuleTable): loaded_tables.add(table)
-					if table == current: break
-
-				return {current, self.as_metas(loaded_tables)}
-			else:
-				return {}
-
 	def process_import(self, import_tuple: tuple[ast.Import, Table, bool]):
 		node = import_tuple[0]
 		enclosing_definition = import_tuple[1]
 		in_function = import_tuple[2]
-		node_str = ast.unparse(node)
-		tofill = self.module_meta.dependency_map[node_str] = set()
+		vars = set()
 		m = builtins.classes["module"]
 
 		for alias in node.names:
-			import_chain = alias.name.split('.')
-			chains = self.resolve_chains(import_chain)
+			import_module = alias.name
+			chains = self.resolve_chains(import_module)
 			resolved_chains = self.filter_chains(chains)
 			collected = self.collect_modules(resolved_chains)
+			self.module_meta.dependency_map[import_module] = chains
 
-			var = VariableTable(alias.asname if alias.asname else alias.name.split('.')[0])
+			var = VariableTable(alias.asname if alias.asname else import_module.split('.')[0])
 			position = (node.lineno, node.col_offset)
 			dt = var.add_definition(DefinitionTable(self.module_table, position))
 			dt.type = Type(m)
 
-			candidates = set()
-			if alias.asname:
-				for chain in resolved_chains:
-					module_instance = m.create_instance(m)
-					if isinstance(chain[-1], ModuleTable): 
-						Table.transfer_content(self.meta_map[chain[-1]], module_instance)
-					candidates.add(module_instance)
-			else:
-				for chain in resolved_chains:
-					length = len(import_chain)
-					adjusted_chain = chain[-length:]
-					current_module = m.create_instance(m)
-					start_module = current_module
-					Table.transfer_content(adjusted_chain[0], current_module)
-
-					for table in adjusted_chain[1:]:
-						next_module = m.create_instance(m)
-						Table.transfer_content(table, next_module)
-						m_var = VariableTable(table.key)
-						vd = m_var.add_definition(DefinitionTable(self.module_table, position))
-						vd.type = Type(m)
-						vd.points_to.add(next_module)
-						current_module.add_variable(m_var)
-						current_module = next_module
-					
-					candidates.add(start_module)
-			dt.points_to.update(candidates)
-			tofill.add(var)
+			vars.add(var)
 
 			if not in_function:
 				self.module_meta.dependencies.update(self.as_metas(collected))
 		
-		for var in tofill:
-			ivar = enclosing_definition.add_variable(var)
-			self.symbols.add(ivar)
+		for var in vars: self.symbols.add(enclosing_definition.add_variable(var))
 		
 	def process_import_from(self, import_tuple: tuple[ast.ImportFrom, Table, bool]):
 		node = import_tuple[0]
 		enclosing_definition = import_tuple[1]
 		in_function = import_tuple[2]
+		import_module = self.module_meta.to_absolute_name(node.module, node.level)
 		m = builtins.classes["module"]
-		node_str = ast.unparse(node)
-		tofill = self.module_meta.dependency_map[node_str] = set()
-		import_chain = node.module.split('.')
+
+		chains = self.resolve_chains(import_module)
+
 		position = (node.lineno, node.col_offset)
 		if node.names[0].name == '*':
 			identifiers = {}
@@ -190,82 +117,34 @@ class ImportCollector():
 			}
 		
 		for var in identifiers.values():
-			var.add_definition(DefinitionTable(self.module_table, position))
-			tofill.add(var)
+			vdt = var.add_definition(DefinitionTable(self.module_table, position))
+			self.symbols.add(enclosing_definition.add_variable(var))
+			new_chains = []
+			for chain in chains:
+				if var.key in chain[-1].packages:
+					new_import_module = import_module + "." + var.key
+					new_chain = chain + [chain[-1].packages[var.key]]
+					new_chains.append(new_chain)
+					if new_import_module not in self.module_meta.dependency_map: 
+						self.module_meta.dependency_map[new_import_module] = []
+					self.module_meta.dependency_map[new_import_module].append(new_chain)
+					vdt.type = Type(m)
+				elif var.key in chain[-1].modules:
+					new_import_module = import_module + "." + var.key
+					new_chain = chain + [chain[-1].modules[var.key]]
+					new_chains.append(new_chain)
+					if new_import_module not in self.module_meta.dependency_map: 
+						self.module_meta.dependency_map[new_import_module] = []
+					self.module_meta.dependency_map[new_import_module].append(new_chain)
+					vdt.type = Type(m)
+			if not in_function:
+				resolved_chains = self.filter_chains(chains)
+				collected = self.collect_modules(resolved_chains)
+				self.module_meta.dependencies.update(self.as_metas(collected))
 
-		data_bundle = self.get_modules(node.level, import_chain, set(identifiers.keys()))
-		endpoints = data_bundle[0]
-		metas = data_bundle[1]
+		self.module_meta.dependency_map[import_module] = chains
 
-		if identifiers:
-			for endpoint in endpoints:
-				if isinstance(endpoint, PackageTable):
-					search_space = endpoint.modules
-					for id, var in identifiers.items():
-						if id in search_space:
-							vdt = var.get_latest_definition()
-							found_module = search_space[id]
-							vdt.collected_types.add(Type(m))
-							minstance = m.create_instance(m)
-							Table.transfer_content(found_module, minstance)
-							vdt.points_to.add(minstance)
-				else:
-					vars = endpoint.variables
-					modules = endpoint.get_enclosing_table().modules if endpoint.key == "__init__" else dict()
-					packages = endpoint.get_enclosing_table().packages if endpoint.key == "__init__" else dict()
-					search_space = packages | modules | vars
-
-					for id, var in identifiers.items():
-						if id in search_space:
-							vdt = var.get_latest_definition()
-							found_table = search_space[id]
-							if isinstance(found_table, PackageTable):
-								vdt.collected_types.add(Type(m))
-								minstance = m.create_instance(m)
-								if "__init__" in found_table.modules:
-									Table.transfer_content(found_table.modules["__init__"], minstance)
-								vdt.points_to.add(minstance)
-							elif isinstance(found_table, ModuleTable):
-								vdt.collected_types.add(Type(m))
-								minstance = m.create_instance(m)
-								Table.transfer_content(found_table, minstance)
-								vdt.points_to.add(minstance)
-							else:
-								ftdt = found_table.get_latest_definition()
-								vdt.collected_types.add(ftdt.type)
-								vdt.points_to.update(ftdt.points_to)
-			for var in identifiers.values():
-				vdt = var.get_latest_definition()
-				vdt.type = TypeUtils.unify(vdt.collected_types)
-		else:
-			varkeys = set()
-			varmap: dict[str, VariableTable] = {}
-			for endpoint in endpoints:
-				varkeys.update(endpoint.variables.keys())
-			
-			for varkey in varkeys:
-				var = VariableTable(varkey)
-				vdt = var.add_definition(DefinitionTable(self.module_table, position))
-				varmap[varkey] = var
-				tofill.add(var)
-
-			for endpoint in endpoints:
-				for evarkey in endpoint.variables:
-					var = varmap[evarkey]
-					vdt = var.get_latest_definition()
-					evar = endpoint.variables[evarkey]
-					evdt = evar.get_latest_definition()
-					var.collected_types.add(evdt.type)
-					var.points_to.update(evdt.points_to)
-
-			for varkey in varkeys:
-				var = varmap[varkey]
-				vdt = var.get_latest_definition()
-				vdt.type = TypeUtils.unify(vdt.collected_types)
-		
-		for var in tofill: 
-			ivar = enclosing_definition.add_variable(var)
-			self.symbols.add(ivar)
-
-		if in_function:
-			self.module_meta.dependencies.update(metas)
+		if not in_function:
+			resolved_chains = self.filter_chains(chains)
+			collected = self.collect_modules(resolved_chains)
+			self.module_meta.dependencies.update(self.as_metas(collected))

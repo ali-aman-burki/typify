@@ -92,7 +92,7 @@ class Table:
 			current_table = current_table.get_enclosing_table()
 		return ".".join(path[::-1])
 	
-	def get_path_chain(self):
+	def get_path_chain(self) -> list["Table"]:
 		path_chain = []
 		current_table = self
 		while current_table and current_table:

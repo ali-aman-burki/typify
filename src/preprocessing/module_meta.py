@@ -13,10 +13,27 @@ class ModuleMeta:
 		self.table = table
 		self.library_table = library_table
 		self.imports: list[tuple[ast.AST, Table, bool]] = []
-		self.dependency_map: dict[str, set[VariableTable]] = {}
+		self.dependency_map: dict[str, list[list[Table]]] = {}
 		self.dependencies: set[ModuleMeta] = set()
 		self.vslots: dict[tuple[int, int], tuple[str, TypeAnnotation]] = {}
 		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeAnnotation]] = {}
+
+	def to_absolute_name(self, import_module: str | None, level: int):
+		if not level: return import_module
+
+		import_module = import_module if import_module else ""
+		import_chain = import_module.split(".")
+		path_chain = self.table.get_path_chain() 
+		current = path_chain[-level]
+		result = []
+		for i in import_chain[:-1]:
+			current = current.packages[i]
+		
+		for table in path_chain:
+			result.append(table.key)
+			if table == current: break
+
+		return ".".join(result)
 
 	def __repr__(self):
 		return self.table.fully_qualified_name()
@@ -57,10 +74,10 @@ class ModuleMeta:
 			}
 		}
 		
-		for k, s in self.dependency_map.items():
+		for k, l in self.dependency_map.items():
 			key = k
-			formatted_list = [var.key for var in s]
-			output["dependency_map"][key] = ", ".join(formatted_list)
+			result = ', '.join('->'.join(x.key for x in sublist) for sublist in l)
+			output["dependency_map"][key] = result
 
 		with output_path.open("w", encoding="utf-8") as f:
 			json.dump(output, f, indent="\t")
