@@ -1,7 +1,7 @@
 from src.preprocessing.preprocessor import Preprocessor
 from src.preprocessing.module_meta import ModuleMeta
 from src.inferencing import Inferencer
-from pathlib import Path
+from src.symbol_table import Table
 import sys
 import traceback
 
@@ -10,12 +10,13 @@ class InferenceProcessor:
 		self.preprocessor = preprocessor
 		self.symbols = preprocessor.symbols
 		self.meta_map = self.preprocessor.meta_map
-		self.sequence = []
+		self.sequence: list[ModuleMeta] = []
 		self.sequence_length = 0
 		self.errors = 0
 		self.ignore_errors = False
 		self.progress: list[ModuleMeta] = []
 		self.working_directory = self.preprocessor.working_directory
+		self.module_object_map: dict[Table, list[Table]] = {}
 
 	def infer(self):
 		self.sequence = self.preprocessor.generate_resolving_sequence()
@@ -29,7 +30,7 @@ class InferenceProcessor:
 		for module_meta in self.sequence: self.infer_meta(module_meta)
 
 	def infer_meta(self, module_meta: ModuleMeta):
-		inferencer = Inferencer(module_meta)
+		inferencer = Inferencer(module_meta, self.module_object_map)
 
 		try:
 			inferencer.visit(module_meta.tree)

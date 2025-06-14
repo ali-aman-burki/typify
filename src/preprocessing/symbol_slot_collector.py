@@ -27,11 +27,11 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		self.symbols: set[Table] = set()
 
 	def visit_Import(self, node):
-		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth==0))
+		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth!=0))
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
-		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth==0))
+		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth!=0))
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):
