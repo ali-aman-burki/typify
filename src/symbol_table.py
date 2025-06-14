@@ -159,8 +159,8 @@ class Table:
 		definition_table.parent = self
 		return definition_table
 	
-	def lookup_definition(self, key: tuple["ModuleTable", int, int]) -> "DefinitionTable":
-		mtable, line, col = key
+	def lookup_definition(self, key: tuple["ModuleTable", tuple[int, int]]) -> "DefinitionTable":
+		mtable, (line, col) = key
 		if mtable in self.definitions:
 			for defn in self.definitions[mtable].values():
 				if defn.position == (line, col):

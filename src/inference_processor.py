@@ -16,7 +16,7 @@ class InferenceProcessor:
 		self.ignore_errors = False
 		self.progress: list[ModuleMeta] = []
 		self.working_directory = self.preprocessor.working_directory
-		self.module_object_map: dict[Table, list[Table]] = {}
+		self.module_object_map: dict[Table, Table] = {}
 
 	def infer(self):
 		self.sequence = self.preprocessor.generate_resolving_sequence()

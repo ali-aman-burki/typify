@@ -77,7 +77,6 @@ class ImportCollector():
 		enclosing_definition = import_tuple[1]
 		in_function = import_tuple[2]
 		vars = set()
-		m = builtins.classes["module"]
 
 		for alias in node.names:
 			import_module = alias.name
@@ -88,8 +87,7 @@ class ImportCollector():
 
 			var = VariableTable(alias.asname if alias.asname else import_module.split('.')[0])
 			position = (node.lineno, node.col_offset)
-			dt = var.add_definition(DefinitionTable(self.module_table, position))
-			dt.type = Type(m)
+			var.add_definition(DefinitionTable(self.module_table, position))
 
 			vars.add(var)
 
@@ -103,7 +101,6 @@ class ImportCollector():
 		enclosing_definition = import_tuple[1]
 		in_function = import_tuple[2]
 		import_module = self.module_meta.to_absolute_name(node.module, node.level)
-		m = builtins.classes["module"]
 
 		chains = self.resolve_chains(import_module)
 
@@ -117,7 +114,7 @@ class ImportCollector():
 			}
 		
 		for varkey, var in identifiers.items():
-			vdt = var.add_definition(DefinitionTable(self.module_table, position))
+			var.add_definition(DefinitionTable(self.module_table, position))
 			self.symbols.add(enclosing_definition.add_variable(var))
 			new_chains = []
 			for chain in chains:
@@ -128,7 +125,6 @@ class ImportCollector():
 					if new_import_module not in self.module_meta.dependency_map: 
 						self.module_meta.dependency_map[new_import_module] = []
 					self.module_meta.dependency_map[new_import_module].append(new_chain)
-					vdt.type = Type(m)
 				elif varkey in chain[-1].modules:
 					new_import_module = import_module + "." + varkey
 					new_chain = chain + [chain[-1].modules[varkey]]
@@ -136,7 +132,6 @@ class ImportCollector():
 					if new_import_module not in self.module_meta.dependency_map: 
 						self.module_meta.dependency_map[new_import_module] = []
 					self.module_meta.dependency_map[new_import_module].append(new_chain)
-					vdt.type = Type(m)
 			if not in_function:
 				resolved_chains = self.filter_chains(chains)
 				collected = self.collect_modules(resolved_chains)
