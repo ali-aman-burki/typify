@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from collections import defaultdict
 import ast
 
 class Table:
@@ -49,7 +50,36 @@ class Table:
 	@staticmethod
 	def transfer_content(src: "Table", dst: "Table"):
 		dst.variables.update(src.variables)
+	
+	@staticmethod
+	def process_group(key: str, values: list["Table"], defkey: tuple["Table", tuple[int, int]], precedence: list["ModuleTable"]) -> "Table":
+		from src.typeutils import TypeUtils
 
+		var = VariableTable(key)
+		var.add_definition(DefinitionTable(defkey[0], defkey[1]))
+
+		for table in values:
+			tdef = table.get_latest_definition(defkey, precedence)
+			var.points_to.update(tdef.points_to)
+			var.collected_types.add(tdef.type)
+		
+		var.type = TypeUtils.unify(var.collected_types)
+		return var
+
+	@staticmethod
+	def homogenize(dicts: list[dict[str, "Table"]], defkey: tuple["Table", tuple[int, int]], precedence: list["ModuleTable"]) -> dict[str, "Table"]:
+		key_groups = defaultdict(list)
+
+		for d in dicts:
+			for key, value in d.items():
+				key_groups[key].append(value)
+
+		result = {}
+		for key, values in key_groups.items():
+			result[key] = Table.process_group(key, values, defkey, precedence)
+
+		return result
+	
 	def get_type_class(self):
 		if isinstance(self, DefinitionTable):
 			if isinstance(self.parent, ClassTable):
@@ -119,11 +149,38 @@ class Table:
 			result = result.get_enclosing_table()
 		return result
 
-	def get_latest_definition(self) -> "DefinitionTable":
+	def get_latest_definition(self, anchor: tuple["ModuleTable", tuple[int, int]] = None, precedence: list["ModuleTable"] = None) -> "DefinitionTable":
 		if not self.definitions:
 			return self
-		last_module_dict = next(reversed(self.definitions.values()))
-		return next(reversed(last_module_dict.values()))
+
+		if anchor is None:
+			last_module_dict = next(reversed(self.definitions.values()))
+			return next(reversed(last_module_dict.values()))
+
+		anchor_module, (anchor_line, anchor_col) = anchor
+
+		if precedence:
+			if anchor_module not in precedence:
+				return None
+
+			candidates = [m for m in precedence if m in self.definitions and precedence.index(m) <= precedence.index(anchor_module)]
+		else:
+			candidates = list(self.definitions.keys())
+
+		for module in reversed(candidates):
+			defs = self.definitions[module]
+
+			if module == anchor_module:
+				prior_defs = [
+					defn for defn in defs.values()
+					if defn.position < (anchor_line, anchor_col)
+				]
+				if prior_defs:
+					return prior_defs[-1]
+			else:
+				return next(reversed(defs.values()))
+
+		return None
 
 	def add_package(self, package_table):
 		self.packages[package_table.key] = package_table
@@ -158,9 +215,9 @@ class Table:
 			 
 		definition_table.parent = self
 		return definition_table
-	
-	def lookup_definition(self, key: tuple["ModuleTable", tuple[int, int]]) -> "DefinitionTable":
-		mtable, (line, col) = key
+
+	def lookup_definition(self, defkey: tuple["ModuleTable", tuple[int, int]]) -> "DefinitionTable":
+		mtable, (line, col) = defkey
 		if mtable in self.definitions:
 			for defn in self.definitions[mtable].values():
 				if defn.position == (line, col):
@@ -177,7 +234,8 @@ class Table:
 				)
 				ordered_definitions[mtable] = ordered_subdict
 
-		return ordered_definitions
+		self.definitions = ordered_definitions
+		return self.definitions
 	
 	def add_variable(self, variable_table: "VariableTable"):
 		if variable_table.key in self.variables:

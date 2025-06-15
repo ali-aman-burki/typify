@@ -1,4 +1,4 @@
-from src.symbol_table import Table, ModuleTable, VariableTable
+from src.symbol_table import Table, ModuleTable, VariableTable, PackageTable
 from src.typeutils import TypeAnnotation
 from pathlib import Path
 
@@ -37,6 +37,58 @@ class ModuleMeta:
 
 	def __repr__(self):
 		return self.table.fully_qualified_name()
+
+	def resolve_chains(self, import_module: str) -> list[list[Table]]:
+		path_chain = self.table.get_path_chain()
+		import_chain = import_module.split(".")
+		starting_points: list[list[Table]] = []
+		for i in range(len(path_chain)):
+			table = path_chain[i]
+			if import_chain[0] in table.modules:
+				starting_points.append([table.modules[import_chain[0]]])
+			elif import_chain[0] in table.packages: 
+				starting_points.append([table.packages[import_chain[0]]])
+		
+		result = []
+		for starting_point in starting_points:
+			current = starting_point[0]
+			for j in range(1, len(import_chain)):
+				if import_chain[j] in current.modules:
+					current = current.modules[import_chain[j]]
+					starting_point.append(current)
+				elif import_chain[j] in current.packages:
+					current = current.packages[import_chain[j]]
+					starting_point.append(current)
+			if len(starting_point) == len(import_chain):
+				result.append(starting_point)
+
+		return result
+
+	def filter_chains(self, chains: list[list[Table]]) -> list[list[Table]]:
+		module_table = self.table
+		new_chains = []
+
+		for chain in chains:
+			new_chain = []
+			for table in chain:
+				if isinstance(table, PackageTable) and "__init__" in table.modules and table.modules["__init__"] != module_table:
+					new_chain.append(table.modules["__init__"])
+				else:
+					new_chain.append(table)
+			new_chains.append(new_chain)
+
+		return new_chains
+
+
+	def collect_modules(self, resolved_chains: list[list[Table]]) -> set[Table]:
+		modules: set[Table] = set()
+
+		for chain in resolved_chains:
+			for table in chain:
+				if not isinstance(table, PackageTable):
+					modules.add(table)
+
+		return modules
 
 	@staticmethod
 	def from_source(src_path: Path, library_table: Table):

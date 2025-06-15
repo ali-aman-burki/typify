@@ -7,13 +7,14 @@ from src.annotation_types import Type
 import copy
 
 class Inferencer(ast.NodeVisitor):
-	def __init__(self, module_meta: ModuleMeta, module_object_map: dict[Table, Table]):
+	def __init__(self, module_meta: ModuleMeta, module_object_map: dict[Table, Table], module_precedence):
 		self.library_table = module_meta.library_table
 		self.module_meta = module_meta
 		self.module_table = module_meta.table
 		self.current_table = module_meta.table
 		self.latest_definition = self.current_table
 		self.module_object_map = module_object_map
+		self.module_precedence = module_precedence
 
 	def push(self):
 		self.current_table = self.latest_definition.get_enclosing_table()
@@ -79,6 +80,29 @@ class Inferencer(ast.NodeVisitor):
 			target_index = -1 if alias.asname else 0
 
 			for chain in results: vardef.points_to.add(chain[target_index])
+		self.generic_visit(node)
+	
+	def visit_ImportFrom(self, node):
+		absolute_name = self.module_meta.to_absolute_name(node.module, node.level)
+		position = (node.lineno, node.col_offset)
+		defkey = (self.module_table, position)
+		results = self.process_import(absolute_name, position)
+		vars: dict[VariableTable, DefinitionTable] = {}
+		
+		if node.names[0].name == '*':
+			var_dicts = []
+			for chain in results: var_dicts.append(chain[-1].variables)
+
+			homogenized = Table.homogenize(var_dicts, defkey, self.module_precedence)
+			for v in homogenized.values():
+				nv = self.module_table.add_variable(v)
+				nv.order_definitions(self.module_precedence)
+		else:
+			for alias in node.names:
+				varkey = alias.asname if alias.asname else alias.name
+				var = self.latest_definition.variables[varkey]
+				vars[var] = var.lookup_definition(defkey)
+
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):

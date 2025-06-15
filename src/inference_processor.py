@@ -24,13 +24,12 @@ class InferenceProcessor:
 		
 		module_precedence = [meta.table for meta in self.sequence]
 		for t in self.symbols:
-			t.definitions = t.order_definitions(module_precedence)
-			pass
+			t.order_definitions(module_precedence)
 
-		for module_meta in self.sequence: self.infer_meta(module_meta)
+		for module_meta in self.sequence: self.infer_meta(module_meta, module_precedence)
 
-	def infer_meta(self, module_meta: ModuleMeta):
-		inferencer = Inferencer(module_meta, self.module_object_map)
+	def infer_meta(self, module_meta: ModuleMeta, module_precedence):
+		inferencer = Inferencer(module_meta, self.module_object_map, module_precedence)
 
 		try:
 			inferencer.visit(module_meta.tree)
