@@ -51,7 +51,7 @@ class TypeUtils:
 		elif seen:
 			return next(iter(seen))
 		else:
-			return AnyType(None)
+			return AnyType()
 
 	@staticmethod
 	def unwrap(unified_type: TypeAnnotation) -> set[Type]:
