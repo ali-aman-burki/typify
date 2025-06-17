@@ -1,10 +1,11 @@
 import ast
-from src.symbol_table import *
+import copy
+
+from src.symbol_table import Table, VariableTable, DefinitionTable
 from src.preprocessing.module_meta import ModuleMeta
 from src.typeutils import TypeUtils
-from src.preloading.commons import ModuleClass, builtin_lib
+from src.preloading.commons import ModuleClass
 
-import copy
 
 class Inferencer(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta, module_precedence):
