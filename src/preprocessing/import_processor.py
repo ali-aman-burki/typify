@@ -74,7 +74,7 @@ class ImportCollector():
 						self.module_meta.dependency_map[new_import_module] = []
 					self.module_meta.dependency_map[new_import_module].append(new_chain)
 					if not in_function:
-						if "__init__" in pac.modules:
+						if "__init__" in pac.modules and pac.modules["__init__"] in self.meta_map:
 							self.module_meta.dependencies.add(self.meta_map[pac.modules["__init__"]])
 				elif varkey in chain[-1].modules:
 					mod = chain[-1].modules[varkey]
@@ -84,12 +84,8 @@ class ImportCollector():
 					if new_import_module not in self.module_meta.dependency_map: 
 						self.module_meta.dependency_map[new_import_module] = []
 					self.module_meta.dependency_map[new_import_module].append(new_chain)
-					if not in_function:
+					if not in_function and mod in self.meta_map:
 						self.module_meta.dependencies.add(self.meta_map[mod])
-			if not in_function:
-				resolved_chains = self.module_meta.filter_chains(chains)
-				collected = self.module_meta.collect_modules(resolved_chains)
-				self.module_meta.dependencies.update(self.as_metas(collected))
 
 		self.module_meta.dependency_map[import_module] = chains
 

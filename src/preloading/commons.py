@@ -4,6 +4,8 @@ from src.preloading.preloader import PreloadedLibs
 
 from pathlib import Path
 
+preloaded_libs = None
+
 builtin_lib: LibraryTable = None
 pystd_lib: LibraryTable = None
 site_libs: dict[Path, LibraryTable] = None
@@ -18,12 +20,15 @@ FunctionClass: ClassTable = None
 
 AnyType: TypeExpr = None
 
-def bind(preloaded_libs: PreloadedLibs):
+def bind(pl: PreloadedLibs):
+	global preloaded_libs
 	global builtin_lib, pystd_lib, site_libs, user_site_libs
 	global builtins_m, typing_m
 	global TypeClass, ModuleClass, FunctionClass
 	global AnyType
 	
+	preloaded_libs = pl
+
 	builtin_lib = preloaded_libs.builtin_lib
 	pystd_lib = preloaded_libs.pystd_lib
 	site_libs = preloaded_libs.site_libs

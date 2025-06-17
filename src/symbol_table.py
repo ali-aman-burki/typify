@@ -173,27 +173,27 @@ class Table:
 
 		return self
 
-	def add_package(self, package_table):
+	def add_package(self, package_table) -> "PackageTable":
 		self.packages[package_table.key] = package_table
 		package_table.parent = self
 		return package_table
 
-	def add_module(self, module_table):
+	def add_module(self, module_table) -> "ModuleTable":
 		self.modules[module_table.key] = module_table
 		module_table.parent = self
 		return module_table
 
-	def add_class(self, class_table):
+	def add_class(self, class_table) -> "ClassTable":
 		self.classes[class_table.key] = class_table
 		class_table.parent = self
 		return class_table
 
-	def add_function(self, function_table):
+	def add_function(self, function_table) -> "FunctionTable":
 		self.functions[function_table.key] = function_table
 		function_table.parent = self
 		return function_table
 
-	def override_variable(self, variable_table):
+	def override_variable(self, variable_table) -> "VariableTable":
 		self.variables[variable_table.key] = variable_table
 		variable_table.parent = self
 		return variable_table
@@ -240,6 +240,7 @@ class Table:
 	
 class LibraryTable(Table):
 	def __init__(self, key):
+		self.module_object_map: dict[ModuleTable | PackageTable, InstanceTable] = {}
 		super().__init__(key)
 
 class PackageTable(Table):

@@ -2,16 +2,16 @@ import ast
 from src.symbol_table import *
 from src.preprocessing.module_meta import ModuleMeta
 from src.typeutils import TypeUtils
-from src.preloading.commons import ModuleClass
+from src.preloading.commons import ModuleClass, builtin_lib
 
 import copy
 
 class Inferencer(ast.NodeVisitor):
-	def __init__(self, module_meta: ModuleMeta, module_object_map: dict[Table, Table], module_precedence):
+	def __init__(self, module_meta: ModuleMeta, module_precedence):
 		self.module_meta = module_meta
-		self.module_object_map = module_object_map
 		self.module_precedence = module_precedence
 		self.library_table = module_meta.library_table
+		self.module_object_map = self.library_table.module_object_map
 		self.module_table = module_meta.table
 		self.current_table = module_meta.table
 		self.latest_definition = self.current_table
@@ -25,15 +25,11 @@ class Inferencer(ast.NodeVisitor):
 
 	def visit_Module(self, node):
 		self.generic_visit(node)
-		module_object = TypeUtils.create_instance(ModuleClass, [])
-		Table.transfer_content(self.module_table, module_object)
+		mobject = TypeUtils.create_instance(ModuleClass, [])
+		Table.transfer_content(self.module_table, mobject)
 
-		if self.module_table.key == "__init__":
-			self.module_object_map[self.module_table.parent] = module_object
-		else:
-			self.module_object_map[self.module_table] = module_object
-			if self.module_table.parent not in self.module_object_map:
-				self.module_object_map[self.module_table.parent] = TypeUtils.create_instance(ModuleClass, [])
+		if self.module_table.key == "__init__": self.module_object_map[self.module_table.parent] = mobject
+		else: self.module_object_map[self.module_table] = mobject
 
 	def process_import(self, name: str, position: tuple[int, int]):
 		results: list[list[Table]] = []
@@ -41,11 +37,9 @@ class Inferencer(ast.NodeVisitor):
 			results.append([])
 		for i in range(len(self.module_meta.dependency_map[name])):
 			chain = self.module_meta.dependency_map[name][i]
-			self.module_object_map.setdefault(chain[0], TypeUtils.create_instance(ModuleClass, []))
 			cobject = self.module_object_map[chain[0]]
 			results[i].append(cobject) 
 			for table in chain[1:]:
-				self.module_object_map.setdefault(table, TypeUtils.create_instance(ModuleClass, []))
 				tobject = self.module_object_map[table]
 				if table.key not in cobject.variables:
 					mvar = VariableTable(table.key)

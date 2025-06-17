@@ -1,7 +1,8 @@
 from src.preprocessing.preprocessor import Preprocessor
 from src.preprocessing.module_meta import ModuleMeta
 from src.inferencing import Inferencer
-from src.symbol_table import Table
+from src.preloading.commons import preloaded_libs
+
 import sys
 import traceback
 
@@ -16,9 +17,15 @@ class InferenceProcessor:
 		self.ignore_errors = False
 		self.progress: list[ModuleMeta] = []
 		self.working_directory = self.preprocessor.working_directory
-		self.module_object_map: dict[Table, Table] = {}
+		self.module_object_map = preprocessor.library_table.module_object_map
 
-	def infer(self):
+	def infer(self): 
+		self.module_object_map.update(preloaded_libs.builtin_lib.module_object_map)
+		self.module_object_map.update(preloaded_libs.pystd_lib.module_object_map)
+
+		for site_lib in preloaded_libs.site_libs.values(): self.module_object_map.update(site_lib.module_object_map)
+		for user_site_lib in preloaded_libs.user_site_libs.values(): self.module_object_map.update(user_site_lib.module_object_map)
+
 		self.sequence = self.preprocessor.generate_resolving_sequence()
 		self.sequence_length = len(self.sequence)
 		
@@ -27,7 +34,7 @@ class InferenceProcessor:
 		for module_meta in self.sequence: self.infer_meta(module_meta, module_precedence)
 
 	def infer_meta(self, module_meta: ModuleMeta, module_precedence):
-		inferencer = Inferencer(module_meta, self.module_object_map, module_precedence)
+		inferencer = Inferencer(module_meta, module_precedence)
 
 		try:
 			inferencer.visit(module_meta.tree)

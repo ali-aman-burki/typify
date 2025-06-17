@@ -1,5 +1,7 @@
-from src.symbol_table import Table, ModuleTable, VariableTable, PackageTable
+from src.symbol_table import Table, ModuleTable, VariableTable, PackageTable, LibraryTable
 from src.typeutils import TypeExpr
+from src.preloading.commons import builtin_lib, pystd_lib
+
 from pathlib import Path
 
 import ast
@@ -7,7 +9,7 @@ import json
 
 class ModuleMeta:
 
-	def __init__(self, src_path: Path, tree: ast.AST, table: ModuleTable, library_table: Table):
+	def __init__(self, src_path: Path, tree: ast.AST, table: ModuleTable, library_table: LibraryTable):
 		self.src_path = src_path
 		self.tree = tree
 		self.table = table
@@ -50,7 +52,7 @@ class ModuleMeta:
 			elif start_name in table.packages: 
 				starting_points.append([table.packages[start_name]])
 		
-		result = []
+		result: list[list[Table]] = []
 		for starting_point in starting_points:
 			current = starting_point[0]
 			for j in range(1, len(import_chain)):
@@ -62,6 +64,23 @@ class ModuleMeta:
 					starting_point.append(current)
 			if len(starting_point) == len(import_chain):
 				result.append(starting_point)
+		
+		if not result:
+			if start_name in builtin_lib.modules: result.append([builtin_lib.modules[start_name]])
+
+		if not result:
+			if start_name in pystd_lib.modules:
+				if start_name in pystd_lib.modules: result.append([pystd_lib.modules[start_name]])
+			elif start_name in pystd_lib.packages:
+				result.append([pystd_lib.packages[start_name]])
+				current = result[0][0]
+				for i in import_chain[1:]:
+					if i in current.modules:
+						current = current.modules[i]
+						result[0].append(current)
+					elif i in current.packages:
+						current = current.packages[i]
+						result[0].append(current)
 
 		return result
 
@@ -77,18 +96,14 @@ class ModuleMeta:
 				else:
 					new_chain.append(table)
 			new_chains.append(new_chain)
-
 		return new_chains
 
 
 	def collect_modules(self, resolved_chains: list[list[Table]]) -> set[Table]:
 		modules: set[Table] = set()
-
 		for chain in resolved_chains:
 			for table in chain:
-				if not isinstance(table, PackageTable):
-					modules.add(table)
-
+				if not isinstance(table, PackageTable): modules.add(table)
 		return modules
 
 	@staticmethod

@@ -1,5 +1,6 @@
-from src.symbol_table import LibraryTable, ModuleTable, ClassTable
+from src.symbol_table import LibraryTable, ModuleTable, ClassTable, Table
 from src.preloading.module_utils import ModuleUtils
+from src.typeutils import TypeUtils
 from pathlib import Path
 
 class PreloadedLibs:
@@ -62,6 +63,15 @@ class PreloadedLibs:
 		ModuleUtils.add(m_builtins, ClassTable("bytes"), type_class).bases.append(object_class)
 		ModuleUtils.add(m_builtins, ClassTable("complex"), type_class).bases.append(object_class)
 
-	def _init_pystd_lib(self, pystd_path: Path): pass
+		bobject = TypeUtils.create_instance(m_builtins.classes["module"], [])
+		Table.transfer_content(m_builtins, bobject)
+		self.builtin_lib.module_object_map[m_builtins] = bobject
+
+	def _init_pystd_lib(self, pystd_path: Path): 
+		m_builtins = self.builtin_lib.modules["builtins"]
+		m_typing = self.pystd_lib.modules["typing"]
+
+		self.builtin_lib.module_object_map[m_typing] = TypeUtils.create_instance(m_builtins.classes["module"], [])
+
 	def _init_site_libs(self, site_paths: list[Path]): pass
 	def _init_user_site_libs(self, user_site_paths: list[Path]): pass
