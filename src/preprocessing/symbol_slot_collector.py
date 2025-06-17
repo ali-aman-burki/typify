@@ -7,10 +7,10 @@ from src.symbol_table import (
 	VariableTable,
 	DefinitionTable,
 )
-from src.annotation_types import AnyType
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.scope_manager import ScopeManager
 from src.function_utils import FunctionUtils
+from src.preloading.commons import AnyType
 
 class SymbolSlotCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
@@ -43,7 +43,7 @@ class SymbolSlotCollector(ast.NodeVisitor):
 	def visit_FunctionDef(self, node):
 		parameters = FunctionUtils.collect_parameters(node, self.module_table)
 		key = (node.lineno, node.col_offset)
-		value = (node.name, parameters, AnyType())
+		value = (node.name, parameters, AnyType)
 		self.fslots[key] = value
 
 		enclosing = self.current_table.get_latest_definition()
@@ -108,7 +108,7 @@ class SymbolSlotCollector(ast.NodeVisitor):
 				self.process_target(elt)
 		else:
 			key = (target.lineno, target.col_offset)
-			value = (ast.unparse(target), AnyType())
+			value = (ast.unparse(target), AnyType)
 			self.vslots[key] = value
 
 			if isinstance(target, ast.Name):

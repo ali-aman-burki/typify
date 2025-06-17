@@ -21,7 +21,6 @@ class Table:
 		self.parent: Table = None
 
 		self.kind: str = ""
-		self.collected_types: set = set()
 		self.type = None
 		self.points_to: set[Table] = set()
 		self.origin: DefinitionTable = None
@@ -61,9 +60,7 @@ class Table:
 		for table in values:
 			tdef = table.get_latest_definition(defkey, precedence)
 			var.points_to.update(tdef.points_to)
-			var.collected_types.add(tdef.type)
 		
-		var.type = TypeUtils.unify(var.collected_types)
 		return var
 
 	@staticmethod
@@ -89,12 +86,6 @@ class Table:
 		else:
 			return None
 	
-	def create_instance(self, template_def: "DefinitionTable"):
-		instance = InstanceTable(self.key)
-		instance.template_used = template_def
-		template_def.instances.append(instance)
-		return instance
-
 	def __str__(self):
 		path = self.generate_path()
 		if self.key == "__init__": return ("" if not path or path == "builtins" else path)
@@ -161,7 +152,7 @@ class Table:
 
 		if precedence:
 			if anchor_module not in precedence:
-				return None
+				return self
 
 			candidates = [m for m in precedence if m in self.definitions and precedence.index(m) <= precedence.index(anchor_module)]
 		else:
@@ -180,7 +171,7 @@ class Table:
 			else:
 				return next(reversed(defs.values()))
 
-		return None
+		return self
 
 	def add_package(self, package_table):
 		self.packages[package_table.key] = package_table

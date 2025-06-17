@@ -1,5 +1,5 @@
 from src.symbol_table import Table, ModuleTable, VariableTable, PackageTable
-from src.typeutils import TypeAnnotation
+from src.typeutils import TypeExpr
 from pathlib import Path
 
 import ast
@@ -15,10 +15,10 @@ class ModuleMeta:
 		self.imports: list[tuple[ast.AST, Table, bool]] = []
 		self.dependency_map: dict[str, list[list[Table]]] = {}
 		self.dependencies: set[ModuleMeta] = set()
-		self.vslots: dict[tuple[int, int], tuple[str, TypeAnnotation]] = {}
-		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeAnnotation]] = {}
+		self.vslots: dict[tuple[int, int], tuple[str, TypeExpr]] = {}
+		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeExpr]] = {}
 
-	def to_absolute_name(self, import_module: str | None, level: int):
+	def to_absolute_name(self, import_module: str | None, level: int) -> str:
 		if not level: return import_module
 
 		import_module = import_module if import_module else ""
@@ -41,13 +41,14 @@ class ModuleMeta:
 	def resolve_chains(self, import_module: str) -> list[list[Table]]:
 		path_chain = self.table.get_path_chain()
 		import_chain = import_module.split(".")
+		start_name = import_chain[0]
 		starting_points: list[list[Table]] = []
 		for i in range(len(path_chain)):
 			table = path_chain[i]
-			if import_chain[0] in table.modules:
-				starting_points.append([table.modules[import_chain[0]]])
-			elif import_chain[0] in table.packages: 
-				starting_points.append([table.packages[import_chain[0]]])
+			if start_name in table.modules:
+				starting_points.append([table.modules[start_name]])
+			elif start_name in table.packages: 
+				starting_points.append([table.packages[start_name]])
 		
 		result = []
 		for starting_point in starting_points:

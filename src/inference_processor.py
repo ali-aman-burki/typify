@@ -23,9 +23,7 @@ class InferenceProcessor:
 		self.sequence_length = len(self.sequence)
 		
 		module_precedence = [meta.table for meta in self.sequence]
-		for t in self.symbols:
-			t.order_definitions(module_precedence)
-
+		for t in self.symbols: t.order_definitions(module_precedence)
 		for module_meta in self.sequence: self.infer_meta(module_meta, module_precedence)
 
 	def infer_meta(self, module_meta: ModuleMeta, module_precedence):

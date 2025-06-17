@@ -1,21 +1,20 @@
 import ast
 from src.symbol_table import *
 from src.preprocessing.module_meta import ModuleMeta
-from src.builtins_ctn import builtins
-from src.annotation_types import Type
 from src.typeutils import TypeUtils
+from src.preloading.commons import ModuleClass
 
 import copy
 
 class Inferencer(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta, module_object_map: dict[Table, Table], module_precedence):
-		self.library_table = module_meta.library_table
 		self.module_meta = module_meta
+		self.module_object_map = module_object_map
+		self.module_precedence = module_precedence
+		self.library_table = module_meta.library_table
 		self.module_table = module_meta.table
 		self.current_table = module_meta.table
 		self.latest_definition = self.current_table
-		self.module_object_map = module_object_map
-		self.module_precedence = module_precedence
 
 	def push(self):
 		self.current_table = self.latest_definition.get_enclosing_table()
@@ -26,8 +25,7 @@ class Inferencer(ast.NodeVisitor):
 
 	def visit_Module(self, node):
 		self.generic_visit(node)
-		m = builtins.classes["module"]
-		module_object = m.create_instance(m)
+		module_object = TypeUtils.create_instance(ModuleClass, [])
 		Table.transfer_content(self.module_table, module_object)
 
 		if self.module_table.key == "__init__":
@@ -35,32 +33,29 @@ class Inferencer(ast.NodeVisitor):
 		else:
 			self.module_object_map[self.module_table] = module_object
 			if self.module_table.parent not in self.module_object_map:
-				self.module_object_map[self.module_table.parent] = m.create_instance(m)
+				self.module_object_map[self.module_table.parent] = TypeUtils.create_instance(ModuleClass, [])
 
 	def process_import(self, name: str, position: tuple[int, int]):
-		m = builtins.classes["module"]
 		results: list[list[Table]] = []
 		for i in range(len(self.module_meta.dependency_map[name])):
 			results.append([])
 		for i in range(len(self.module_meta.dependency_map[name])):
 			chain = self.module_meta.dependency_map[name][i]
-			self.module_object_map.setdefault(chain[0], m.create_instance(m))
+			self.module_object_map.setdefault(chain[0], TypeUtils.create_instance(ModuleClass, []))
 			cobject = self.module_object_map[chain[0]]
 			results[i].append(cobject) 
 			for table in chain[1:]:
-				self.module_object_map.setdefault(table, m.create_instance(m))
+				self.module_object_map.setdefault(table, TypeUtils.create_instance(ModuleClass, []))
 				tobject = self.module_object_map[table]
 				if table.key not in cobject.variables:
 					mvar = VariableTable(table.key)
 					mdef = mvar.add_definition(DefinitionTable(self.module_table, position))
-					mdef.type = Type(m)
 					mdef.points_to.add(tobject)
 					cobject.add_variable(mvar)
 				else:
 					if tobject not in cobject.variables[table.key].get_latest_definition().points_to:
 						mvar = VariableTable(table.key)
 						mdef = mvar.add_definition(DefinitionTable(self.module_table, position))
-						mdef.type = Type(m)
 						mdef.points_to.add(tobject)
 						cobject.override_variable(mvar)
 				cobject = tobject
@@ -69,21 +64,18 @@ class Inferencer(ast.NodeVisitor):
 		return results
 
 	def visit_Import(self, node):
-		m = builtins.classes["module"]
 		position = (node.lineno, node.col_offset)
 		for alias in node.names:
 			varname = alias.asname if alias.asname else alias.name.split(".")[0]
 			var = self.latest_definition.variables[varname]
 			defkey = (self.module_table, position)
 			vardef = var.lookup_definition(defkey)
-			vardef.type = Type(m)
 			results = self.process_import(alias.name, position)
 			target_index = -1 if alias.asname else 0
 			for chain in results: vardef.points_to.add(chain[target_index])
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
-		m = builtins.classes["module"]
 		absolute_name = self.module_meta.to_absolute_name(node.module, node.level)
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
@@ -110,21 +102,18 @@ class Inferencer(ast.NodeVisitor):
 					if alias.name in ep.variables:
 						mvar = ep.variables[alias.name]
 						mvardef = mvar.get_latest_definition((vardef.module, vardef.position), self.module_precedence)
-						vardef.collected_types.add(mvardef.type)
 						vardef.points_to.update(mvardef.points_to)
 					else:
 						if alias.name in chain[-1].packages:
 							pac = chain[-1].packages[alias.name]
-							pobject = self.module_object_map[pac] if pac in self.module_object_map[pac] else m.create_instance(m)
+							pobject = self.module_object_map[pac] if pac in self.module_object_map[pac] else TypeUtils.create_instance(ModuleClass, [])
 							self.module_object_map[pac] = pobject
 							
 							pvar = VariableTable(alias.name)
 							pdef = pvar.add_definition(DefinitionTable(self.module_table, position))
-							pdef.type = Type(m)
 							pdef.points_to.add(pobject)
 							ep.add_variable(pvar)
 
-							vardef.collected_types.add(pdef.type)
 							vardef.points_to.update(pdef.points_to)
 
 						elif alias.name in chain[-1].modules:
@@ -133,15 +122,11 @@ class Inferencer(ast.NodeVisitor):
 							
 							mvar = VariableTable(alias.name)
 							mdef = mvar.add_definition(DefinitionTable(self.module_table, position))
-							mdef.type = Type(m)
 							mdef.points_to.add(mobject)
 							ep.add_variable(mvar)
 
-							vardef.collected_types.add(mdef.type)
 							vardef.points_to.update(mdef.points_to)
 				
-				vardef.type = TypeUtils.unify(vardef.collected_types)
-
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):

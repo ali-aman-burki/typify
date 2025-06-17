@@ -1,6 +1,11 @@
-import argparse
+from src.preloading.setup_utils import SetupUtils
+from src.preloading.preloader import PreloadedLibs
+from src.preloading.commons import bind
+
+bind(PreloadedLibs(SetupUtils.extract_runtime_env()))
+
+import argparse, os
 from src.utils import Utils
-import os
 
 parser = argparse.ArgumentParser(description="Build and export type bindings for a Python project.")
 parser.add_argument("project_path", help="Path to the Python project directory.")

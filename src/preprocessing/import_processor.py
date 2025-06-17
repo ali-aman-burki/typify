@@ -1,8 +1,6 @@
 import ast
-from src.symbol_table import VariableTable, Table, ModuleTable, PackageTable, DefinitionTable
-from src.builtins_ctn import builtins
+from src.symbol_table import VariableTable, Table, ModuleTable, DefinitionTable
 from src.preprocessing.module_meta import ModuleMeta
-from src.annotation_types import Type
 
 class ImportCollector():
 	def __init__(self, meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta):
