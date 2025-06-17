@@ -71,7 +71,9 @@ class PreloadedLibs:
 		m_builtins = self.builtin_lib.modules["builtins"]
 		m_typing = self.pystd_lib.modules["typing"]
 
-		self.builtin_lib.module_object_map[m_typing] = TypeUtils.create_instance(m_builtins.classes["module"], [])
+		tobject = TypeUtils.create_instance(m_builtins.classes["module"], [])
+		Table.transfer_content(m_typing, tobject)
+		self.pystd_lib.module_object_map[m_typing] = tobject
 
 	def _init_site_libs(self, site_paths: list[Path]): pass
 	def _init_user_site_libs(self, user_site_paths: list[Path]): pass

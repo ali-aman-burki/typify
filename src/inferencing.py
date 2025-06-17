@@ -38,7 +38,7 @@ class Inferencer(ast.NodeVisitor):
 		for i in range(len(self.module_meta.dependency_map[name])):
 			chain = self.module_meta.dependency_map[name][i]
 			cobject = self.module_object_map[chain[0]]
-			results[i].append(cobject) 
+			results[i].append(cobject)
 			for table in chain[1:]:
 				tobject = self.module_object_map[table]
 				if table.key not in cobject.variables:
@@ -78,7 +78,6 @@ class Inferencer(ast.NodeVisitor):
 		if node.names[0].name == '*':
 			var_dicts = []
 			for chain in results: var_dicts.append(chain[-1].variables)
-
 			homogenized = Table.homogenize(var_dicts, defkey, self.module_precedence)
 			for v in homogenized.values():
 				nv = self.module_table.add_variable(v)

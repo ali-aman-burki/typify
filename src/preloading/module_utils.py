@@ -15,4 +15,5 @@ class ModuleUtils:
 		
 		ins.origin = ct
 		cv.points_to.add(ins)
+		add_to.add_variable(cv)
 		return ct
