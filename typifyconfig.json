@@ -1,0 +1,9 @@
+{
+    "project_dir": "",
+    "output_dir": "",
+
+    "builtin_lib": "{auto}",
+    "pystd_lib": "{auto}",
+
+    "custom_libs": []
+}
