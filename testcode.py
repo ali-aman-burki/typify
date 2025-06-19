@@ -1,99 +1,78 @@
-import ast
-from src.symbol_table import Table, ModuleTable, PackageTable
-from src.preprocessing.module_meta import ModuleMeta
+import tempfile
+import json
+from pathlib import Path
+from src.preloading.setup_utils import SetupUtils
 
-class ImportCollector(ast.NodeVisitor):
-	def __init__(self, meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta):
-		self.meta_map = meta_map
-		self.library_table = module_meta.library_table
-		self.module_meta = module_meta
-		self.module_table = module_meta.table
-		self.path_chain: list[Table] = self.module_table.get_path_chain()
+def run_tests():
+    defaults = SetupUtils.extract_runtime_env()
 
-	def resolve(self, import_chain: list[str]) -> list[tuple[list[Table], int]]:
-		starting_points: list[tuple[list[Table], int]] = []
-		for i in range(len(self.path_chain)):
-			table = self.path_chain[i]
-			if import_chain[0] in table.modules:
-				starting_points.append(([table.modules[import_chain[0]]], i))
-			elif import_chain[0] in table.packages: 
-				starting_points.append(([table.packages[import_chain[0]]], i))
-		
-		result = []
-		for starting_point in starting_points:
-			current_list = starting_point[0]
-			current = current_list[0]
-			for j in range(1, len(import_chain)):
-				if import_chain[j] in current.modules:
-					current = current.modules[import_chain[j]]
-					current_list.append(current)
-				elif import_chain[j] in current.packages:
-					current = current.packages[import_chain[j]]
-					current_list.append(current)
-			if len(current_list) == len(import_chain):
-				result.append(starting_point)
+    def write_config(data: dict) -> Path:
+        f = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json")
+        json.dump(data, f)
+        f.close()
+        return Path(f.name)
 
-		return result
-	
-	def filter(self, chain_tuples: list[tuple[list[Table], int]]) -> list[tuple[list[Table], int]]:
-		module_table = self.module_meta.table
-		for table_list, _ in chain_tuples:
-			for i in range(len(table_list)):
-				table = table_list[i]
-				if isinstance(table, PackageTable) and "__init__" in table.modules and table.modules["__init__"] != module_table:
-					table_list[i] = table.modules["__init__"]
-		return chain_tuples
+    def print_result(n: int, result: list[Path]):
+        print(f"\n--- Test {n} Resolved Paths ---")
+        for p in result:
+            print(p)
 
-	def collect(self, chain_tuples: list[tuple[list[Table], int]]) -> set[Table]:
-		resolved_chain_tuples = self.filter(chain_tuples)
-		modules: set[Table] = set()
+    project_dir = Path("/some/proj")
 
-		for table_list, _ in resolved_chain_tuples:
-			for table in table_list:
-				if not isinstance(table, PackageTable):
-					modules.add(table)
+    # Test 1: All auto
+    config1 = {
+        "project_dir": str(project_dir),
+        "output_dir": "/some/ignored",
+        "man_libs": {
+            "builtin_lib": "{auto}",
+            "pystd_lib": "{auto}",
+        },
+        "paths": "{auto}"
+    }
+    result1 = SetupUtils.get_paths(write_config(config1))
+    print_result(1, result1)
 
-		return modules
+    # Test 2: Custom paths using templates (but builtin_lib should move to index 1)
+    config2 = {
+        "project_dir": str(project_dir),
+        "output_dir": "/some/ignored",
+        "man_libs": {
+            "builtin_lib": "{auto}",
+            "pystd_lib": "{auto}",
+			"other_lib": "/other/lib"
+        },
+        "paths": "{builtin_lib}, /extra, {pystd_lib}, {other_lib}"
+    }
+    result2 = SetupUtils.get_paths(write_config(config2))
+    print_result(2, result2)
 
-	def as_metas(self, modules: set[Table]) -> set[ModuleMeta]:
-		return {self.meta_map[table] for table in modules if table in self.meta_map}
+    # Test 3: Manual override of builtin_lib
+    custom_builtin = Path("/my/custom/builtin")
+    config3 = {
+        "project_dir": str(project_dir),
+        "output_dir": "/some/ignored",
+        "man_libs": {
+            "builtin_lib": str(custom_builtin),
+            "pystd_lib": "{auto}"
+        },
+        "paths": "{builtin_lib}, {pystd_lib}"
+    }
+    result3 = SetupUtils.get_paths(write_config(config3))
+    print_result(3, result3)
 
-	def visit_Import(self, node: ast.Import):
-		for alias in node.names:
-			import_chain = alias.name.split('.')
-			chain_tuples = self.resolve(import_chain)
-			collected = self.collect(chain_tuples)
-			self.module_meta.dependency_map[alias.name] = {(chain_tuple[0][-1], chain_tuple[1]) for chain_tuple in chain_tuples}
-			self.module_meta.dependencies.update(self.as_metas(collected))
+    config4 = {
+        "project_dir": str(project_dir),
+        "output_dir": "/some/ignored",
+        "man_libs": {
+            "builtin_lib": "{auto}",
+            "pystd_lib": "{auto}"
+        },
+        "paths": "/a, /b, /c"
+    }
+    result4 = SetupUtils.get_paths(write_config(config4))
+    print_result(4, result4)
 
-		self.generic_visit()
+    print("\n✅ no errors.")
 
-	def visit_ImportFrom(self, node: ast.ImportFrom):
-		if node.module and not node.level:
-			import_chain = node.module.split('.')
-			identifiers = [alias.name for alias in node.names]
-			chain_tuples = self.resolve(import_chain)
-			if "*" in identifiers:
-				collected = self.collect(chain_tuples)
-				self.module_meta.dependency_map[node.module] = {(chain_tuple[0][-1], chain_tuple[1]) for chain_tuple in chain_tuples}
-				self.module_meta.dependencies.update(self.as_metas(collected))
-				return
-			results = []
-			for chain in chain_tuples:
-				end_point = chain[0][-1]
-				if isinstance(end_point, ModuleTable):
-					if all(identifier in end_point.variables for identifier in identifiers):
-						results.append(chain)
-				elif isinstance(end_point, PackageTable):
-					module_names = end_point.modules.keys()
-					init_vars = end_point.modules["__init__"].variables.keys() if "__init__" in end_point.modules else set()
-					search_space = module_names | init_vars
-					if all(identifier in search_space for identifier in identifiers):
-						results.append(chain)
-			
-			collected = self.collect(results)
-			self.module_meta.dependency_map[node.module] = results
-			self.module_meta.dependencies.update(self.as_metas(collected))
-		else:
-			pass
-		self.generic_visit(node)
+if __name__ == "__main__":
+    run_tests()

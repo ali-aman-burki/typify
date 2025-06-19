@@ -1,9 +1,11 @@
 {
-    "project_dir": "",
-    "output_dir": "",
+    "project_dir": "/home/ali/dev/typify-workspace/sample_projects/proj1/",
+	"output_dir": "/home/ali/dev/typify-workspace/sample_projects/proj1/.typify",
 
-    "builtin_lib": "{auto}",
-    "pystd_lib": "{auto}",
+	"man_libs": {
+		"builtin_lib": "{auto}",
+		"pystd_lib": "{auto}"
+	},
 
-    "custom_libs": []
+    "paths": "{auto}"
 }
