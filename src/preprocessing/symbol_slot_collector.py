@@ -10,7 +10,7 @@ from src.symbol_table import (
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.scope_manager import ScopeManager
 from src.function_utils import FunctionUtils
-from src.preloading.common_types import Typing
+from src.preloading.commons import Typing
 
 class SymbolSlotCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):

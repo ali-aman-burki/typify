@@ -11,7 +11,7 @@ from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.graph_utils import GraphUtils
 from src.preprocessing.dependency_tracker import ImportCollector
 from src.typeutils import TypeUtils
-from src.preloading.common_types import Builtins
+from src.preloading.commons import Builtins
 
 class Preprocessor:
 

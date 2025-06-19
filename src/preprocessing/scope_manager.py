@@ -1,7 +1,7 @@
 from src.symbol_table import Table, ClassTable, DefinitionTable, VariableTable, FunctionTable
 from src.function_utils import FunctionUtils
 from src.typeutils import TypeUtils
-from src.preloading.common_types import TypeClass, FunctionClass
+from src.preloading.commons import Builtins
 
 import ast
 
@@ -17,7 +17,7 @@ class ScopeManager:
 			
 		cvt = enclosing.variables[class_name]
 		cdvt = cvt.add_definition(DefinitionTable(module_table, position))
-		tinstnace = TypeUtils.create_instance(TypeClass, [])
+		tinstnace = TypeUtils.create_instance(Builtins.TypeClass, [])
 		cdvt.points_to.add(tinstnace)
 		parent = enclosing.parent
 
@@ -46,7 +46,7 @@ class ScopeManager:
 		
 		fvt = enclosing.variables[function_name]
 		fdvt = fvt.add_definition(DefinitionTable(module_table, position))
-		finstance = TypeUtils.create_instance(FunctionClass, [])
+		finstance = TypeUtils.create_instance(Builtins.FunctionClass, [])
 		fdvt.points_to.add(finstance)
 
 		if function_name not in enclosing.functions:

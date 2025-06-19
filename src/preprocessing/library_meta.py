@@ -7,7 +7,7 @@ from src.symbol_table import (
 )
 from src.preprocessing.symbol_slot_collector import SymbolSlotCollector
 from src.preprocessing.module_meta import ModuleMeta
-from src.preloading.common_types import Builtins
+from src.preloading.commons import Builtins
 from src.typeutils import TypeUtils
 
 from pathlib import Path

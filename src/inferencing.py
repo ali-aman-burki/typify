@@ -4,7 +4,7 @@ import copy
 from src.symbol_table import Table, VariableTable, DefinitionTable
 from src.preprocessing.module_meta import ModuleMeta
 from src.typeutils import TypeUtils
-from src.preloading.common_types import ModuleClass
+from src.preloading.commons import ModuleClass
 
 
 class Inferencer(ast.NodeVisitor):

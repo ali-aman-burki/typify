@@ -2,8 +2,16 @@ from src.typeutils import TypeExpr
 from src.symbol_table import ModuleTable, ClassTable
 from src.preloading.module_utils import ModuleUtils
 
+from pathlib import Path
+from dataclasses import dataclass
+
 builtins_m = ModuleTable("builtins")
 typing_m =  ModuleTable("typing")
+
+@dataclass
+class TypifyPaths:
+    preload: list[Path]
+    ondemand: list[Path]
 
 class Builtins:
 	TypeClass = ModuleUtils.add(builtins_m, ClassTable("type"))

@@ -3,10 +3,12 @@ import subprocess, sys, json, re
 from pathlib import Path
 from typing import Union
 
+from src.preloading.commons import TypifyPaths
+
 class SetupUtils:
 
 	@staticmethod
-	def extract_runtime_env(python_executable=sys.executable) -> dict[str, Union[str, Path, list[Path]]]:
+	def extract_current_env(python_executable=sys.executable) -> dict[str, Union[str, Path, list[Path]]]:
 		script = """
 import site, json
 
@@ -32,33 +34,35 @@ print(json.dumps(info))
 			"site_libs": raw_info["site_libs"],
 		}
 	
+	
 	@staticmethod
-	def get_paths(config_path: Path):
-		defaults = SetupUtils.extract_runtime_env()
+	def get_paths(config_path: Path) -> TypifyPaths:
+		defaults = SetupUtils.extract_current_env()
 
 		with open(config_path, "r") as f:
-			config: dict[str, str | dict[str, str]] = json.load(f)
+			config: dict[str, Union[str, dict[str, str]]] = json.load(f)
 
-		man_libs = config["man_libs"]
-		for key in man_libs:
-			config["paths"] = config["paths"].replace("{" + key + "}", man_libs[key])
+		config.setdefault("preload", "")
+		config.setdefault("ondemand", "CURRENT_ENV")
 
-		if config["paths"] == "{auto}":
-			return (
-				[Path(config["project_dir"]),
-				Path(man_libs["builtinlib"]),
-				Path(man_libs["stdlib"]),
-				Path(defaults["user_site_lib"])] +
-				[Path(p) for p in defaults["site_libs"]]
-			)
+		paths_dict: dict[str, str] = config.get("paths", {})
+		for key, value in paths_dict.items():
+			config["preload"] = config["preload"].replace(f"{{{key}}}", value)
+			config["ondemand"] = config["ondemand"].replace(f"{{{key}}}", value)
+
+		preload_paths = [Path(p).resolve() for p in re.split(r"\s*,\s*", config["preload"]) if p]
+
+		ondemand_raw = config["ondemand"].strip()
+		if not ondemand_raw:
+			ondemand_paths = []
+		elif ondemand_raw == "CURRENT_ENV":
+			ondemand_paths = [Path(defaults["user_site_lib"]).resolve()] + [
+				Path(p).resolve() for p in defaults["site_libs"]
+			]
 		else:
-			raw_paths = [Path(p) for p in re.split(r"\s*,\s*", config["paths"])]
-			project_dir = Path(config["project_dir"])
-			builtinlib = Path(man_libs["builtinlib"])
+			ondemand_paths = [Path(p).resolve() for p in re.split(r"\s*,\s*", ondemand_raw) if p]
 
-			raw_paths = [p for p in raw_paths if p != project_dir and p != builtinlib]
-			final_paths = [project_dir, builtinlib] + raw_paths
-			return final_paths
+		return TypifyPaths(preload_paths, ondemand_paths)
 
 	@staticmethod
 	def preprocess_libs(config_path: Path): 
