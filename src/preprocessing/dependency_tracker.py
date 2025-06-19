@@ -2,7 +2,7 @@ import ast
 from src.symbol_table import VariableTable, Table, ModuleTable, DefinitionTable
 from src.preprocessing.module_meta import ModuleMeta
 
-class ImportCollector():
+class DependencyTracker(ast.NodeVisitor):
 	def __init__(self, meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta):
 		self.meta_map = meta_map
 		self.library_table = module_meta.library_table
@@ -10,21 +10,17 @@ class ImportCollector():
 		self.module_table = module_meta.table
 		self.path_chain: list[Table] = self.module_table.get_path_chain()
 		self.symbols: set[Table] = set()
+		self.in_function = 0
 	
-	def collect(self):
-		for import_tuple in self.module_meta.imports:
-			if isinstance(import_tuple[0], ast.Import): self.process_import(import_tuple)
-			else: self.process_import_from(import_tuple)
-
 	def as_metas(self, modules: set[Table]) -> set[ModuleMeta]:
 		return {self.meta_map[table] for table in modules if table in self.meta_map}
 
-	def process_import(self, import_tuple: tuple[ast.Import, Table, bool]):
-		node = import_tuple[0]
-		enclosing_definition = import_tuple[1]
-		in_function = import_tuple[2]
-		vars = set()
+	def visit_FunctionDef(self, node):
+		self.in_function += 1
+		self.generic_visit(node)
+		self.in_function -= 1
 
+	def visit_Import(self, node):
 		for alias in node.names:
 			import_module = alias.name
 			chains = self.module_meta.resolve_chains(import_module)
@@ -32,16 +28,8 @@ class ImportCollector():
 			collected = self.module_meta.collect_modules(resolved_chains)
 			self.module_meta.dependency_map[import_module] = chains
 
-			var = VariableTable(alias.asname if alias.asname else import_module.split('.')[0])
-			position = (node.lineno, node.col_offset)
-			var.add_definition(DefinitionTable(self.module_table, position))
-
-			vars.add(var)
-
-			if not in_function:
+			if not self.in_function:
 				self.module_meta.dependencies.update(self.as_metas(collected))
-		
-		for var in vars: self.symbols.add(enclosing_definition.add_variable(var))
 		
 	def process_import_from(self, import_tuple: tuple[ast.ImportFrom, Table, bool]):
 		node = import_tuple[0]

@@ -1,7 +1,7 @@
 from src.preprocessing.preprocessor import Preprocessor
 from src.preprocessing.module_meta import ModuleMeta
 from src.inferencing import Inferencer
-from src.preloading.commons import preloaded_libs
+from src.preloading.common_types import preloaded_libs
 
 import sys
 import traceback

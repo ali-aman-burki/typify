@@ -24,38 +24,38 @@ def run_tests():
         "project_dir": str(project_dir),
         "output_dir": "/some/ignored",
         "man_libs": {
-            "builtin_lib": "{auto}",
-            "pystd_lib": "{auto}",
+            "builtinlib": "some_path",
+            "stdlib": "stdlib/path",
         },
-        "paths": "{auto}"
+        "paths": "/aanother_path, {stdlib}"
     }
     result1 = SetupUtils.get_paths(write_config(config1))
     print_result(1, result1)
 
-    # Test 2: Custom paths using templates (but builtin_lib should move to index 1)
+    # Test 2: Custom paths using templates (but builtinlib should move to index 1)
     config2 = {
         "project_dir": str(project_dir),
         "output_dir": "/some/ignored",
         "man_libs": {
-            "builtin_lib": "{auto}",
-            "pystd_lib": "{auto}",
+            "builtinlib": "{auto}",
+            "stdlib": "{auto}",
 			"other_lib": "/other/lib"
         },
-        "paths": "{builtin_lib}, /extra, {pystd_lib}, {other_lib}"
+        "paths": "{builtinlib}, /extra, {stdlib}, {other_lib}"
     }
     result2 = SetupUtils.get_paths(write_config(config2))
     print_result(2, result2)
 
-    # Test 3: Manual override of builtin_lib
+    # Test 3: Manual override of builtinlib
     custom_builtin = Path("/my/custom/builtin")
     config3 = {
         "project_dir": str(project_dir),
         "output_dir": "/some/ignored",
         "man_libs": {
-            "builtin_lib": str(custom_builtin),
-            "pystd_lib": "{auto}"
+            "builtinlib": str(custom_builtin),
+            "stdlib": "{auto}"
         },
-        "paths": "{builtin_lib}, {pystd_lib}"
+        "paths": "{builtinlib}, {stdlib}"
     }
     result3 = SetupUtils.get_paths(write_config(config3))
     print_result(3, result3)
@@ -64,8 +64,8 @@ def run_tests():
         "project_dir": str(project_dir),
         "output_dir": "/some/ignored",
         "man_libs": {
-            "builtin_lib": "{auto}",
-            "pystd_lib": "{auto}"
+            "builtinlib": "{auto}",
+            "stdlib": "{auto}"
         },
         "paths": "/a, /b, /c"
     }

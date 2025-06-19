@@ -1,6 +1,5 @@
 from src.symbol_table import Table, ModuleTable, VariableTable, PackageTable, LibraryTable
 from src.typeutils import TypeExpr
-from src.preloading.commons import builtin_lib, pystd_lib
 
 from pathlib import Path
 
@@ -9,9 +8,9 @@ import json
 
 class ModuleMeta:
 
-	def __init__(self, src_path: Path, tree: ast.AST, table: ModuleTable, library_table: LibraryTable):
+	def __init__(self, src_path: Path, table: ModuleTable, library_table: LibraryTable):
 		self.src_path = src_path
-		self.tree = tree
+		self.tree: ast.AST = None
 		self.table = table
 		self.library_table = library_table
 		self.imports: list[tuple[ast.AST, Table, bool]] = []
@@ -64,23 +63,6 @@ class ModuleMeta:
 					starting_point.append(current)
 			if len(starting_point) == len(import_chain):
 				result.append(starting_point)
-		
-		if not result:
-			if start_name in builtin_lib.modules: result.append([builtin_lib.modules[start_name]])
-
-		if not result:
-			if start_name in pystd_lib.modules:
-				if start_name in pystd_lib.modules: result.append([pystd_lib.modules[start_name]])
-			elif start_name in pystd_lib.packages:
-				result.append([pystd_lib.packages[start_name]])
-				current = result[0][0]
-				for i in import_chain[1:]:
-					if i in current.modules:
-						current = current.modules[i]
-						result[0].append(current)
-					elif i in current.packages:
-						current = current.packages[i]
-						result[0].append(current)
 
 		return result
 
@@ -108,12 +90,7 @@ class ModuleMeta:
 
 	@staticmethod
 	def from_source(src_path: Path, library_table: Table):
-		with open(src_path, "r", encoding="utf-8") as file:
-			source_code = file.read()
-		tree = ast.parse(source_code)
-		table = ModuleTable(src_path.stem)
-		meta = ModuleMeta(src_path, tree, table, library_table)
-		return meta
+		return ModuleMeta(src_path, ModuleTable(src_path.stem), library_table)
 	
 	def mirror_export_path(self, working_directory: Path, export_path: Path, suffix: str = "") -> Path:
 		file_path = self.src_path

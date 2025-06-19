@@ -3,9 +3,9 @@
 	"output_dir": "/home/ali/dev/typify-workspace/sample_projects/proj1/.typify",
 
 	"man_libs": {
-		"builtin_lib": "{auto}",
-		"pystd_lib": "{auto}"
+		"builtinlib": "/home/ali/dev/typify-workspace/typify/typify-defaults/builtinlib",
+		"stdlib": "/home/ali/dev/typify-workspace/typify/typify-defaults/stdlib"
 	},
 
-    "paths": "{auto}"
+    "paths": "{builtinlib},{stdlib}"
 }

@@ -1,6 +1,6 @@
 from src.preloading.setup_utils import SetupUtils
 from src.preloading.preloader import PreloadedLibs
-from src.preloading.commons import bind
+from src.preloading.common_types import bind
 
 bind(PreloadedLibs(SetupUtils.extract_runtime_env()))
 

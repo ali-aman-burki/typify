@@ -1,7 +1,7 @@
 from src.symbol_table import Table, ClassTable, DefinitionTable, VariableTable, FunctionTable
 from src.function_utils import FunctionUtils
 from src.typeutils import TypeUtils
-from src.preloading.commons import TypeClass, FunctionClass
+from src.preloading.common_types import TypeClass, FunctionClass
 
 import ast
 
