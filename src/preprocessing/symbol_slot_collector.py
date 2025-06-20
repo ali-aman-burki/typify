@@ -26,11 +26,6 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		self.imports = module_meta.imports
 		self.symbols: set[Table] = set()
 
-		if not module_meta.tree:
-			with open(module_meta.src_path, "r", encoding="utf-8") as file:
-				source_code = file.read()
-			module_meta.tree = ast.parse(source_code)
-
 	def visit_Import(self, node):
 		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth!=0))
 		self.generic_visit(node)

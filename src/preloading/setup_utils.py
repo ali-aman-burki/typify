@@ -1,9 +1,19 @@
-import subprocess, sys, json, re
+import subprocess
+import sys
+import json
+import re
 
 from pathlib import Path
 from typing import Union
+from dataclasses import dataclass
 
-from src.preloading.commons import TypifyPaths
+from src.preprocessing.library_meta import LibraryMeta
+from src.preprocessing.dependency_tracker import GraphBuilder, DependencyBundle
+
+@dataclass
+class TypifyPaths:
+	preload: list[Path]
+	ondemand: list[Path]
 
 class SetupUtils:
 
@@ -51,6 +61,8 @@ print(json.dumps(info))
 			config["ondemand"] = config["ondemand"].replace(f"{{{key}}}", value)
 
 		preload_paths = [Path(p).resolve() for p in re.split(r"\s*,\s*", config["preload"]) if p]
+		project_dir = Path(config["project_dir"]).resolve()
+		preload_paths = [project_dir] + [p for p in preload_paths if p != project_dir]
 
 		ondemand_raw = config["ondemand"].strip()
 		if not ondemand_raw:
@@ -65,7 +77,10 @@ print(json.dumps(info))
 		return TypifyPaths(preload_paths, ondemand_paths)
 
 	@staticmethod
-	def preprocess_libs(config_path: Path): 
+	def preprocess_libs(config_path: Path) -> DependencyBundle: 
 		paths = SetupUtils.get_paths(config_path)
-		
-		pass
+		libs = []
+		for preload_path in paths.preload: 
+			libs.append(LibraryMeta(preload_path))
+		bundle = GraphBuilder.build_graph(libs)
+		return bundle

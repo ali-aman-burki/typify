@@ -1,5 +1,5 @@
 class GraphUtils:
-
+	
 	@staticmethod
 	def tarjan(graph):
 		index = 0

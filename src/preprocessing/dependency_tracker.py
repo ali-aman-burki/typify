@@ -1,19 +1,63 @@
 import ast
-from src.symbol_table import VariableTable, Table, ModuleTable, DefinitionTable
-from src.preprocessing.module_meta import ModuleMeta
 
+from src.symbol_table import Table, ModuleTable, PackageTable
+from src.preprocessing.module_meta import ModuleMeta
+from src.preprocessing.library_meta import LibraryMeta
+
+from dataclasses import dataclass
+
+@dataclass
+class DependencyBundle:
+	libs: list[LibraryMeta]
+	meta_map: dict[ModuleTable, ModuleMeta]
+	dependency_map: dict[str, list[Table]]
+	dependency_graph: dict[ModuleMeta, set[ModuleMeta, str]]
+
+class GraphBuilder:
+	@staticmethod
+	def build_graph(libs: list[LibraryMeta]) -> DependencyBundle:
+		meta_map: dict[ModuleTable, ModuleMeta] = {}
+		dependency_map: dict[str, list[Table]] = {}
+		dependency_graph: dict[ModuleMeta, set[ModuleMeta, str]] = {}
+		for lib in libs: meta_map.update(lib.meta_map)
+
+		for meta in meta_map.values():
+			tracker = DependencyTracker(libs, meta_map, dependency_map, dependency_graph, meta)
+			tracker.visit(meta.tree)
+		
+		return DependencyBundle(libs, meta_map, dependency_map, dependency_graph)
+			
 class DependencyTracker(ast.NodeVisitor):
-	def __init__(self, meta_map: dict[ModuleTable, ModuleMeta], module_meta: ModuleMeta):
+	def __init__(
+		self,
+		search_libs: list[LibraryMeta],
+		meta_map: dict[ModuleTable, ModuleMeta],
+		dependency_map: dict[str, list[Table]],
+		dependency_graph: dict[ModuleMeta, set[ModuleMeta, str]],
+		module_meta: ModuleMeta
+	):
 		self.meta_map = meta_map
-		self.library_table = module_meta.library_table
 		self.module_meta = module_meta
 		self.module_table = module_meta.table
-		self.path_chain: list[Table] = self.module_table.get_path_chain()
-		self.symbols: set[Table] = set()
+		self.search_libs = search_libs
+		self.dependency_map = dependency_map
+		self.dependency_graph = dependency_graph
 		self.in_function = 0
+
+		if not module_meta.tree:
+			with open(module_meta.src_path, "r", encoding="utf-8") as file:
+				source_code = file.read()
+			module_meta.tree = ast.parse(source_code)
 	
 	def as_metas(self, modules: set[Table]) -> set[ModuleMeta]:
 		return {self.meta_map[table] for table in modules if table in self.meta_map}
+
+	def filter_chain(chain: list[PackageTable | ModuleTable]):
+		result = []
+		for table in chain:
+			if isinstance(table, PackageTable): result.append(table.modules["__init__"])
+			else: result.append(table)
+		return result
 
 	def visit_FunctionDef(self, node):
 		self.in_function += 1
@@ -22,62 +66,31 @@ class DependencyTracker(ast.NodeVisitor):
 
 	def visit_Import(self, node):
 		for alias in node.names:
-			import_module = alias.name
-			chains = self.module_meta.resolve_chains(import_module)
-			resolved_chains = self.module_meta.filter_chains(chains)
-			collected = self.module_meta.collect_modules(resolved_chains)
-			self.module_meta.dependency_map[import_module] = chains
-
+			fqn_parts = alias.name.split(".")
+			chain = []
+			for search_lib in self.search_libs:
+				lib_table = search_lib.library_table
+				if fqn_parts[0] in lib_table.packages:
+					current = lib_table.packages[fqn_parts[0]]
+					chain.append[current]
+					for part in fqn_parts[1:]:
+						if part in current.packages: 
+							current = current.packages[part]
+							chain.append(current)
+						elif part in current.modules: 
+							current = current.modules[part]
+							chain.append(current)
+							break
+						else: break
+					break
+				elif fqn_parts[0] in lib_table.modules:
+					chain = [lib_table.modules[fqn_parts[0]]]
+					break
+			
+			self.dependency_map[alias.name] = chain
 			if not self.in_function:
-				self.module_meta.dependencies.update(self.as_metas(collected))
-		
-	def process_import_from(self, import_tuple: tuple[ast.ImportFrom, Table, bool]):
-		node = import_tuple[0]
-		enclosing_definition = import_tuple[1]
-		in_function = import_tuple[2]
-		import_module = self.module_meta.to_absolute_name(node.module, node.level)
-
-		chains = self.module_meta.resolve_chains(import_module)
-
-		position = (node.lineno, node.col_offset)
-		if node.names[0].name == '*':
-			identifiers = {}
-		else:
-			identifiers = {
-				alias.name: VariableTable(alias.asname) if alias.asname else VariableTable(alias.name)
-				for alias in node.names
-			}
-		
-		for varkey, var in identifiers.items():
-			var.add_definition(DefinitionTable(self.module_table, position))
-			self.symbols.add(enclosing_definition.add_variable(var))
-			new_chains = []
-			for chain in chains:
-				if varkey in chain[-1].packages:
-					pac = chain[-1].packages[varkey]
-					new_import_module = import_module + "." + varkey
-					new_chain = chain + [pac]
-					new_chains.append(new_chain)
-					if new_import_module not in self.module_meta.dependency_map: 
-						self.module_meta.dependency_map[new_import_module] = []
-					self.module_meta.dependency_map[new_import_module].append(new_chain)
-					if not in_function:
-						if "__init__" in pac.modules and pac.modules["__init__"] in self.meta_map:
-							self.module_meta.dependencies.add(self.meta_map[pac.modules["__init__"]])
-				elif varkey in chain[-1].modules:
-					mod = chain[-1].modules[varkey]
-					new_import_module = import_module + "." + varkey
-					new_chain = chain + [mod]
-					new_chains.append(new_chain)
-					if new_import_module not in self.module_meta.dependency_map: 
-						self.module_meta.dependency_map[new_import_module] = []
-					self.module_meta.dependency_map[new_import_module].append(new_chain)
-					if not in_function and mod in self.meta_map:
-						self.module_meta.dependencies.add(self.meta_map[mod])
-
-		self.module_meta.dependency_map[import_module] = chains
-
-		if not in_function:
-			resolved_chains = self.module_meta.filter_chains(chains)
-			collected = self.module_meta.collect_modules(resolved_chains)
-			self.module_meta.dependencies.update(self.as_metas(collected))
+				if chain: self.dependency_graph[self.module_meta].update(self.filter_chain(chain))
+				else: self.dependency_graph[self.module_meta].add(alias.name)
+			
+	def visit_ImportFrom(self, node):
+		self.generic_visit(node)
