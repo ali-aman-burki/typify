@@ -1,6 +1,6 @@
 import ast
 
-from src.symbol_table import VariableTable, DefinitionTable, ModuleTable, InstanceTable
+from src.preprocessing.symbol_table import VariableTable, DefinitionTable, ModuleTable, InstanceTable
 
 class FunctionUtils:
 

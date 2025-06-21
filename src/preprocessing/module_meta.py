@@ -1,4 +1,4 @@
-from src.symbol_table import Table, ModuleTable, VariableTable, PackageTable, LibraryTable
+from src.preprocessing.symbol_table import Table, ModuleTable, VariableTable, PackageTable, LibraryTable
 from src.typeutils import TypeExpr
 
 from pathlib import Path

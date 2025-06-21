@@ -1,6 +1,6 @@
 import ast
 
-from src.symbol_table import Table, ModuleTable, PackageTable
+from src.preprocessing.symbol_table import Table, ModuleTable, PackageTable, InstanceTable
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.library_meta import LibraryMeta
 from src.preprocessing.sequencer import Sequencer
@@ -9,24 +9,27 @@ from dataclasses import dataclass
 
 @dataclass
 class DependencyBundle:
-	libs: list[tuple[str, LibraryMeta]]
+	libs: dict[str, LibraryMeta]
 	meta_map: dict[ModuleTable, ModuleMeta]
+	module_object_map: dict[PackageTable | ModuleTable, InstanceTable]
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
 	cleaned_graph: dict[ModuleMeta, set[ModuleMeta]]
 	resolving_sequence: list[ModuleMeta]
 
 class GraphBuilder:
 	@staticmethod
-	def build_graph(libs: list[tuple[str, LibraryMeta]]) -> DependencyBundle:
+	def build_graph(libs: dict[str, LibraryMeta]) -> DependencyBundle:
 		meta_map: dict[ModuleTable, ModuleMeta] = {}
+		module_object_map: dict[PackageTable | ModuleTable, InstanceTable] = {}
 		dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]] = {}
 
-		for _, lib in libs: 
+		for lib in libs.values():
 			meta_map.update(lib.meta_map)
+			module_object_map.update(lib.module_object_map)
 
 		for meta in meta_map.values():
 			tracker = DependencyTracker(libs, meta_map, dependency_graph, meta)
-			
+
 			meta.load_tree()
 			builtin_node = ast.ImportFrom(module="builtins", names=[ast.alias(name="*", asname=None)], level=0)
 			builtin_node.lineno = 0
@@ -37,25 +40,26 @@ class GraphBuilder:
 
 			meta.tree.body.pop(0)
 
-		cleaned_graph = {}
-
-		for key in dependency_graph:
-			deps = dependency_graph[key]
-			cleaned_graph[key] = {dep for dep in deps if not isinstance(dep, str)}
+		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = {
+			key: {dep for dep in deps if not isinstance(dep, str)}
+			for key, deps in dependency_graph.items()
+		}
 
 		resolving_sequence = Sequencer.generate_resolving_sequence(cleaned_graph)
+
 		return DependencyBundle(
-			libs, 
-			meta_map, 
-			dependency_graph, 
-			cleaned_graph, 
+			libs,
+			meta_map,
+			module_object_map,
+			dependency_graph,
+			cleaned_graph,
 			resolving_sequence
 		)
 
 class DependencyTracker(ast.NodeVisitor):
 	def __init__(
 		self,
-		libs: list[tuple[str, LibraryMeta]],
+		libs: dict[str, LibraryMeta],
 		meta_map: dict[ModuleTable, ModuleMeta],
 		dependency_graph: dict[ModuleMeta, set[tuple[ModuleMeta, str]]],
 		module_meta: ModuleMeta
@@ -90,7 +94,7 @@ class DependencyTracker(ast.NodeVisitor):
 			if module: base_parts.extend(module.split("."))
 			base_fqn = ".".join(base_parts)
 
-		for _, lib in self.libs:
+		for lib in self.libs.values():
 			if base_fqn in lib.fqn_map:
 				chain = lib.fqn_map[base_fqn]
 				metas = self.as_module_metas(self.filter_chain(chain))

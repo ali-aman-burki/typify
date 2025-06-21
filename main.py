@@ -7,6 +7,7 @@ from pathlib import Path
 
 from src.utils import Utils
 from src.preprocessing.preloader import Preloader
+from src.inferencing.inferencer import Inferencer
 
 config_path = "typifyconfig.json"
 
@@ -34,14 +35,19 @@ config["project_dir"] = project_dir
 print(Utils.title)
 
 bundle = Preloader.load(config)
-print("Original Graph")
+
+print("")
+for lib, meta in bundle.libs.items():
+     print(f"{lib} -> {str(meta.src)}")
+
+print("\nOriginal Graph: ")
 for meta, deps in bundle.dependency_graph.items():
     joined = ", ".join(
         f"<{dep}>" if isinstance(dep, str) else repr(dep)
         for dep in deps
     )
     print(f"{repr(meta)} -> [{joined}]")
-print("\nCleaned Graph")
+print("\nCleaned Graph: ")
 for meta, deps in bundle.cleaned_graph.items():
     joined = ", ".join(
         f"<{dep}>" if isinstance(dep, str) else repr(dep)
@@ -51,7 +57,9 @@ for meta, deps in bundle.cleaned_graph.items():
 
 print("\nResolving Sequence: ")
 joined = " -> ".join(repr(meta) for meta in bundle.resolving_sequence)
-print(joined)
+print(joined + "\n")
 
-bundle.libs[0][1].export_to(Path(output_dir))
+Inferencer.infer(bundle)
+
+bundle.libs["proj1"].export_to(Path(output_dir))
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
-
 import json
+import ast
+
 from pathlib import Path
 from collections import defaultdict
-import ast
 
 class Table:
 	def __init__(self, key: str):
@@ -34,7 +34,8 @@ class Table:
 
 	def to_dict(self):
 		data = {}
-		if self.type: data["type"] = repr(self.type)
+		if self.points_to: 
+			data["type"] = ", ".join(repr(pt.type) for pt in self.points_to)
 		if self.definitions:
 			data["definitions"] = {}
 			for m in self.definitions:

@@ -1,7 +1,7 @@
 import ast
 import copy
 
-from src.symbol_table import (
+from src.preprocessing.symbol_table import (
 	Table,
 	ClassTable,
 	VariableTable,
@@ -57,7 +57,6 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		fdef = self.push(ScopeManager.function_table(node, enclosing, self.module_table))
 		for var in parameters.values(): 
 			fdef.merge_variable(var)
-
 		self.function_depth += 1
 		self.generic_visit(node)
 		self.function_depth -= 1

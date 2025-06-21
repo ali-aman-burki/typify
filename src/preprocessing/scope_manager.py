@@ -1,4 +1,4 @@
-from src.symbol_table import (
+from src.preprocessing.symbol_table import (
 	Table, 
 	ClassTable, 
 	DefinitionTable, 

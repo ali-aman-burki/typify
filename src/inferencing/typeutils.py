@@ -1,4 +1,4 @@
-from src.symbol_table import Table, InstanceTable
+from src.preprocessing.symbol_table import Table, InstanceTable
 from types import EllipsisType
 
 import ast
@@ -9,6 +9,7 @@ class TypeExpr:
 		self.args = args
 	
 	def __repr__(self):
+		if not self.base: return "$unresolved$"
 		fqn = self.base.get_type_class().fqn
 		joined = ", ".join(
 			(
@@ -25,8 +26,8 @@ class TypeExpr:
 class TypeUtils:
 
 	@staticmethod
-	def create_instance(template: Table, args: list[TypeExpr | list[TypeExpr] | EllipsisType]) -> InstanceTable:
-		fqn = template.get_type_class().fqn
+	def instantiate(template: Table, args: list[TypeExpr | list[TypeExpr] | EllipsisType]) -> InstanceTable:
+		fqn = template.get_type_class().fqn if template else "$unresolved$"
 		instance = InstanceTable(f"instance@{fqn}")
 		instance.type = TypeExpr(template, args)
 		return instance
