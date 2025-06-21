@@ -5,7 +5,7 @@ from src.preprocessing.symbol_table import (
 	VariableTable, 
 	FunctionTable
 )
-from src.function_utils import FunctionUtils
+from src.inferencing.function_utils import FunctionUtils
 
 import ast
 

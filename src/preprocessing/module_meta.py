@@ -1,5 +1,5 @@
 from src.preprocessing.symbol_table import Table, ModuleTable, VariableTable, PackageTable, LibraryTable
-from src.typeutils import TypeExpr
+from src.inferencing.typeutils import TypeExpr
 
 from pathlib import Path
 

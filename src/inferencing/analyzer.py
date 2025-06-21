@@ -10,7 +10,7 @@ from src.preprocessing.symbol_table import (
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.library_meta import LibraryMeta
 from src.inferencing.commons import Builtins
-from src.typeutils import TypeUtils
+from src.inferencing.typeutils import TypeUtils
 
 class Analyzer(ast.NodeVisitor):
 	def __init__(

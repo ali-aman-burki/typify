@@ -1,5 +1,5 @@
 from src.preprocessing.symbol_table import Table, VariableTable, ClassTable, FunctionTable
-from src.typeutils import TypeUtils
+from src.inferencing.typeutils import TypeUtils
 from src.chain import Chain, Segment
 import ast
 
