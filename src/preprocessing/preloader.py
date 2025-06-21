@@ -8,7 +8,7 @@ from typing import Union
 from dataclasses import dataclass
 
 from src.preprocessing.library_meta import LibraryMeta
-from src.preprocessing.dependency_tracker import GraphBuilder, DependencyBundle
+from src.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
 from src.preprocessing.symbol_slot_collector import SymbolSlotCollector
 
 @dataclass
@@ -16,7 +16,7 @@ class TypifyPaths:
 	preload: list[tuple[str, Path]]
 	ondemand: list[tuple[str, Path]]
 
-class SetupUtils:
+class Preloader:
 
 	@staticmethod
 	def extract_current_env(python_executable=sys.executable) -> dict[str, Union[str, Path, list[Path]]]:
@@ -47,7 +47,7 @@ print(json.dumps(info))
 	
 	@staticmethod
 	def get_paths(config: dict[str, Union[str, dict[str, str]]]) -> TypifyPaths:
-		defaults = SetupUtils.extract_current_env()
+		defaults = Preloader.extract_current_env()
 
 		config.setdefault("preload", "")
 		config.setdefault("ondemand", "CURRENT_ENV")
@@ -89,8 +89,8 @@ print(json.dumps(info))
 		return TypifyPaths(preload_paths, ondemand_paths)
 
 	@staticmethod
-	def preprocess_libs(config) -> DependencyBundle:
-		paths = SetupUtils.get_paths(config)
+	def load(config) -> DependencyBundle:
+		paths = Preloader.get_paths(config)
 		libs: list[tuple[str, LibraryMeta]] = []
 
 		for label, preload_path in paths.preload:

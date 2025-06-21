@@ -95,15 +95,6 @@ class Table:
 		with file_path.open("w", encoding="utf-8") as f:
 			json.dump(self.to_dict(), f, indent=4)
 
-	def generate_path(self):
-		path = []
-		current_table = self
-		while current_table and not isinstance(current_table, LibraryTable):
-			if isinstance(current_table, (ModuleTable, PackageTable)) and current_table != self:
-				path.append(current_table.key)
-			current_table = current_table.get_enclosing_table()
-		return ".".join(path[::-1])
-
 	def get_enclosing_table(self):
 		result = self.parent
 		if isinstance(result, DefinitionTable):

@@ -3,6 +3,7 @@ import ast
 from src.symbol_table import Table, ModuleTable, PackageTable
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.library_meta import LibraryMeta
+from src.preprocessing.sequencer import Sequencer
 
 from dataclasses import dataclass
 
@@ -10,13 +11,15 @@ from dataclasses import dataclass
 class DependencyBundle:
 	libs: list[tuple[str, LibraryMeta]]
 	meta_map: dict[ModuleTable, ModuleMeta]
-	dependency_graph: dict[ModuleMeta, set[tuple[ModuleMeta, str]]]
+	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
+	cleaned_graph: dict[ModuleMeta, set[ModuleMeta]]
+	resolving_sequence: list[ModuleMeta]
 
 class GraphBuilder:
 	@staticmethod
 	def build_graph(libs: list[tuple[str, LibraryMeta]]) -> DependencyBundle:
 		meta_map: dict[ModuleTable, ModuleMeta] = {}
-		dependency_graph: dict[ModuleMeta, set[tuple[ModuleMeta, str]]] = {}
+		dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]] = {}
 
 		for _, lib in libs: 
 			meta_map.update(lib.meta_map)
@@ -32,10 +35,22 @@ class GraphBuilder:
 
 			tracker.visit(meta.tree)
 
-			if meta.tree.body and meta.tree.body[0] is builtin_node:
-				meta.tree.body.pop(0)
+			meta.tree.body.pop(0)
 
-		return DependencyBundle(libs, meta_map, dependency_graph)
+		cleaned_graph = {}
+
+		for key in dependency_graph:
+			deps = dependency_graph[key]
+			cleaned_graph[key] = {dep for dep in deps if not isinstance(dep, str)}
+
+		resolving_sequence = Sequencer.generate_resolving_sequence(cleaned_graph)
+		return DependencyBundle(
+			libs, 
+			meta_map, 
+			dependency_graph, 
+			cleaned_graph, 
+			resolving_sequence
+		)
 
 class DependencyTracker(ast.NodeVisitor):
 	def __init__(

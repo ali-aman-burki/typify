@@ -69,9 +69,12 @@ class LibraryMeta:
 				continue
 
 			table = package_map[parent]
-			meta = ModuleMeta.from_source(chosen_path, self.library_table)
-			meta.trust_annotations = True if chosen_path.suffix == ".pyi" else table.trust_annotations
+			meta = ModuleMeta(chosen_path, True if chosen_path.suffix == ".pyi" else table.trust_annotations)
 			table.set_module(meta.table, self.fqn_map)
 			self.meta_map[meta.table] = meta
 
 
+	def export_to(self, path: Path):
+		for meta in self.meta_map.values():
+			meta.export_symbols(self.src, path)
+			meta.export_typeslots(self.src, path)

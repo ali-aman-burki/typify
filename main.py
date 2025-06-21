@@ -3,9 +3,10 @@ import os
 import json
 
 from typing import Union
+from pathlib import Path
 
 from src.utils import Utils
-from src.preloading.setup_utils import SetupUtils
+from src.preprocessing.preloader import Preloader
 
 config_path = "typifyconfig.json"
 
@@ -32,11 +33,25 @@ config["project_dir"] = project_dir
 
 print(Utils.title)
 
-bundle = SetupUtils.preprocess_libs(config)
+bundle = Preloader.load(config)
+print("Original Graph")
 for meta, deps in bundle.dependency_graph.items():
     joined = ", ".join(
         f"<{dep}>" if isinstance(dep, str) else repr(dep)
         for dep in deps
     )
     print(f"{repr(meta)} -> [{joined}]")
+print("\nCleaned Graph")
+for meta, deps in bundle.cleaned_graph.items():
+    joined = ", ".join(
+        f"<{dep}>" if isinstance(dep, str) else repr(dep)
+        for dep in deps
+    )
+    print(f"{repr(meta)} -> [{joined}]")
+
+print("\nResolving Sequence: ")
+joined = " -> ".join(repr(meta) for meta in bundle.resolving_sequence)
+print(joined)
+
+bundle.libs[0][1].export_to(Path(output_dir) / "project_lib")
 

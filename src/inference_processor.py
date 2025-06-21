@@ -1,4 +1,4 @@
-from src.preprocessing.dependency_tracker import DependencyBundle
+from src.preprocessing.dependency_utils import DependencyBundle
 from src.preprocessing.module_meta import ModuleMeta
 from src.inferencing import Inferencer
 

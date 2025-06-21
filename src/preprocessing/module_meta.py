@@ -8,32 +8,25 @@ import json
 
 class ModuleMeta:
 
-	def __init__(self, src_path: Path, table: ModuleTable, library_table: LibraryTable):
-		self.src_path = src_path
+	def __init__(self, src: Path, trust_annotations: bool):
+		self.src = src
 		self.tree: ast.AST = None
-		self.table = table
-		self.library_table = library_table
-		self.imports: list[tuple[ast.AST, Table, bool]] = []
+		self.table = ModuleTable(src.stem)
 		self.vslots: dict[tuple[int, int], tuple[str, TypeExpr]] = {}
 		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeExpr]] = {}
-		self.is_stub = src_path.suffix == ".pyi"
-		self.trust_annotations = False
+		self.trust_annotations = trust_annotations
 
 	def load_tree(self):
 		if not self.tree:
-			with open(self.src_path, "r", encoding="utf-8") as file:
-				source_code = file.read()
-			self.tree = ast.parse(source_code)
+			with open(self.src, "r", encoding="utf-8") as file:
+				src_code = file.read()
+			self.tree = ast.parse(src_code)
 
 	def __repr__(self):
 		return self.table.fqn
-
-	@staticmethod
-	def from_source(src_path: Path, library_table: Table):
-		return ModuleMeta(src_path, ModuleTable(src_path.stem), library_table)
 	
 	def mirror_export_path(self, working_directory: Path, export_path: Path, suffix: str = "") -> Path:
-		file_path = self.src_path
+		file_path = self.src
 		rel_path = file_path.relative_to(working_directory)
 		dash = f"-{suffix}" if suffix else ""
 		return export_path / rel_path.parent / f"{self.table.key}{dash}.json"

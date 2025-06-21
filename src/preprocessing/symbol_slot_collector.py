@@ -14,7 +14,6 @@ from src.function_utils import FunctionUtils
 class SymbolSlotCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
 		self.module_meta = module_meta
-		self.library_table = module_meta.library_table
 		self.module_table = module_meta.table
 		self.current_table = self.module_table
 
@@ -22,7 +21,6 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		self.fslots = self.module_meta.fslots
 
 		self.function_depth = 0
-		self.imports = module_meta.imports
 
 	def visit_Import(self, node):
 		enclosing = self.current_table.get_latest_definition()

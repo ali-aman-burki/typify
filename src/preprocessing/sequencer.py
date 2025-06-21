@@ -1,7 +1,7 @@
-class GraphUtils:
+class Sequencer:
 	
 	@staticmethod
-	def tarjan(graph):
+	def _tarjan(graph):
 		index = 0
 		indices = {}
 		low_links = {}
@@ -40,5 +40,12 @@ class GraphUtils:
 
 		return result
 
-	def generate_resolving_sequence(sccs):
-		return [module for scc in sccs for module in scc]
+	@staticmethod
+	def generate_resolving_sequence(graph):
+		sccs = Sequencer._tarjan(graph)
+		sequence = []
+		for scc in sccs:
+			for i in range(len(scc)):
+				for meta in scc:
+					sequence.append(meta)
+		return sequence
