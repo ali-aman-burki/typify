@@ -1,3 +1,5 @@
+**/dirname/
+
 *.pyc
 *.pyo
 __pycache__/

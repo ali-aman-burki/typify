@@ -1,8 +1,0 @@
-{
-	"vdefs": {
-		"5:1": "title: $unresolved$"
-	},
-	"fdefs": {
-		"17:1": "def is_valid_directory(...) -> $unresolved$"
-	}
-}
