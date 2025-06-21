@@ -5,9 +5,9 @@ import json
 from typing import Union
 from pathlib import Path
 
-from src.utils import Utils
-from src.preprocessing.preloader import Preloader
-from src.inferencing.inferencer import Inferencer
+from typify.utils import Utils
+from typify.preprocessing.preloader import Preloader
+from typify.inferencing.inferencer import Inferencer
 
 config_path = "typifyconfig.json"
 

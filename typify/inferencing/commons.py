@@ -1,5 +1,5 @@
-from src.preprocessing.symbol_table import ClassTable
-from src.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.symbol_table import ClassTable
+from typify.preprocessing.library_meta import LibraryMeta
 
 def _safe_get(func):
 	try: return func()

@@ -1,4 +1,4 @@
-from src.preprocessing.symbol_table import Table, InstanceTable
+from typify.preprocessing.symbol_table import Table, InstanceTable
 from types import EllipsisType
 
 import ast

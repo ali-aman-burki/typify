@@ -1,11 +1,11 @@
-from src.preprocessing.symbol_table import (
+from typify.preprocessing.symbol_table import (
     Table,
 	LibraryTable,
     PackageTable,
     ModuleTable,
 	InstanceTable
 )
-from src.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.module_meta import ModuleMeta
 
 from pathlib import Path
 from collections import defaultdict

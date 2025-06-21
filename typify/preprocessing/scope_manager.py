@@ -1,11 +1,11 @@
-from src.preprocessing.symbol_table import (
+from typify.preprocessing.symbol_table import (
 	Table, 
 	ClassTable, 
 	DefinitionTable, 
 	VariableTable, 
 	FunctionTable
 )
-from src.inferencing.function_utils import FunctionUtils
+from typify.inferencing.function_utils import FunctionUtils
 
 import ast
 

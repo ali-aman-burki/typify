@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from src.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.library_meta import LibraryMeta
 
 def write(p: Path, content=""):
     p.parent.mkdir(parents=True, exist_ok=True)

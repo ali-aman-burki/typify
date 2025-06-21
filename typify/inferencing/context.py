@@ -1,6 +1,6 @@
-from src.preprocessing.symbol_table import Table, VariableTable, ClassTable, FunctionTable
-from src.inferencing.typeutils import TypeUtils
-from src.chain import Chain, Segment
+from typify.preprocessing.symbol_table import Table, VariableTable, ClassTable, FunctionTable
+from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.chain import Chain, Segment
 import ast
 
 class Context:

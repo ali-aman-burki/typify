@@ -1,5 +1,5 @@
-from src.preprocessing.dependency_utils import DependencyBundle
-from src.inferencing.analyzer import Analyzer
+from typify.preprocessing.dependency_utils import DependencyBundle
+from typify.inferencing.analyzer import Analyzer
 
 class Inferencer:
 

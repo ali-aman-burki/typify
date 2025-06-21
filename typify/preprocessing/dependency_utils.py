@@ -1,9 +1,9 @@
 import ast
 
-from src.preprocessing.symbol_table import Table, ModuleTable, PackageTable, InstanceTable
-from src.preprocessing.module_meta import ModuleMeta
-from src.preprocessing.library_meta import LibraryMeta
-from src.preprocessing.sequencer import Sequencer
+from typify.preprocessing.symbol_table import Table, ModuleTable, PackageTable, InstanceTable
+from typify.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.sequencer import Sequencer
 
 from dataclasses import dataclass
 

@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Union
 from dataclasses import dataclass
 
-from src.preprocessing.library_meta import LibraryMeta
-from src.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
-from src.preprocessing.symbol_slot_collector import SymbolSlotCollector
-from src.inferencing.commons import bind
+from typify.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
+from typify.preprocessing.symbol_slot_collector import SymbolSlotCollector
+from typify.inferencing.commons import bind
 
 @dataclass
 class TypifyPaths:

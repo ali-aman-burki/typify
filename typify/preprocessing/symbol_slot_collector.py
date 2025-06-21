@@ -1,15 +1,15 @@
 import ast
 import copy
 
-from src.preprocessing.symbol_table import (
+from typify.preprocessing.symbol_table import (
 	Table,
 	ClassTable,
 	VariableTable,
 	DefinitionTable,
 )
-from src.preprocessing.module_meta import ModuleMeta
-from src.preprocessing.scope_manager import ScopeManager
-from src.inferencing.function_utils import FunctionUtils
+from typify.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.scope_manager import ScopeManager
+from typify.inferencing.function_utils import FunctionUtils
 
 class SymbolSlotCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
