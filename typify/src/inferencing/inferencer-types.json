@@ -1,0 +1,11 @@
+{
+	"vdefs": {
+		"8:2": "sequence: $unresolved$",
+		"9:2": "precedence: $unresolved$",
+		"10:2": "module_object_map: $unresolved$",
+		"11:2": "libs: $unresolved$"
+	},
+	"fdefs": {
+		"7:1": "def infer(...) -> $unresolved$"
+	}
+}

@@ -1,0 +1,244 @@
+{
+    "classes": {
+        "Segment": {
+            "definitions": {
+                "src.inferencing.chain:3:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.chain:4:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.chain:4:14": {}
+                                            }
+                                        },
+                                        "anchor": {
+                                            "definitions": {
+                                                "src.inferencing.chain:4:20": {}
+                                            }
+                                        },
+                                        "trail": {
+                                            "definitions": {
+                                                "src.inferencing.chain:4:37": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "__str__": {
+                            "definitions": {
+                                "src.inferencing.chain:8:1": {
+                                    "functions": {
+                                        "node_str": {
+                                            "definitions": {
+                                                "src.inferencing.chain:9:2": {
+                                                    "variables": {
+                                                        "n": {
+                                                            "definitions": {
+                                                                "src.inferencing.chain:9:15": {}
+                                                            }
+                                                        },
+                                                        "args": {
+                                                            "definitions": {
+                                                                "src.inferencing.chain:15:4": {}
+                                                            }
+                                                        },
+                                                        "kwargs": {
+                                                            "definitions": {
+                                                                "src.inferencing.chain:16:4": {}
+                                                            }
+                                                        },
+                                                        "all_args": {
+                                                            "definitions": {
+                                                                "src.inferencing.chain:17:4": {}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.chain:8:13": {}
+                                            }
+                                        },
+                                        "node_str": {
+                                            "definitions": {
+                                                "src.inferencing.chain:9:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.chain:4:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "__str__": {
+                            "definitions": {
+                                "src.inferencing.chain:8:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "Chain": {
+            "definitions": {
+                "src.inferencing.chain:30:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.chain:31:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.chain:31:14": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.chain:31:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "__str__": {
+                            "definitions": {
+                                "src.inferencing.chain:34:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.chain:34:13": {}
+                                            }
+                                        },
+                                        "parts": {
+                                            "definitions": {
+                                                "src.inferencing.chain:35:2": {}
+                                            }
+                                        },
+                                        "segment_str": {
+                                            "definitions": {
+                                                "src.inferencing.chain:37:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "build_chain": {
+                            "definitions": {
+                                "src.inferencing.chain:42:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.chain:42:17": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.chain:42:23": {},
+                                                "src.inferencing.chain:48:4": {},
+                                                "src.inferencing.chain:51:4": {},
+                                                "src.inferencing.chain:54:4": {}
+                                            }
+                                        },
+                                        "raw_chain": {
+                                            "definitions": {
+                                                "src.inferencing.chain:43:2": {},
+                                                "src.inferencing.chain:59:2": {}
+                                            }
+                                        },
+                                        "attribute_indices": {
+                                            "definitions": {
+                                                "src.inferencing.chain:61:2": {}
+                                            }
+                                        },
+                                        "processed_chain": {
+                                            "definitions": {
+                                                "src.inferencing.chain:67:2": {}
+                                            }
+                                        },
+                                        "next_index": {
+                                            "definitions": {
+                                                "src.inferencing.chain:69:3": {}
+                                            }
+                                        },
+                                        "anchor": {
+                                            "definitions": {
+                                                "src.inferencing.chain:70:3": {}
+                                            }
+                                        },
+                                        "trail": {
+                                            "definitions": {
+                                                "src.inferencing.chain:71:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.chain:31:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "__str__": {
+                            "definitions": {
+                                "src.inferencing.chain:34:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "build_chain": {
+                            "definitions": {
+                                "src.inferencing.chain:42:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "ast": {
+            "definitions": {
+                "src.inferencing.chain:1:0": {}
+            }
+        },
+        "Segment": {
+            "definitions": {
+                "src.inferencing.chain:3:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "Chain": {
+            "definitions": {
+                "src.inferencing.chain:30:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

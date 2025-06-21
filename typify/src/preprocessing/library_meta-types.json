@@ -1,0 +1,40 @@
+{
+	"vdefs": {
+		"15:2": "self.src: $unresolved$",
+		"16:2": "self.library_table: $unresolved$",
+		"17:2": "self.module_object_map: $unresolved$",
+		"18:2": "self.meta_map: $unresolved$",
+		"19:2": "self.dependency_graph: $unresolved$",
+		"20:2": "self.fqn_map: $unresolved$",
+		"25:2": "working_is_package: $unresolved$",
+		"28:3": "root_package_table: $unresolved$",
+		"29:3": "root_package_table.trust_annotations: $unresolved$",
+		"31:3": "package_map: $unresolved$",
+		"33:3": "self.library_table.trust_annotations: $unresolved$",
+		"34:3": "package_map: $unresolved$",
+		"42:4": "has_init: $unresolved$",
+		"44:5": "parent_table: $unresolved$",
+		"45:5": "package_table: $unresolved$",
+		"46:5": "package_table.trust_annotations: $unresolved$",
+		"47:5": "package_map[path]: $unresolved$",
+		"51:4": "parent: $unresolved$",
+		"52:4": "table: $unresolved$",
+		"54:5": "table.trust_annotations: $unresolved$",
+		"59:4": "init_path: $unresolved$",
+		"61:5": "meta: $unresolved$",
+		"63:5": "self.meta_map[meta.table]: $unresolved$",
+		"67:2": "module_candidates: $unresolved$",
+		"70:4": "parent: $unresolved$",
+		"72:5": "stem: $unresolved$",
+		"73:5": "module_candidates[parent, stem][path.suffix]: $unresolved$",
+		"77:3": "chosen_path: $unresolved$",
+		"81:3": "table: $unresolved$",
+		"82:3": "meta: $unresolved$",
+		"84:3": "self.meta_map[meta.table]: $unresolved$"
+	},
+	"fdefs": {
+		"14:1": "def __init__(...) -> $unresolved$",
+		"24:1": "def _build(...) -> $unresolved$",
+		"88:1": "def export_to(...) -> $unresolved$"
+	}
+}

@@ -53,10 +53,20 @@ class LibraryMeta:
 				if table:
 					table.trust_annotations = True
 
-		# Second pass: collect .py and .pyi candidates
+		# Add __init__ modules to package tables
+		for dir_path, package_table in package_map.items():
+			for ext in [".pyi", ".py"]:
+				init_path = dir_path / f"__init__{ext}"
+				if init_path.is_file():
+					meta = ModuleMeta(init_path, package_table.trust_annotations)
+					package_table.set_module(meta.table, self.fqn_map)
+					self.meta_map[meta.table] = meta
+					break  # Prefer .pyi over .py
+
+		# Second pass: collect .py and .pyi candidates (excluding __init__)
 		module_candidates = defaultdict(dict)
 		for path in self.src.rglob("*"):
-			if path.suffix in {".py", ".pyi"} and path.name != "__init__.py" and path.name != "__init__.pyi":
+			if path.suffix in {".py", ".pyi"} and not path.name.startswith("__init__.py"):
 				parent = path.parent
 				if parent in package_map:
 					stem = path.stem
@@ -72,6 +82,7 @@ class LibraryMeta:
 			meta = ModuleMeta(chosen_path, True if chosen_path.suffix == ".pyi" else table.trust_annotations)
 			table.set_module(meta.table, self.fqn_map)
 			self.meta_map[meta.table] = meta
+
 
 
 	def export_to(self, path: Path):

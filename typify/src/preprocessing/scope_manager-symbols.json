@@ -1,0 +1,168 @@
+{
+    "classes": {
+        "ScopeManager": {
+            "definitions": {
+                "src.preprocessing.scope_manager:12:0": {
+                    "functions": {
+                        "class_table": {
+                            "definitions": {
+                                "src.preprocessing.scope_manager:15:1": {
+                                    "variables": {
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:15:17": {}
+                                            }
+                                        },
+                                        "enclosing": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:15:37": {}
+                                            }
+                                        },
+                                        "module_table": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:15:55": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:16:2": {}
+                                            }
+                                        },
+                                        "class_name": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:17:2": {}
+                                            }
+                                        },
+                                        "vartable": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:19:2": {}
+                                            }
+                                        },
+                                        "classtable": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:23:2": {}
+                                            }
+                                        },
+                                        "classdef": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:24:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "function_table": {
+                            "definitions": {
+                                "src.preprocessing.scope_manager:29:1": {
+                                    "variables": {
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:29:20": {}
+                                            }
+                                        },
+                                        "enclosing": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:29:43": {}
+                                            }
+                                        },
+                                        "module_table": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:29:61": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:30:2": {}
+                                            }
+                                        },
+                                        "function_name": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:31:2": {}
+                                            }
+                                        },
+                                        "vartable": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:33:2": {}
+                                            }
+                                        },
+                                        "functable": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:37:2": {}
+                                            }
+                                        },
+                                        "funcdef": {
+                                            "definitions": {
+                                                "src.preprocessing.scope_manager:38:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "class_table": {
+                            "definitions": {
+                                "src.preprocessing.scope_manager:15:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "function_table": {
+                            "definitions": {
+                                "src.preprocessing.scope_manager:29:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "Table": {
+            "definitions": {
+                "src.preprocessing.scope_manager:1:0": {}
+            }
+        },
+        "ClassTable": {
+            "definitions": {
+                "src.preprocessing.scope_manager:1:0": {}
+            }
+        },
+        "DefinitionTable": {
+            "definitions": {
+                "src.preprocessing.scope_manager:1:0": {}
+            }
+        },
+        "VariableTable": {
+            "definitions": {
+                "src.preprocessing.scope_manager:1:0": {}
+            }
+        },
+        "FunctionTable": {
+            "definitions": {
+                "src.preprocessing.scope_manager:1:0": {}
+            }
+        },
+        "FunctionUtils": {
+            "definitions": {
+                "src.preprocessing.scope_manager:8:0": {}
+            }
+        },
+        "ast": {
+            "definitions": {
+                "src.preprocessing.scope_manager:10:0": {}
+            }
+        },
+        "ScopeManager": {
+            "definitions": {
+                "src.preprocessing.scope_manager:12:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

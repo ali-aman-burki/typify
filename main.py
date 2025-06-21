@@ -61,5 +61,5 @@ print(joined + "\n")
 
 Inferencer.infer(bundle)
 
-bundle.libs["proj1"].export_to(Path(output_dir))
+next(iter(bundle.libs.values())).export_to(Path(output_dir))
 

@@ -1,0 +1,431 @@
+{
+    "classes": {
+        "DependencyBundle": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:11:0": {
+                    "variables": {
+                        "libs": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:12:1": {}
+                            }
+                        },
+                        "meta_map": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:13:1": {}
+                            }
+                        },
+                        "module_object_map": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:14:1": {}
+                            }
+                        },
+                        "dependency_graph": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:15:1": {}
+                            }
+                        },
+                        "cleaned_graph": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:16:1": {}
+                            }
+                        },
+                        "resolving_sequence": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:17:1": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "GraphBuilder": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:19:0": {
+                    "functions": {
+                        "build_graph": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:21:1": {
+                                    "variables": {
+                                        "libs": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:21:17": {}
+                                            }
+                                        },
+                                        "meta_map": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:22:2": {}
+                                            }
+                                        },
+                                        "module_object_map": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:23:2": {}
+                                            }
+                                        },
+                                        "dependency_graph": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:24:2": {}
+                                            }
+                                        },
+                                        "tracker": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:31:3": {}
+                                            }
+                                        },
+                                        "builtin_node": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:34:3": {}
+                                            }
+                                        },
+                                        "cleaned_graph": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:43:2": {}
+                                            }
+                                        },
+                                        "resolving_sequence": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:48:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "build_graph": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:21:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "DependencyTracker": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:59:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:60:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:61:2": {}
+                                            }
+                                        },
+                                        "libs": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:62:2": {}
+                                            }
+                                        },
+                                        "meta_map": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:63:2": {}
+                                            }
+                                        },
+                                        "dependency_graph": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:64:2": {}
+                                            }
+                                        },
+                                        "module_meta": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:65:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "as_module_metas": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:75:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:75:21": {}
+                                            }
+                                        },
+                                        "modules": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:75:27": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "filter_chain": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:78:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:78:18": {}
+                                            }
+                                        },
+                                        "chain": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:78:24": {}
+                                            }
+                                        },
+                                        "result": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:79:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "resolve_fqn_chain": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:85:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:85:23": {}
+                                            }
+                                        },
+                                        "module": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:85:29": {}
+                                            }
+                                        },
+                                        "level": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:85:49": {}
+                                            }
+                                        },
+                                        "base_fqn": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:87:3": {},
+                                                "src.preprocessing.dependency_utils:95:3": {}
+                                            }
+                                        },
+                                        "current_fqn": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:89:3": {}
+                                            }
+                                        },
+                                        "parts": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:90:3": {}
+                                            }
+                                        },
+                                        "base_parts": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:93:3": {}
+                                            }
+                                        },
+                                        "chain": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:99:4": {}
+                                            }
+                                        },
+                                        "metas": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:100:4": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Import": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:109:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:109:18": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:109:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_ImportFrom": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:114:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:114:22": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:114:28": {}
+                                            }
+                                        },
+                                        "names": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:116:3": {}
+                                            }
+                                        },
+                                        "chain": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:117:3": {}
+                                            }
+                                        },
+                                        "endpoint": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:119:4": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_FunctionDef": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:126:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:126:23": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.dependency_utils:126:29": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:60:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "as_module_metas": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:75:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "filter_chain": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:78:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "resolve_fqn_chain": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:85:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Import": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:109:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_ImportFrom": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:114:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_FunctionDef": {
+                            "definitions": {
+                                "src.preprocessing.dependency_utils:126:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "ast": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:1:0": {}
+            }
+        },
+        "Table": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:3:0": {}
+            }
+        },
+        "ModuleTable": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:3:0": {}
+            }
+        },
+        "PackageTable": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:3:0": {}
+            }
+        },
+        "InstanceTable": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:3:0": {}
+            }
+        },
+        "ModuleMeta": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:4:0": {}
+            }
+        },
+        "LibraryMeta": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:5:0": {}
+            }
+        },
+        "Sequencer": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:6:0": {}
+            }
+        },
+        "dataclass": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:8:0": {}
+            }
+        },
+        "DependencyBundle": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:11:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "GraphBuilder": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:19:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "DependencyTracker": {
+            "definitions": {
+                "src.preprocessing.dependency_utils:59:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

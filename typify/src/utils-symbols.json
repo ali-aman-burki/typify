@@ -1,0 +1,53 @@
+{
+    "classes": {
+        "Utils": {
+            "definitions": {
+                "src.utils:3:0": {
+                    "functions": {
+                        "is_valid_directory": {
+                            "definitions": {
+                                "src.utils:17:1": {
+                                    "variables": {
+                                        "path": {
+                                            "definitions": {
+                                                "src.utils:17:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "title": {
+                            "definitions": {
+                                "src.utils:5:1": {}
+                            }
+                        },
+                        "is_valid_directory": {
+                            "definitions": {
+                                "src.utils:17:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "os": {
+            "definitions": {
+                "src.utils:1:0": {}
+            }
+        },
+        "Utils": {
+            "definitions": {
+                "src.utils:3:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

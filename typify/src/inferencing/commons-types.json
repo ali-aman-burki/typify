@@ -1,0 +1,20 @@
+{
+	"vdefs": {
+		"9:1": "ModuleClass: $unresolved$",
+		"10:1": "TypeClass: $unresolved$",
+		"11:1": "FunctionClass: $unresolved$",
+		"14:1": "AnyClass: $unresolved$",
+		"15:1": "ListClass: $unresolved$",
+		"18:1": "Builtins.ModuleClass: $unresolved$",
+		"19:1": "Builtins.TypeClass: $unresolved$",
+		"20:1": "Builtins.FunctionClass: $unresolved$",
+		"23:1": "Typing.AnyClass: $unresolved$",
+		"24:1": "Typing.ListClass: $unresolved$"
+	},
+	"fdefs": {
+		"4:0": "def _safe_get(...) -> $unresolved$",
+		"17:0": "def _bind_builtins(...) -> $unresolved$",
+		"22:0": "def _bind_typing(...) -> $unresolved$",
+		"26:0": "def bind(...) -> $unresolved$"
+	}
+}

@@ -1,0 +1,24 @@
+{
+	"vdefs": {
+		"5:2": "index: $unresolved$",
+		"6:2": "indices: $unresolved$",
+		"7:2": "low_links: $unresolved$",
+		"8:2": "on_stack: $unresolved$",
+		"9:2": "stack: $unresolved$",
+		"10:2": "result: $unresolved$",
+		"14:3": "indices[node]: $unresolved$",
+		"15:3": "low_links[node]: $unresolved$",
+		"16:3": "index: $unresolved$",
+		"23:5": "low_links[node]: $unresolved$",
+		"25:5": "low_links[node]: $unresolved$",
+		"28:4": "scc: $unresolved$",
+		"30:5": "popped_node: $unresolved$",
+		"45:2": "sccs: $unresolved$",
+		"46:2": "sequence: $unresolved$"
+	},
+	"fdefs": {
+		"4:1": "def _tarjan(...) -> $unresolved$",
+		"12:2": "def strongconnect(...) -> $unresolved$",
+		"44:1": "def generate_resolving_sequence(...) -> $unresolved$"
+	}
+}

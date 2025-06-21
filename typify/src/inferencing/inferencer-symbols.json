@@ -1,0 +1,73 @@
+{
+    "classes": {
+        "Inferencer": {
+            "definitions": {
+                "src.inferencing.inferencer:4:0": {
+                    "functions": {
+                        "infer": {
+                            "definitions": {
+                                "src.inferencing.inferencer:7:1": {
+                                    "variables": {
+                                        "bundle": {
+                                            "definitions": {
+                                                "src.inferencing.inferencer:7:11": {}
+                                            }
+                                        },
+                                        "sequence": {
+                                            "definitions": {
+                                                "src.inferencing.inferencer:8:2": {}
+                                            }
+                                        },
+                                        "precedence": {
+                                            "definitions": {
+                                                "src.inferencing.inferencer:9:2": {}
+                                            }
+                                        },
+                                        "module_object_map": {
+                                            "definitions": {
+                                                "src.inferencing.inferencer:10:2": {}
+                                            }
+                                        },
+                                        "libs": {
+                                            "definitions": {
+                                                "src.inferencing.inferencer:11:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "infer": {
+                            "definitions": {
+                                "src.inferencing.inferencer:7:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "DependencyBundle": {
+            "definitions": {
+                "src.inferencing.inferencer:1:0": {}
+            }
+        },
+        "Analyzer": {
+            "definitions": {
+                "src.inferencing.inferencer:2:0": {}
+            }
+        },
+        "Inferencer": {
+            "definitions": {
+                "src.inferencing.inferencer:4:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

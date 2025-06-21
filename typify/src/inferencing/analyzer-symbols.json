@@ -1,0 +1,499 @@
+{
+    "classes": {
+        "Analyzer": {
+            "definitions": {
+                "src.inferencing.analyzer:15:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.analyzer:16:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:17:3": {}
+                                            }
+                                        },
+                                        "module_meta": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:18:3": {}
+                                            }
+                                        },
+                                        "precedence": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:19:3": {}
+                                            }
+                                        },
+                                        "module_object_map": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:20:3": {}
+                                            }
+                                        },
+                                        "libs": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:21:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "push": {
+                            "definitions": {
+                                "src.inferencing.analyzer:31:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:31:10": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "pop": {
+                            "definitions": {
+                                "src.inferencing.analyzer:34:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:34:9": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Module": {
+                            "definitions": {
+                                "src.inferencing.analyzer:38:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:38:18": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:38:24": {}
+                                            }
+                                        },
+                                        "module_object": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:39:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Import": {
+                            "definitions": {
+                                "src.inferencing.analyzer:46:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:46:18": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:46:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_ImportFrom": {
+                            "definitions": {
+                                "src.inferencing.analyzer:49:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:49:22": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:49:28": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_ClassDef": {
+                            "definitions": {
+                                "src.inferencing.analyzer:52:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:52:20": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:52:26": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:53:2": {}
+                                            }
+                                        },
+                                        "defkey": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:54:2": {}
+                                            }
+                                        },
+                                        "class_name": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:55:2": {}
+                                            }
+                                        },
+                                        "class_table": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:56:2": {}
+                                            }
+                                        },
+                                        "classdef": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:57:2": {}
+                                            }
+                                        },
+                                        "vartable": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:59:2": {}
+                                            }
+                                        },
+                                        "vardef": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:60:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_AsyncFunctionDef": {
+                            "definitions": {
+                                "src.inferencing.analyzer:68:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:68:28": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:68:34": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_FunctionDef": {
+                            "definitions": {
+                                "src.inferencing.analyzer:71:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:71:23": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:71:29": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:72:2": {}
+                                            }
+                                        },
+                                        "defkey": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:73:2": {}
+                                            }
+                                        },
+                                        "func_name": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:74:2": {}
+                                            }
+                                        },
+                                        "vartable": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:76:2": {}
+                                            }
+                                        },
+                                        "vardef": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:77:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Return": {
+                            "definitions": {
+                                "src.inferencing.analyzer:80:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:80:18": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:80:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Call": {
+                            "definitions": {
+                                "src.inferencing.analyzer:83:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:83:16": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:83:22": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_AnnAssign": {
+                            "definitions": {
+                                "src.inferencing.analyzer:86:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:86:21": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:86:27": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Assign": {
+                            "definitions": {
+                                "src.inferencing.analyzer:89:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:89:18": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:89:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_AugAssign": {
+                            "definitions": {
+                                "src.inferencing.analyzer:92:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:92:21": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:92:27": {}
+                                            }
+                                        },
+                                        "toAssign": {
+                                            "definitions": {
+                                                "src.inferencing.analyzer:93:2": {},
+                                                "src.inferencing.analyzer:103:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.analyzer:16:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "push": {
+                            "definitions": {
+                                "src.inferencing.analyzer:31:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "pop": {
+                            "definitions": {
+                                "src.inferencing.analyzer:34:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Module": {
+                            "definitions": {
+                                "src.inferencing.analyzer:38:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Import": {
+                            "definitions": {
+                                "src.inferencing.analyzer:46:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_ImportFrom": {
+                            "definitions": {
+                                "src.inferencing.analyzer:49:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_ClassDef": {
+                            "definitions": {
+                                "src.inferencing.analyzer:52:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_AsyncFunctionDef": {
+                            "definitions": {
+                                "src.inferencing.analyzer:68:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_FunctionDef": {
+                            "definitions": {
+                                "src.inferencing.analyzer:71:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Return": {
+                            "definitions": {
+                                "src.inferencing.analyzer:80:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Call": {
+                            "definitions": {
+                                "src.inferencing.analyzer:83:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_AnnAssign": {
+                            "definitions": {
+                                "src.inferencing.analyzer:86:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Assign": {
+                            "definitions": {
+                                "src.inferencing.analyzer:89:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_AugAssign": {
+                            "definitions": {
+                                "src.inferencing.analyzer:92:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "ast": {
+            "definitions": {
+                "src.inferencing.analyzer:1:0": {}
+            }
+        },
+        "copy": {
+            "definitions": {
+                "src.inferencing.analyzer:2:0": {}
+            }
+        },
+        "Table": {
+            "definitions": {
+                "src.inferencing.analyzer:4:0": {}
+            }
+        },
+        "PackageTable": {
+            "definitions": {
+                "src.inferencing.analyzer:4:0": {}
+            }
+        },
+        "ModuleTable": {
+            "definitions": {
+                "src.inferencing.analyzer:4:0": {}
+            }
+        },
+        "InstanceTable": {
+            "definitions": {
+                "src.inferencing.analyzer:4:0": {}
+            }
+        },
+        "ModuleMeta": {
+            "definitions": {
+                "src.inferencing.analyzer:10:0": {}
+            }
+        },
+        "LibraryMeta": {
+            "definitions": {
+                "src.inferencing.analyzer:11:0": {}
+            }
+        },
+        "Builtins": {
+            "definitions": {
+                "src.inferencing.analyzer:12:0": {}
+            }
+        },
+        "TypeUtils": {
+            "definitions": {
+                "src.inferencing.analyzer:13:0": {}
+            }
+        },
+        "Analyzer": {
+            "definitions": {
+                "src.inferencing.analyzer:15:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

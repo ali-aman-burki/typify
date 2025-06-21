@@ -1,0 +1,160 @@
+{
+    "classes": {
+        "TypeExpr": {
+            "definitions": {
+                "src.inferencing.typeutils:6:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.typeutils:7:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:7:14": {}
+                                            }
+                                        },
+                                        "base": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:7:20": {}
+                                            }
+                                        },
+                                        "args": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:7:33": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "__repr__": {
+                            "definitions": {
+                                "src.inferencing.typeutils:11:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:11:14": {}
+                                            }
+                                        },
+                                        "fqn": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:13:2": {}
+                                            }
+                                        },
+                                        "joined": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:14:2": {}
+                                            }
+                                        },
+                                        "trailing": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:23:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.inferencing.typeutils:7:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "__repr__": {
+                            "definitions": {
+                                "src.inferencing.typeutils:11:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "TypeUtils": {
+            "definitions": {
+                "src.inferencing.typeutils:26:0": {
+                    "functions": {
+                        "instantiate": {
+                            "definitions": {
+                                "src.inferencing.typeutils:29:1": {
+                                    "variables": {
+                                        "template": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:29:17": {}
+                                            }
+                                        },
+                                        "args": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:29:34": {}
+                                            }
+                                        },
+                                        "fqn": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:30:2": {}
+                                            }
+                                        },
+                                        "instance": {
+                                            "definitions": {
+                                                "src.inferencing.typeutils:31:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "instantiate": {
+                            "definitions": {
+                                "src.inferencing.typeutils:29:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "Table": {
+            "definitions": {
+                "src.inferencing.typeutils:1:0": {}
+            }
+        },
+        "InstanceTable": {
+            "definitions": {
+                "src.inferencing.typeutils:1:0": {}
+            }
+        },
+        "EllipsisType": {
+            "definitions": {
+                "src.inferencing.typeutils:2:0": {}
+            }
+        },
+        "ast": {
+            "definitions": {
+                "src.inferencing.typeutils:4:0": {}
+            }
+        },
+        "TypeExpr": {
+            "definitions": {
+                "src.inferencing.typeutils:6:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "TypeUtils": {
+            "definitions": {
+                "src.inferencing.typeutils:26:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

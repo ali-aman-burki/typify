@@ -1,0 +1,271 @@
+{
+    "classes": {
+        "TypifyPaths": {
+            "definitions": {
+                "src.preprocessing.preloader:16:0": {
+                    "variables": {
+                        "preload": {
+                            "definitions": {
+                                "src.preprocessing.preloader:17:1": {}
+                            }
+                        },
+                        "ondemand": {
+                            "definitions": {
+                                "src.preprocessing.preloader:18:1": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "Preloader": {
+            "definitions": {
+                "src.preprocessing.preloader:20:0": {
+                    "functions": {
+                        "extract_current_env": {
+                            "definitions": {
+                                "src.preprocessing.preloader:23:1": {
+                                    "variables": {
+                                        "python_executable": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:23:25": {}
+                                            }
+                                        },
+                                        "script": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:24:2": {}
+                                            }
+                                        },
+                                        "result": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:35:2": {}
+                                            }
+                                        },
+                                        "raw_info": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:42:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "get_paths": {
+                            "definitions": {
+                                "src.preprocessing.preloader:50:1": {
+                                    "functions": {
+                                        "resolve_paths": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:62:2": {
+                                                    "variables": {
+                                                        "raw": {
+                                                            "definitions": {
+                                                                "src.preprocessing.preloader:62:20": {}
+                                                            }
+                                                        },
+                                                        "result": {
+                                                            "definitions": {
+                                                                "src.preprocessing.preloader:63:3": {}
+                                                            }
+                                                        },
+                                                        "resolved": {
+                                                            "definitions": {
+                                                                "src.preprocessing.preloader:67:4": {}
+                                                            }
+                                                        },
+                                                        "label": {
+                                                            "definitions": {
+                                                                "src.preprocessing.preloader:68:4": {}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "variables": {
+                                        "config": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:50:15": {}
+                                            }
+                                        },
+                                        "defaults": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:51:2": {}
+                                            }
+                                        },
+                                        "paths_dict": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:54:2": {}
+                                            }
+                                        },
+                                        "project_dir": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:60:2": {}
+                                            }
+                                        },
+                                        "resolve_paths": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:62:2": {}
+                                            }
+                                        },
+                                        "preload_raw": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:72:2": {}
+                                            }
+                                        },
+                                        "preload_paths": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:73:2": {},
+                                                "src.preprocessing.preloader:74:2": {}
+                                            }
+                                        },
+                                        "ondemand_raw": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:76:2": {}
+                                            }
+                                        },
+                                        "ondemand_paths": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:78:3": {},
+                                                "src.preprocessing.preloader:80:3": {},
+                                                "src.preprocessing.preloader:85:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "load": {
+                            "definitions": {
+                                "src.preprocessing.preloader:90:1": {
+                                    "variables": {
+                                        "config": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:90:10": {}
+                                            }
+                                        },
+                                        "paths": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:91:2": {}
+                                            }
+                                        },
+                                        "libs": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:92:2": {}
+                                            }
+                                        },
+                                        "bundle": {
+                                            "definitions": {
+                                                "src.preprocessing.preloader:96:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "extract_current_env": {
+                            "definitions": {
+                                "src.preprocessing.preloader:23:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "get_paths": {
+                            "definitions": {
+                                "src.preprocessing.preloader:50:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "load": {
+                            "definitions": {
+                                "src.preprocessing.preloader:90:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "subprocess": {
+            "definitions": {
+                "src.preprocessing.preloader:1:0": {}
+            }
+        },
+        "sys": {
+            "definitions": {
+                "src.preprocessing.preloader:2:0": {}
+            }
+        },
+        "json": {
+            "definitions": {
+                "src.preprocessing.preloader:3:0": {}
+            }
+        },
+        "re": {
+            "definitions": {
+                "src.preprocessing.preloader:4:0": {}
+            }
+        },
+        "Path": {
+            "definitions": {
+                "src.preprocessing.preloader:6:0": {}
+            }
+        },
+        "Union": {
+            "definitions": {
+                "src.preprocessing.preloader:7:0": {}
+            }
+        },
+        "dataclass": {
+            "definitions": {
+                "src.preprocessing.preloader:8:0": {}
+            }
+        },
+        "LibraryMeta": {
+            "definitions": {
+                "src.preprocessing.preloader:10:0": {}
+            }
+        },
+        "GraphBuilder": {
+            "definitions": {
+                "src.preprocessing.preloader:11:0": {}
+            }
+        },
+        "DependencyBundle": {
+            "definitions": {
+                "src.preprocessing.preloader:11:0": {}
+            }
+        },
+        "SymbolSlotCollector": {
+            "definitions": {
+                "src.preprocessing.preloader:12:0": {}
+            }
+        },
+        "bind": {
+            "definitions": {
+                "src.preprocessing.preloader:13:0": {}
+            }
+        },
+        "TypifyPaths": {
+            "definitions": {
+                "src.preprocessing.preloader:16:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "Preloader": {
+            "definitions": {
+                "src.preprocessing.preloader:20:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

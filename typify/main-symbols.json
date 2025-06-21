@@ -1,0 +1,86 @@
+{
+    "variables": {
+        "argparse": {
+            "definitions": {
+                "main:1:0": {}
+            }
+        },
+        "os": {
+            "definitions": {
+                "main:2:0": {}
+            }
+        },
+        "json": {
+            "definitions": {
+                "main:3:0": {}
+            }
+        },
+        "Union": {
+            "definitions": {
+                "main:5:0": {}
+            }
+        },
+        "Path": {
+            "definitions": {
+                "main:6:0": {}
+            }
+        },
+        "Utils": {
+            "definitions": {
+                "main:8:0": {}
+            }
+        },
+        "Preloader": {
+            "definitions": {
+                "main:9:0": {}
+            }
+        },
+        "Inferencer": {
+            "definitions": {
+                "main:10:0": {}
+            }
+        },
+        "config_path": {
+            "definitions": {
+                "main:12:0": {}
+            }
+        },
+        "parser": {
+            "definitions": {
+                "main:14:0": {}
+            }
+        },
+        "args": {
+            "definitions": {
+                "main:18:0": {}
+            }
+        },
+        "project_dir": {
+            "definitions": {
+                "main:20:0": {}
+            }
+        },
+        "output_dir": {
+            "definitions": {
+                "main:21:0": {}
+            }
+        },
+        "config": {
+            "definitions": {
+                "main:31:1": {}
+            }
+        },
+        "bundle": {
+            "definitions": {
+                "main:37:0": {}
+            }
+        },
+        "joined": {
+            "definitions": {
+                "main:45:4": {},
+                "main:52:4": {},
+                "main:59:0": {}
+            }
+        }
+    }
+}

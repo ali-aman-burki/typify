@@ -1,0 +1,490 @@
+{
+    "classes": {
+        "SymbolSlotCollector": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:14:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:15:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:15:14": {}
+                                            }
+                                        },
+                                        "module_meta": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:15:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Import": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:25:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:25:18": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:25:24": {}
+                                            }
+                                        },
+                                        "enclosing": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:26:2": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:27:2": {}
+                                            }
+                                        },
+                                        "var": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:29:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_ImportFrom": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:34:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:34:22": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:34:28": {}
+                                            }
+                                        },
+                                        "enclosing": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:35:2": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:36:2": {}
+                                            }
+                                        },
+                                        "var": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:39:4": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_ClassDef": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:44:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:44:20": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:44:26": {}
+                                            }
+                                        },
+                                        "enclosing": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:45:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_FunctionDef": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:50:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:50:23": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:50:29": {}
+                                            }
+                                        },
+                                        "parameters": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:51:2": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:52:2": {}
+                                            }
+                                        },
+                                        "value": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:53:2": {}
+                                            }
+                                        },
+                                        "enclosing": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:56:2": {}
+                                            }
+                                        },
+                                        "fdef": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:57:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_AsyncFunctionDef": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:65:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:65:28": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:65:34": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_AnnAssign": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:68:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:68:21": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:68:27": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_Assign": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:72:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:72:18": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:72:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "visit_AugAssign": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:77:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:77:21": {}
+                                            }
+                                        },
+                                        "node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:77:27": {}
+                                            }
+                                        },
+                                        "toAssign": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:78:2": {},
+                                                "src.preprocessing.symbol_slot_collector:88:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "push": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:91:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:91:10": {}
+                                            }
+                                        },
+                                        "scope_def": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:91:16": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "pop": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:95:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:95:9": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "process_variable": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:99:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:99:22": {}
+                                            }
+                                        },
+                                        "name_node": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:99:28": {}
+                                            }
+                                        },
+                                        "enclosing": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:100:2": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:101:2": {}
+                                            }
+                                        },
+                                        "var": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:102:2": {},
+                                                "src.preprocessing.symbol_slot_collector:104:2": {}
+                                            }
+                                        },
+                                        "grandparent": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:107:3": {}
+                                            }
+                                        },
+                                        "cvar": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:108:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "process_target": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:111:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:111:20": {}
+                                            }
+                                        },
+                                        "target": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:111:26": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:116:3": {}
+                                            }
+                                        },
+                                        "value": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_slot_collector:117:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:15:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Import": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:25:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_ImportFrom": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:34:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_ClassDef": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:44:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_FunctionDef": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:50:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_AsyncFunctionDef": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:65:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_AnnAssign": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:68:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_Assign": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:72:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "visit_AugAssign": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:77:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "push": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:91:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "pop": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:95:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "process_variable": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:99:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "process_target": {
+                            "definitions": {
+                                "src.preprocessing.symbol_slot_collector:111:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "ast": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:1:0": {}
+            }
+        },
+        "copy": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:2:0": {}
+            }
+        },
+        "Table": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:4:0": {}
+            }
+        },
+        "ClassTable": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:4:0": {}
+            }
+        },
+        "VariableTable": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:4:0": {}
+            }
+        },
+        "DefinitionTable": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:4:0": {}
+            }
+        },
+        "ModuleMeta": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:10:0": {}
+            }
+        },
+        "ScopeManager": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:11:0": {}
+            }
+        },
+        "FunctionUtils": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:12:0": {}
+            }
+        },
+        "SymbolSlotCollector": {
+            "definitions": {
+                "src.preprocessing.symbol_slot_collector:14:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

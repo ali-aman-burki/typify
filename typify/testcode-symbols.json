@@ -1,0 +1,66 @@
+{
+    "functions": {
+        "write": {
+            "definitions": {
+                "testcode:5:0": {
+                    "variables": {
+                        "p": {
+                            "definitions": {
+                                "testcode:5:10": {}
+                            }
+                        },
+                        "content": {
+                            "definitions": {
+                                "testcode:5:19": {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "tempfile": {
+            "definitions": {
+                "testcode:1:0": {}
+            }
+        },
+        "Path": {
+            "definitions": {
+                "testcode:2:0": {}
+            }
+        },
+        "LibraryMeta": {
+            "definitions": {
+                "testcode:3:0": {}
+            }
+        },
+        "write": {
+            "definitions": {
+                "testcode:5:0": {
+                    "type": "builtins.function"
+                }
+            }
+        },
+        "temp": {
+            "definitions": {
+                "testcode:10:4": {}
+            }
+        },
+        "lib_dir": {
+            "definitions": {
+                "testcode:22:4": {}
+            }
+        },
+        "sub": {
+            "definitions": {
+                "testcode:28:4": {}
+            }
+        },
+        "lib": {
+            "definitions": {
+                "testcode:33:4": {}
+            }
+        }
+    }
+}

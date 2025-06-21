@@ -1,0 +1,1103 @@
+{
+    "classes": {
+        "Table": {
+            "definitions": {
+                "src.preprocessing.symbol_table:8:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:9:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:9:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:9:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "to_dict": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:35:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:35:13": {}
+                                            }
+                                        },
+                                        "data": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:36:2": {}
+                                            }
+                                        },
+                                        "subdict": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:42:4": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "transfer_content": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:56:1": {
+                                    "variables": {
+                                        "src": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:56:22": {}
+                                            }
+                                        },
+                                        "dst": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:56:34": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "process_group": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:60:1": {
+                                    "variables": {
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:60:19": {}
+                                            }
+                                        },
+                                        "values": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:60:29": {}
+                                            }
+                                        },
+                                        "defkey": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:60:50": {}
+                                            }
+                                        },
+                                        "precedence": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:60:89": {}
+                                            }
+                                        },
+                                        "var": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:61:2": {}
+                                            }
+                                        },
+                                        "tdef": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:65:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "homogenize": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:71:1": {
+                                    "variables": {
+                                        "dicts": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:71:16": {}
+                                            }
+                                        },
+                                        "defkey": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:71:47": {}
+                                            }
+                                        },
+                                        "precedence": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:71:86": {}
+                                            }
+                                        },
+                                        "key_groups": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:72:2": {}
+                                            }
+                                        },
+                                        "result": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:78:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "get_type_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:84:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:84:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "__str__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:93:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:93:13": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "export_to_json": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:95:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:95:20": {}
+                                            }
+                                        },
+                                        "file_path": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:95:26": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "get_enclosing_table": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:99:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:99:25": {}
+                                            }
+                                        },
+                                        "result": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:100:2": {},
+                                                "src.preprocessing.symbol_table:102:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "get_enclosing_module": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:105:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:105:26": {}
+                                            }
+                                        },
+                                        "result": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:106:2": {},
+                                                "src.preprocessing.symbol_table:108:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "get_enclosing_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:111:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:111:25": {}
+                                            }
+                                        },
+                                        "result": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:112:2": {},
+                                                "src.preprocessing.symbol_table:114:3": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "get_latest_definition": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:117:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:117:27": {}
+                                            }
+                                        },
+                                        "anchor": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:117:33": {}
+                                            }
+                                        },
+                                        "precedence": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:117:85": {}
+                                            }
+                                        },
+                                        "last_module_dict": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:122:3": {}
+                                            }
+                                        },
+                                        "anchor_module": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:125:2": {}
+                                            }
+                                        },
+                                        "anchor_line": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:125:18": {}
+                                            }
+                                        },
+                                        "anchor_col": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:125:31": {}
+                                            }
+                                        },
+                                        "candidates": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:131:3": {},
+                                                "src.preprocessing.symbol_table:133:3": {}
+                                            }
+                                        },
+                                        "defs": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:136:3": {}
+                                            }
+                                        },
+                                        "prior_defs": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:139:4": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "register_fqn": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:150:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:150:18": {}
+                                            }
+                                        },
+                                        "fqn_map": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:150:24": {}
+                                            }
+                                        },
+                                        "parent": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:151:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "set_package": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:158:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:158:17": {}
+                                            }
+                                        },
+                                        "package_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:158:23": {}
+                                            }
+                                        },
+                                        "fqn_map": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:158:54": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "set_module": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:164:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:164:16": {}
+                                            }
+                                        },
+                                        "module_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:164:22": {}
+                                            }
+                                        },
+                                        "fqn_map": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:164:49": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "set_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:170:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:170:15": {}
+                                            }
+                                        },
+                                        "class_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:170:21": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "set_function": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:176:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:176:18": {}
+                                            }
+                                        },
+                                        "function_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:176:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "set_variable": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:182:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:182:18": {}
+                                            }
+                                        },
+                                        "variable_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:182:24": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "merge_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:188:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:188:17": {}
+                                            }
+                                        },
+                                        "class_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:188:23": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "merge_function": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:198:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:198:20": {}
+                                            }
+                                        },
+                                        "function_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:198:26": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "merge_variable": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:208:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:208:20": {}
+                                            }
+                                        },
+                                        "variable_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:208:26": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "add_definition": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:218:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:218:20": {}
+                                            }
+                                        },
+                                        "definition_table": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:218:26": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "lookup_definition": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:226:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:226:23": {}
+                                            }
+                                        },
+                                        "defkey": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:226:29": {}
+                                            }
+                                        },
+                                        "mtable": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:227:2": {}
+                                            }
+                                        },
+                                        "line": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:227:11": {}
+                                            }
+                                        },
+                                        "col": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:227:17": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "order_definitions": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:234:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:234:23": {}
+                                            }
+                                        },
+                                        "module_precedence": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:234:29": {}
+                                            }
+                                        },
+                                        "ordered_definitions": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:235:2": {}
+                                            }
+                                        },
+                                        "ordered_subdict": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:239:4": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:9:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "to_dict": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:35:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "transfer_content": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:56:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "process_group": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:60:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "homogenize": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:71:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "get_type_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:84:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "__str__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:93:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "export_to_json": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:95:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "get_enclosing_table": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:99:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "get_enclosing_module": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:105:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "get_enclosing_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:111:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "get_latest_definition": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:117:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "register_fqn": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:150:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "set_package": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:158:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "set_module": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:164:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "set_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:170:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "set_function": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:176:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "set_variable": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:182:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "merge_class": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:188:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "merge_function": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:198:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "merge_variable": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:208:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "add_definition": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:218:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "lookup_definition": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:226:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "order_definitions": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:234:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "LibraryTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:247:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:248:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:248:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:248:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:248:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "PackageTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:251:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:252:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:252:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:252:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:252:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ModuleTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:255:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:256:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:256:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:256:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:256:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ClassTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:259:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:260:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:260:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:260:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:260:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "FunctionTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:263:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:264:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:264:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:264:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:264:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "VariableTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:267:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:268:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:268:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:268:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:268:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "InstanceTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:271:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:272:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:272:14": {}
+                                            }
+                                        },
+                                        "key": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:272:20": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:272:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "DefinitionTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:275:0": {
+                    "functions": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:276:1": {
+                                    "variables": {
+                                        "self": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:276:14": {}
+                                            }
+                                        },
+                                        "module": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:276:20": {}
+                                            }
+                                        },
+                                        "position": {
+                                            "definitions": {
+                                                "src.preprocessing.symbol_table:276:35": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "__init__": {
+                            "definitions": {
+                                "src.preprocessing.symbol_table:276:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "annotations": {
+            "definitions": {
+                "src.preprocessing.symbol_table:1:0": {}
+            }
+        },
+        "json": {
+            "definitions": {
+                "src.preprocessing.symbol_table:2:0": {}
+            }
+        },
+        "ast": {
+            "definitions": {
+                "src.preprocessing.symbol_table:3:0": {}
+            }
+        },
+        "Path": {
+            "definitions": {
+                "src.preprocessing.symbol_table:5:0": {}
+            }
+        },
+        "defaultdict": {
+            "definitions": {
+                "src.preprocessing.symbol_table:6:0": {}
+            }
+        },
+        "Table": {
+            "definitions": {
+                "src.preprocessing.symbol_table:8:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "LibraryTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:247:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "PackageTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:251:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "ModuleTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:255:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "ClassTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:259:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "FunctionTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:263:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "VariableTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:267:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "InstanceTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:271:0": {
+                    "type": "builtins.type"
+                }
+            }
+        },
+        "DefinitionTable": {
+            "definitions": {
+                "src.preprocessing.symbol_table:275:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}

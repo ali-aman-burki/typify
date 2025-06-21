@@ -1,0 +1,20 @@
+{
+	"vdefs": {
+		"16:2": "position: $unresolved$",
+		"17:2": "class_name: $unresolved$",
+		"19:2": "vartable: $unresolved$",
+		"23:2": "classtable: $unresolved$",
+		"24:2": "classdef: $unresolved$",
+		"30:2": "position: $unresolved$",
+		"31:2": "function_name: $unresolved$",
+		"33:2": "vartable: $unresolved$",
+		"37:2": "functable: $unresolved$",
+		"38:2": "funcdef: $unresolved$",
+		"41:2": "funcdef.tree: $unresolved$",
+		"42:2": "funcdef.kind: $unresolved$"
+	},
+	"fdefs": {
+		"15:1": "def class_table(...) -> $unresolved$",
+		"29:1": "def function_table(...) -> $unresolved$"
+	}
+}

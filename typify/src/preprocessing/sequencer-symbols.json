@@ -1,0 +1,138 @@
+{
+    "classes": {
+        "Sequencer": {
+            "definitions": {
+                "src.preprocessing.sequencer:1:0": {
+                    "functions": {
+                        "_tarjan": {
+                            "definitions": {
+                                "src.preprocessing.sequencer:4:1": {
+                                    "functions": {
+                                        "strongconnect": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:12:2": {
+                                                    "variables": {
+                                                        "node": {
+                                                            "definitions": {
+                                                                "src.preprocessing.sequencer:12:20": {}
+                                                            }
+                                                        },
+                                                        "index": {
+                                                            "definitions": {
+                                                                "src.preprocessing.sequencer:16:3": {}
+                                                            }
+                                                        },
+                                                        "scc": {
+                                                            "definitions": {
+                                                                "src.preprocessing.sequencer:28:4": {}
+                                                            }
+                                                        },
+                                                        "popped_node": {
+                                                            "definitions": {
+                                                                "src.preprocessing.sequencer:30:5": {}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "variables": {
+                                        "graph": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:4:13": {}
+                                            }
+                                        },
+                                        "index": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:5:2": {}
+                                            }
+                                        },
+                                        "indices": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:6:2": {}
+                                            }
+                                        },
+                                        "low_links": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:7:2": {}
+                                            }
+                                        },
+                                        "on_stack": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:8:2": {}
+                                            }
+                                        },
+                                        "stack": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:9:2": {}
+                                            }
+                                        },
+                                        "result": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:10:2": {}
+                                            }
+                                        },
+                                        "strongconnect": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:12:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "generate_resolving_sequence": {
+                            "definitions": {
+                                "src.preprocessing.sequencer:44:1": {
+                                    "variables": {
+                                        "graph": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:44:33": {}
+                                            }
+                                        },
+                                        "sccs": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:45:2": {}
+                                            }
+                                        },
+                                        "sequence": {
+                                            "definitions": {
+                                                "src.preprocessing.sequencer:46:2": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "variables": {
+                        "_tarjan": {
+                            "definitions": {
+                                "src.preprocessing.sequencer:4:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        },
+                        "generate_resolving_sequence": {
+                            "definitions": {
+                                "src.preprocessing.sequencer:44:1": {
+                                    "type": "builtins.function"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "variables": {
+        "Sequencer": {
+            "definitions": {
+                "src.preprocessing.sequencer:1:0": {
+                    "type": "builtins.type"
+                }
+            }
+        }
+    }
+}
