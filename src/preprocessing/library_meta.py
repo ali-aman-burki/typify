@@ -8,6 +8,7 @@ from src.symbol_table import (
 from src.preprocessing.module_meta import ModuleMeta
 
 from pathlib import Path
+from collections import defaultdict
 
 class LibraryMeta:
 	def __init__(self, src: Path):
@@ -19,31 +20,58 @@ class LibraryMeta:
 		self.fqn_map: dict[str, list[Table]] = {}
 
 		self._build()
-	
+
 	def _build(self):
-		working_is_package = (self.src / "__init__.py").is_file()
+		working_is_package = (self.src / "__init__.py").is_file() or (self.src / "__init__.pyi").is_file()
 
 		if working_is_package:
 			root_package_table = PackageTable(self.src.name)
+			root_package_table.trust_annotations = False
 			self.library_table.set_package(root_package_table, self.fqn_map)
 			package_map = {self.src: root_package_table}
 		else:
+			self.library_table.trust_annotations = False
 			package_map = {self.src: self.library_table}
 
+		# First pass: register packages and detect py.typed
 		for path in self.src.rglob("*"):
 			if path.is_dir():
 				if "__pycache__" in path.parts:
 					continue
 
-				has_init = (path / "__init__.py").is_file()
+				has_init = (path / "__init__.py").is_file() or (path / "__init__.pyi").is_file()
 				if has_init:
-					package_table = PackageTable(path.name)
-					package_map[path] = package_table
 					parent_table = package_map.get(path.parent, self.library_table)
+					package_table = PackageTable(path.name)
+					package_table.trust_annotations = parent_table.trust_annotations
+					package_map[path] = package_table
 					parent_table.set_package(package_table, self.fqn_map)
 
-			elif path.suffix == ".py":
-				package_table = package_map.get(path.parent, self.library_table)
-				meta = ModuleMeta.from_source(path, self.library_table)
-				package_table.set_module(meta.table, self.fqn_map)
-				self.meta_map[meta.table] = meta
+			elif path.name == "py.typed":
+				parent = path.parent
+				table = package_map.get(parent)
+				if table:
+					table.trust_annotations = True
+
+		# Second pass: collect .py and .pyi candidates
+		module_candidates = defaultdict(dict)
+		for path in self.src.rglob("*"):
+			if path.suffix in {".py", ".pyi"} and path.name != "__init__.py" and path.name != "__init__.pyi":
+				parent = path.parent
+				if parent in package_map:
+					stem = path.stem
+					module_candidates[(parent, stem)][path.suffix] = path
+
+		# Final pass: resolve conflicts and create ModuleMetas
+		for (parent, stem), variants in module_candidates.items():
+			chosen_path = variants.get(".pyi") or variants.get(".py")
+			if not chosen_path:
+				continue
+
+			table = package_map[parent]
+			meta = ModuleMeta.from_source(chosen_path, self.library_table)
+			meta.trust_annotations = True if chosen_path.suffix == ".pyi" else table.trust_annotations
+			table.set_module(meta.table, self.fqn_map)
+			self.meta_map[meta.table] = meta
+
+

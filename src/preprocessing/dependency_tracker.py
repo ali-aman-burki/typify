@@ -24,6 +24,7 @@ class GraphBuilder:
 		for meta in meta_map.values():
 			tracker = DependencyTracker(libs, meta_map, dependency_graph, meta)
 			
+			meta.load_tree()
 			builtin_node = ast.ImportFrom(module="builtins", names=[ast.alias(name="*", asname=None)], level=0)
 			builtin_node.lineno = 0
 			builtin_node.col_offset = 0
@@ -51,11 +52,6 @@ class DependencyTracker(ast.NodeVisitor):
 		self.dependency_graph = dependency_graph
 		self.dependency_graph[module_meta] = set()
 		self.in_function = 0
-
-		if not module_meta.tree:
-			with open(module_meta.src_path, "r", encoding="utf-8") as file:
-				source_code = file.read()
-			module_meta.tree = ast.parse(source_code)
 	
 	def as_module_metas(self, modules: list[Table]) -> set[ModuleMeta]:
 		return {self.meta_map[table] for table in modules if table in self.meta_map}

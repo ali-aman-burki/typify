@@ -38,5 +38,5 @@ for meta, deps in bundle.dependency_graph.items():
         f"<{dep}>" if isinstance(dep, str) else repr(dep)
         for dep in deps
     )
-    print(f"{meta} -> [{joined}]")
+    print(f"{repr(meta)} -> [{joined}]")
 

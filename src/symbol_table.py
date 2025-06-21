@@ -17,6 +17,7 @@ class Table:
 		self.instances: list[Table] = []
 		self.path_chain: list[Table] = []
 		self.fqn = ""
+		self.trust_annotations = False
 
 		self.bases: list = []
 		self.params: list = []
@@ -157,6 +158,8 @@ class Table:
 	def register_fqn(self, fqn_map=None):
 		parent = self.get_enclosing_table()
 		self.fqn = parent.fqn + "." + self.key if parent.fqn else self.key
+		if isinstance(self, ModuleTable) and self.key == "__init__": 
+			self.fqn = parent.fqn
 		self.path_chain = parent.path_chain + [self]
 		if fqn_map is not None: fqn_map[self.fqn] = self.path_chain
 

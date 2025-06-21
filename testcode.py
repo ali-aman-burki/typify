@@ -1,78 +1,37 @@
 import tempfile
-import json
 from pathlib import Path
-from src.preloading.setup_utils import SetupUtils
+from src.preprocessing.library_meta import LibraryMeta
 
-def run_tests():
-    defaults = SetupUtils.extract_runtime_env()
+def write(p: Path, content=""):
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(content)
 
-    def write_config(data: dict) -> Path:
-        f = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json")
-        json.dump(data, f)
-        f.close()
-        return Path(f.name)
+with tempfile.TemporaryDirectory() as tempdir:
+    temp = Path(tempdir)
 
-    def print_result(n: int, result: list[Path]):
-        print(f"\n--- Test {n} Resolved Paths ---")
-        for p in result:
-            print(p)
+    # Test structure
+    # /lib/
+    # ├── __init__.py
+    # ├── py.typed
+    # ├── foo.py
+    # ├── bar.pyi
+    # └── sub/
+    #     ├── __init__.py
+    #     ├── sub1.py
+    #     └── sub2.pyi
+    lib_dir = temp / "lib"
+    write(lib_dir / "__init__.py")
+    write(lib_dir / "py.typed")
+    write(lib_dir / "foo.py")
+    write(lib_dir / "bar.pyi")
 
-    project_dir = Path("/some/proj")
+    sub = lib_dir / "sub"
+    write(sub / "__init__.py")
+    write(sub / "sub1.py")
+    write(sub / "sub2.pyi")
 
-    # Test 1: All auto
-    config1 = {
-        "project_dir": str(project_dir),
-        "output_dir": "/some/ignored",
-        "man_libs": {
-            "builtinlib": "some_path",
-            "stdlib": "stdlib/path",
-        },
-        "paths": "/aanother_path, {stdlib}"
-    }
-    result1 = SetupUtils.get_paths(write_config(config1))
-    print_result(1, result1)
+    lib = LibraryMeta(lib_dir)
 
-    # Test 2: Custom paths using templates (but builtinlib should move to index 1)
-    config2 = {
-        "project_dir": str(project_dir),
-        "output_dir": "/some/ignored",
-        "man_libs": {
-            "builtinlib": "{auto}",
-            "stdlib": "{auto}",
-			"other_lib": "/other/lib"
-        },
-        "paths": "{builtinlib}, /extra, {stdlib}, {other_lib}"
-    }
-    result2 = SetupUtils.get_paths(write_config(config2))
-    print_result(2, result2)
-
-    # Test 3: Manual override of builtinlib
-    custom_builtin = Path("/my/custom/builtin")
-    config3 = {
-        "project_dir": str(project_dir),
-        "output_dir": "/some/ignored",
-        "man_libs": {
-            "builtinlib": str(custom_builtin),
-            "stdlib": "{auto}"
-        },
-        "paths": "{builtinlib}, {stdlib}"
-    }
-    result3 = SetupUtils.get_paths(write_config(config3))
-    print_result(3, result3)
-
-    config4 = {
-        "project_dir": str(project_dir),
-        "output_dir": "/some/ignored",
-        "man_libs": {
-            "builtinlib": "{auto}",
-            "stdlib": "{auto}"
-        },
-        "paths": "/a, /b, /c"
-    }
-    result4 = SetupUtils.get_paths(write_config(config4))
-    print_result(4, result4)
-
-    print("\n✅ no errors.")
-
-if __name__ == "__main__":
-    run_tests()
+    print("\n[MODULE META FLAGS]")
+    for meta in lib.meta_map.values():
+        print(f"{meta.src_path.relative_to(temp)} | is_stub: {meta.is_stub:<5} | trust_annotations: {meta.trust_annotations}")

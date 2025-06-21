@@ -16,23 +16,14 @@ class ModuleMeta:
 		self.imports: list[tuple[ast.AST, Table, bool]] = []
 		self.vslots: dict[tuple[int, int], tuple[str, TypeExpr]] = {}
 		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeExpr]] = {}
+		self.is_stub = src_path.suffix == ".pyi"
+		self.trust_annotations = False
 
-	def to_absolute_name(self, import_module: str | None, level: int) -> str:
-		if not level: return import_module
-
-		import_module = import_module if import_module else ""
-		import_chain = import_module.split(".")
-		path_chain = self.table.get_path_chain() 
-		current = path_chain[-level]
-		result = []
-		for i in import_chain[:-1]:
-			current = current.packages[i]
-		
-		for table in path_chain:
-			result.append(table.key)
-			if table == current: break
-
-		return ".".join(result)
+	def load_tree(self):
+		if not self.tree:
+			with open(self.src_path, "r", encoding="utf-8") as file:
+				source_code = file.read()
+			self.tree = ast.parse(source_code)
 
 	def __repr__(self):
 		return self.table.fqn
