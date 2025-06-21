@@ -1,10 +1,7 @@
 {
-    "project_dir": "/home/ali/dev/typify-workspace/sample_projects/proj1/",
-	"output_dir": "/home/ali/dev/typify-workspace/sample_projects/proj1/.typify",
-
 	"paths": {
-		"builtinlib": "/home/ali/dev/typify-workspace/typify/typify-defaults/builtinlib",
-		"stdlib": "/home/ali/dev/typify-workspace/typify/typify-defaults/stdlib"
+		"builtinlib": "typify-defaults/builtinlib",
+		"stdlib": "typify-defaults/stdlib"
 	},
 
     "preload": "{builtinlib},{stdlib}",
