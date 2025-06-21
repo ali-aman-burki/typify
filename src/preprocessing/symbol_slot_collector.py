@@ -10,7 +10,6 @@ from src.symbol_table import (
 from src.preprocessing.module_meta import ModuleMeta
 from src.preprocessing.scope_manager import ScopeManager
 from src.function_utils import FunctionUtils
-from src.preloading.commons import Typing
 
 class SymbolSlotCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
@@ -24,31 +23,42 @@ class SymbolSlotCollector(ast.NodeVisitor):
 
 		self.function_depth = 0
 		self.imports = module_meta.imports
-		self.symbols: set[Table] = set()
 
 	def visit_Import(self, node):
-		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth!=0))
+		enclosing = self.current_table.get_latest_definition()
+		position = (node.lineno, node.col_offset)
+		for alias in node.names:
+			var = VariableTable(alias.asname if alias.asname else alias.name)
+			var.add_definition(DefinitionTable(self.module_table, position)) 
+			enclosing.merge_variable(var)
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
-		self.imports.append((node, self.current_table.get_latest_definition(), self.function_depth!=0))
+		enclosing = self.current_table.get_latest_definition()
+		position = (node.lineno, node.col_offset)
+		if "*" not in node.names:
+			for alias in node.names:
+				var = VariableTable(alias.asname if alias.asname else alias.name)
+				var.add_definition(DefinitionTable(self.module_table, position)) 
+				enclosing.merge_variable(var)
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):
 		enclosing = self.current_table.get_latest_definition()
-		self.push(ScopeManager.class_table(node, enclosing, self.module_table, self.symbols))
+		self.push(ScopeManager.class_table(node, enclosing, self.module_table))
 		self.generic_visit(node)
 		self.pop()
 
 	def visit_FunctionDef(self, node):
 		parameters = FunctionUtils.collect_parameters(node, self.module_table)
 		key = (node.lineno, node.col_offset)
-		value = (node.name, parameters, Typing.AnyType)
+		value = (node.name, parameters, "$unresolved$")
 		self.fslots[key] = value
 
 		enclosing = self.current_table.get_latest_definition()
-		fdef = self.push(ScopeManager.function_table(node, enclosing, self.module_table, self.symbols))
-		for var in parameters.values(): self.symbols.add(fdef.add_variable(var))
+		fdef = self.push(ScopeManager.function_table(node, enclosing, self.module_table))
+		for var in parameters.values(): 
+			fdef.merge_variable(var)
 
 		self.function_depth += 1
 		self.generic_visit(node)
@@ -94,13 +104,12 @@ class SymbolSlotCollector(ast.NodeVisitor):
 		position = (name_node.lineno, name_node.col_offset)
 		var = VariableTable(name_node.id)
 		var.add_definition(DefinitionTable(self.module_table, position))
-		var = enclosing.add_variable(var)
-		self.symbols.add(var)
+		var = enclosing.merge_variable(var)
 
 		if isinstance(self.current_table, ClassTable):
 			grandparent = self.current_table.parent
 			cvar = grandparent.variables[self.current_table.key]
-			for pt in cvar.points_to: pt.add_variable(var)
+			for pt in cvar.points_to: pt.merge_variable(var)
 
 	def process_target(self, target: ast.AST):
 		if isinstance(target, (ast.Tuple, ast.List)):
@@ -108,7 +117,7 @@ class SymbolSlotCollector(ast.NodeVisitor):
 				self.process_target(elt)
 		else:
 			key = (target.lineno, target.col_offset)
-			value = (ast.unparse(target), Typing.AnyType)
+			value = (ast.unparse(target), "$unresolved$")
 			self.vslots[key] = value
 
 			if isinstance(target, ast.Name):

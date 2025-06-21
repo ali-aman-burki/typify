@@ -4,7 +4,6 @@ import copy
 from src.symbol_table import Table, VariableTable, DefinitionTable
 from src.preprocessing.module_meta import ModuleMeta
 from src.typeutils import TypeUtils
-from src.preloading.commons import ModuleClass
 
 
 class Inferencer(ast.NodeVisitor):
@@ -26,7 +25,7 @@ class Inferencer(ast.NodeVisitor):
 
 	def visit_Module(self, node):
 		self.generic_visit(node)
-		mobject = TypeUtils.create_instance(ModuleClass, [])
+		mobject = TypeUtils.create_instance(None, [])
 		Table.transfer_content(self.module_table, mobject)
 
 		if self.module_table.key == "__init__": self.module_object_map[self.module_table.parent] = mobject
@@ -46,13 +45,13 @@ class Inferencer(ast.NodeVisitor):
 					mvar = VariableTable(table.key)
 					mdef = mvar.add_definition(DefinitionTable(self.module_table, position))
 					mdef.points_to.add(tobject)
-					cobject.add_variable(mvar)
+					cobject.merge_variable(mvar)
 				else:
 					if tobject not in cobject.variables[table.key].get_latest_definition().points_to:
 						mvar = VariableTable(table.key)
 						mdef = mvar.add_definition(DefinitionTable(self.module_table, position))
 						mdef.points_to.add(tobject)
-						cobject.override_variable(mvar)
+						cobject.set_variable(mvar)
 				cobject = tobject
 				results[i].append(cobject)
 			
@@ -81,7 +80,7 @@ class Inferencer(ast.NodeVisitor):
 			for chain in results: var_dicts.append(chain[-1].variables)
 			homogenized = Table.homogenize(var_dicts, defkey, self.module_precedence)
 			for v in homogenized.values():
-				nv = self.module_table.add_variable(v)
+				nv = self.module_table.merge_variable(v)
 				nv.order_definitions(self.module_precedence)
 		else:
 			endpoints = [result[-1] for result in results]
@@ -100,13 +99,13 @@ class Inferencer(ast.NodeVisitor):
 					else:
 						if alias.name in chain[-1].packages:
 							pac = chain[-1].packages[alias.name]
-							pobject = self.module_object_map[pac] if pac in self.module_object_map[pac] else TypeUtils.create_instance(ModuleClass, [])
+							pobject = self.module_object_map[pac] if pac in self.module_object_map[pac] else TypeUtils.create_instance(None, [])
 							self.module_object_map[pac] = pobject
 							
 							pvar = VariableTable(alias.name)
 							pdef = pvar.add_definition(DefinitionTable(self.module_table, position))
 							pdef.points_to.add(pobject)
-							ep.add_variable(pvar)
+							ep.merge_variable(pvar)
 
 							vardef.points_to.update(pdef.points_to)
 
@@ -117,7 +116,7 @@ class Inferencer(ast.NodeVisitor):
 							mvar = VariableTable(alias.name)
 							mdef = mvar.add_definition(DefinitionTable(self.module_table, position))
 							mdef.points_to.add(mobject)
-							ep.add_variable(mvar)
+							ep.merge_variable(mvar)
 
 							vardef.points_to.update(mdef.points_to)
 				

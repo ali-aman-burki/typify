@@ -1,4 +1,3 @@
-from src.preloading.commons import builtins_m
 from src.symbol_table import Table, VariableTable, ClassTable, FunctionTable
 from src.typeutils import TypeUtils
 from src.chain import Chain, Segment
@@ -51,7 +50,7 @@ class Context:
 		if isinstance(node, ast.Name):
 			name = node.id
 			if name not in self.current_table.get_latest_definition().variables:
-				self.current_table.get_latest_definition().add_variable(VariableTable(name))
+				self.current_table.get_latest_definition().merge_variable(VariableTable(name))
 			return self.current_table.get_latest_definition().variables[name]
 		return None
 
@@ -87,37 +86,37 @@ class Context:
 		
 	def resolve_type(self, node: ast.AST) -> set[Table]:
 		if isinstance(node, ast.Constant):
-			c = builtins_m.classes[type(node.value).__name__]
+			c = None
 			cinstance = TypeUtils.create_instance(c, [])
 			return {cinstance}
 		
 		elif isinstance(node, ast.JoinedStr):
-			s = builtins_m.classes["str"]
+			s = None
 			sinstance = TypeUtils.create_instance(s, [])
 			return {sinstance}
 		
 		elif isinstance(node, ast.BoolOp):
-			b = builtins_m.classes["bool"]
+			b = None
 			binstance = b.create_instance(b)
 			return {binstance}
 		
 		elif isinstance(node, ast.List):
-			l = builtins_m.classes["list"]
+			l = None
 			linstance = TypeUtils.create_instance(l, [])
 			return {linstance}
 		
 		elif isinstance(node, ast.Set):
-			s = builtins_m.classes["set"]
+			s = None
 			sinstance = TypeUtils.create_instance(s, [])
 			return {sinstance}
 		
 		elif isinstance(node, ast.Tuple):
-			t = builtins_m.classes["tuple"]
+			t = None
 			tinstance = TypeUtils.create_instance(t, [])
 			return {tinstance}
 		
 		elif isinstance(node, ast.Dict):
-			d = builtins_m.classes["dict"]
+			d = None
 			dinstance = TypeUtils.create_instance(d, [])
 			return {dinstance}
 		

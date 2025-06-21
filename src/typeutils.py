@@ -9,7 +9,7 @@ class TypeExpr:
 		self.args = args
 	
 	def __repr__(self):
-		fqn = self.base.get_type_class().fully_qualified_name()
+		fqn = self.base.get_type_class().fqn
 		joined = ", ".join(
 			(
 				f"[{', '.join(repr(a) for a in arg)}]" if isinstance(arg, list)
@@ -26,7 +26,7 @@ class TypeUtils:
 
 	@staticmethod
 	def create_instance(template: Table, args: list[TypeExpr | list[TypeExpr] | EllipsisType]) -> InstanceTable:
-		fqn = template.get_type_class().fully_qualified_name()
+		fqn = template.get_type_class().fqn
 		instance = InstanceTable(f"instance@{fqn}")
 		instance.type = TypeExpr(template, args)
 		return instance

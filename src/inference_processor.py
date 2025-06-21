@@ -1,13 +1,12 @@
-from src.preprocessing.preprocessor import Preprocessor
+from src.preprocessing.dependency_tracker import DependencyBundle
 from src.preprocessing.module_meta import ModuleMeta
 from src.inferencing import Inferencer
-from src.preloading.commons import preloaded_libs
 
 import sys
 import traceback
 
 class InferenceProcessor:
-	def __init__(self, preprocessor: Preprocessor):
+	def __init__(self, bundle: DependencyBundle):
 		self.preprocessor = preprocessor
 		self.symbols = preprocessor.symbols
 		self.meta_map = self.preprocessor.meta_map
@@ -20,12 +19,6 @@ class InferenceProcessor:
 		self.module_object_map = preprocessor.library_table.module_object_map
 
 	def infer(self): 
-		self.module_object_map.update(preloaded_libs.builtin_lib.module_object_map)
-		self.module_object_map.update(preloaded_libs.pystd_lib.module_object_map)
-
-		for site_lib in preloaded_libs.site_libs.values(): self.module_object_map.update(site_lib.module_object_map)
-		for user_site_lib in preloaded_libs.user_site_libs.values(): self.module_object_map.update(user_site_lib.module_object_map)
-
 		self.sequence = self.preprocessor.generate_resolving_sequence()
 		self.sequence_length = len(self.sequence)
 		

@@ -14,8 +14,6 @@ class ModuleMeta:
 		self.table = table
 		self.library_table = library_table
 		self.imports: list[tuple[ast.AST, Table, bool]] = []
-		self.dependency_map: dict[str, list[list[Table]]] = {}
-		self.dependencies: set[ModuleMeta] = set()
 		self.vslots: dict[tuple[int, int], tuple[str, TypeExpr]] = {}
 		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeExpr]] = {}
 
@@ -37,56 +35,7 @@ class ModuleMeta:
 		return ".".join(result)
 
 	def __repr__(self):
-		return self.table.fully_qualified_name()
-
-	def resolve_chains(self, import_module: str) -> list[list[Table]]:
-		path_chain = self.table.get_path_chain()
-		import_chain = import_module.split(".")
-		start_name = import_chain[0]
-		starting_points: list[list[Table]] = []
-		for i in range(len(path_chain)):
-			table = path_chain[i]
-			if start_name in table.modules:
-				starting_points.append([table.modules[start_name]])
-			elif start_name in table.packages: 
-				starting_points.append([table.packages[start_name]])
-		
-		result: list[list[Table]] = []
-		for starting_point in starting_points:
-			current = starting_point[0]
-			for j in range(1, len(import_chain)):
-				if import_chain[j] in current.modules:
-					current = current.modules[import_chain[j]]
-					starting_point.append(current)
-				elif import_chain[j] in current.packages:
-					current = current.packages[import_chain[j]]
-					starting_point.append(current)
-			if len(starting_point) == len(import_chain):
-				result.append(starting_point)
-
-		return result
-
-	def filter_chains(self, chains: list[list[Table]]) -> list[list[Table]]:
-		module_table = self.table
-		new_chains = []
-
-		for chain in chains:
-			new_chain = []
-			for table in chain:
-				if isinstance(table, PackageTable) and "__init__" in table.modules and table.modules["__init__"] != module_table:
-					new_chain.append(table.modules["__init__"])
-				else:
-					new_chain.append(table)
-			new_chains.append(new_chain)
-		return new_chains
-
-
-	def collect_modules(self, resolved_chains: list[list[Table]]) -> set[Table]:
-		modules: set[Table] = set()
-		for chain in resolved_chains:
-			for table in chain:
-				if not isinstance(table, PackageTable): modules.add(table)
-		return modules
+		return self.table.fqn
 
 	@staticmethod
 	def from_source(src_path: Path, library_table: Table):
@@ -108,9 +57,6 @@ class ModuleMeta:
 		output_path.parent.mkdir(parents=True, exist_ok=True)
 
 		output = {
-			"dependency_map": {
-				
-			},
 			"vdefs": {
 				f"{k[0]}:{k[1]}": f"{v[0]}: {v[1]}" for k, v in self.vslots.items()
 			},
@@ -118,11 +64,6 @@ class ModuleMeta:
 				f"{k[0]}:{k[1]}": f"def {v[0]}(...) -> {v[2]}" for k, v in self.fslots.items()
 			}
 		}
-		
-		for k, l in self.dependency_map.items():
-			key = k
-			result = ', '.join('->'.join(x.key for x in sublist) for sublist in l)
-			output["dependency_map"][key] = result
 
 		with output_path.open("w", encoding="utf-8") as f:
 			json.dump(output, f, indent="\t")

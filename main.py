@@ -1,36 +1,42 @@
-from src.preloading.setup_utils import SetupUtils
-from src.preloading.preloader import PreloadedLibs
-from src.preloading.commons import bind
+import argparse
+import os
+import json
 
-bind(PreloadedLibs(SetupUtils.extract_runtime_env()))
+from typing import Union
 
-import argparse, os
 from src.utils import Utils
+from src.preloading.setup_utils import SetupUtils
+
+config_path = "typifyconfig.json"
 
 parser = argparse.ArgumentParser(description="Build and export type bindings for a Python project.")
-parser.add_argument("project_path", help="Path to the Python project directory.")
-parser.add_argument("-o", "--export-path", 
-                    help="Path to the export directory (default: './export').",
-                    default="./.typify")
+parser.add_argument("project_dir", help="Path to the Python project directory.")
+parser.add_argument("-o", "--output-dir", help="Path to the export directory (defaults to project path).")
+
 args = parser.parse_args()
 
-if not Utils.is_valid_directory(args.project_path):
+project_dir = args.project_dir
+output_dir = args.output_dir or (project_dir + "/.typify")
+
+if not Utils.is_valid_directory(project_dir):
     print("Invalid project path given.")
     exit(1)
 
-if not Utils.is_valid_directory(args.export_path):
-    os.makedirs(args.export_path, exist_ok=True)
+if not Utils.is_valid_directory(output_dir):
+    os.makedirs(output_dir, exist_ok=True)
 
-project_path = args.project_path
-export_path = args.export_path
+with open(config_path, "r") as f:
+	config: dict[str, Union[str, dict[str, str]]] = json.load(f)
+
+config["project_dir"] = project_dir
 
 print(Utils.title)
 
-Utils.scan_and_export(project_path, export_path)
+bundle = SetupUtils.preprocess_libs(config)
+for meta, deps in bundle.dependency_graph.items():
+    joined = ", ".join(
+        f"<{dep}>" if isinstance(dep, str) else repr(dep)
+        for dep in deps
+    )
+    print(f"{meta} -> [{joined}]")
 
-while True:
-    choice = input().strip().lower()
-    if choice == "r":
-        Utils.scan_and_export(project_path, export_path)
-    else:
-        break
