@@ -53,5 +53,5 @@ print("\nResolving Sequence: ")
 joined = " -> ".join(repr(meta) for meta in bundle.resolving_sequence)
 print(joined)
 
-bundle.libs[0][1].export_to(Path(output_dir) / "project_lib")
+bundle.libs[0][1].export_to(Path(output_dir))
 
