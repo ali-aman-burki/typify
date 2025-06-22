@@ -29,27 +29,32 @@ class FunctionUtils:
 		for arg in args_node.posonlyargs:
 			var = parameters[arg.arg] = VariableTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
-			var.add_definition(DefinitionTable(module_table, position))
+			defkey = (module_table, position)
+			var.add_definition(DefinitionTable(defkey))
 
 		for arg in args_node.args:
 			var = parameters[arg.arg] = VariableTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
-			var.add_definition(DefinitionTable(module_table, position))
+			defkey = (module_table, position)
+			var.add_definition(DefinitionTable(defkey))
 
 		if args_node.vararg:
 			var = parameters[args_node.vararg.arg] = VariableTable(args_node.vararg.arg)
 			position = (args_node.vararg.lineno, args_node.vararg.col_offset)
-			var.add_definition(DefinitionTable(module_table, position))
+			defkey = (module_table, position)
+			var.add_definition(DefinitionTable(defkey))
 
 		for arg in args_node.kwonlyargs:
 			var = parameters[arg.arg] = VariableTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
-			var.add_definition(DefinitionTable(module_table, position))
+			defkey = (module_table, position)
+			var.add_definition(DefinitionTable(defkey))
 
 		if args_node.kwarg:
 			var = parameters[args_node.kwarg.arg] = VariableTable(args_node.kwarg.arg)
 			position = (args_node.kwarg.lineno, args_node.kwarg.col_offset)
-			var.add_definition(DefinitionTable(module_table, position))
+			defkey = (module_table, position)
+			var.add_definition(DefinitionTable(defkey))
 
 		return parameters
 	

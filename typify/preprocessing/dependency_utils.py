@@ -1,9 +1,18 @@
 import ast
 
-from typify.preprocessing.symbol_table import Table, ModuleTable, PackageTable, InstanceTable
+from typify.preprocessing.symbol_table import (
+    Table,
+	VariableTable,
+    ModuleTable, 
+    PackageTable, 
+    InstanceTable,
+	DefinitionTable
+)
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.sequencer import Sequencer
+from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.commons import Builtins
 
 from dataclasses import dataclass
 
@@ -11,21 +20,83 @@ from dataclasses import dataclass
 class DependencyBundle:
 	libs: dict[str, LibraryMeta]
 	meta_map: dict[ModuleTable, ModuleMeta]
-	module_object_map: dict[PackageTable | ModuleTable, InstanceTable]
+	sysmodules: dict[str, InstanceTable]
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
 	cleaned_graph: dict[ModuleMeta, set[ModuleMeta]]
 	resolving_sequence: list[ModuleMeta]
+
+class DependencyUtils:
+	@staticmethod
+	def resolve_module_chain(
+		fqn: str, 
+		defkey: tuple[ModuleTable, tuple[int, int]], 
+		libs: dict[str, LibraryMeta], 
+		sysmodules: dict[str, InstanceTable]
+	) -> list[InstanceTable]:
+		for lib in libs.values():
+			if fqn in lib.fqn_map:
+				chain = lib.fqn_map[fqn]
+
+				if all(table.fqn in sysmodules for table in chain):
+					return [sysmodules[table.fqn] for table in chain]
+
+				modules = []
+				current_object = sysmodules[chain[0].fqn]
+				modules.append(current_object)
+
+				for table in chain[1:]:
+					if table.fqn in sysmodules:
+						current_object = sysmodules[table.fqn]
+						modules.append(current_object)
+						continue
+
+					module_object = TypeUtils.instantiate(Builtins.ModuleClass)
+					Table.transfer_content(table, module_object)
+
+					attr = VariableTable(table.key)
+					attrdef = attr.add_definition(DefinitionTable(defkey))
+					attrdef.points_to.add(module_object)
+
+					current_object.set_variable(attr)
+					sysmodules[table.fqn] = module_object
+					current_object = module_object
+					modules.append(current_object)
+
+				return modules
+
+		parts = fqn.split(".")
+		modules = []
+		current_object = None
+
+		for i in range(len(parts)):
+			fullname = ".".join(parts[:i+1])
+			module_object = sysmodules.get(fullname)
+
+			if not module_object:
+				module_object = TypeUtils.instantiate(Builtins.ModuleClass)
+				sysmodules[fullname] = module_object
+
+			if current_object:
+				attr = VariableTable(parts[i])
+				attrdef = attr.add_definition(DefinitionTable(defkey))
+				attrdef.points_to.add(module_object)
+				current_object.set_variable(attr)
+
+			current_object = module_object
+			modules.append(module_object)
+
+		return modules
 
 class GraphBuilder:
 	@staticmethod
 	def build_graph(libs: dict[str, LibraryMeta]) -> DependencyBundle:
 		meta_map: dict[ModuleTable, ModuleMeta] = {}
-		module_object_map: dict[PackageTable | ModuleTable, InstanceTable] = {}
+		sysmodules: dict[PackageTable | ModuleTable, InstanceTable] = {}
 		dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]] = {}
 
 		for lib in libs.values():
 			meta_map.update(lib.meta_map)
-			module_object_map.update(lib.module_object_map)
+			sysmodules.update(lib.sysmodules)
 
 		for meta in meta_map.values():
 			tracker = DependencyTracker(libs, meta_map, dependency_graph, meta)
@@ -50,7 +121,7 @@ class GraphBuilder:
 		return DependencyBundle(
 			libs,
 			meta_map,
-			module_object_map,
+			sysmodules,
 			dependency_graph,
 			cleaned_graph,
 			resolving_sequence

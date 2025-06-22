@@ -14,7 +14,7 @@ class LibraryMeta:
 	def __init__(self, src: Path):
 		self.src = Path(src).resolve()
 		self.library_table = LibraryTable(self.src.name)
-		self.module_object_map: dict[ModuleTable | PackageTable, InstanceTable] = {}
+		self.sysmodules: dict[str, InstanceTable] = {}
 		self.meta_map: dict[ModuleTable, ModuleMeta] = {}
 		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
 		self.fqn_map: dict[str, list[Table]] = {}

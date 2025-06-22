@@ -27,7 +27,7 @@ class Table:
 
 		self.kind: str = ""
 		self.type = None
-		self.points_to: set[Table] = set()
+		self.points_to: set[InstanceTable] = set()
 		self.origin: DefinitionTable = None
 		self.template_used: Table = None
 		self.tree: ast.FunctionDef = None		
@@ -59,7 +59,7 @@ class Table:
 	@staticmethod
 	def process_group(key: str, values: list[Table], defkey: tuple[Table, tuple[int, int]], precedence: list[ModuleTable]) -> Table:
 		var = VariableTable(key)
-		var.add_definition(DefinitionTable(defkey[0], defkey[1]))
+		var.add_definition(DefinitionTable(defkey))
 
 		for table in values:
 			tdef = table.get_latest_definition(defkey, precedence)
@@ -273,7 +273,7 @@ class InstanceTable(Table):
 		super().__init__(key)
 
 class DefinitionTable(Table):
-	def __init__(self, module: Table, position: tuple[int, int]):
-		super().__init__(f"{module.fqn}:{position[0]}:{position[1]}")
-		self.module = module
-		self.position = position
+	def __init__(self, defkey: tuple[Table, tuple[int, int]]):
+		super().__init__(f"{defkey[0].fqn}:{defkey[1][0]}:{defkey[1][1]}")
+		self.module = defkey[0]
+		self.position = defkey[1]

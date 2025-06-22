@@ -25,19 +25,21 @@ class SymbolSlotCollector(ast.NodeVisitor):
 	def visit_Import(self, node):
 		enclosing = self.current_table.get_latest_definition()
 		position = (node.lineno, node.col_offset)
+		defkey = (self.module_table, position)
 		for alias in node.names:
-			var = VariableTable(alias.asname if alias.asname else alias.name)
-			var.add_definition(DefinitionTable(self.module_table, position)) 
+			var = VariableTable(alias.asname if alias.asname else alias.name.split(".")[0])
+			var.add_definition(DefinitionTable(defkey)) 
 			enclosing.merge_variable(var)
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
 		enclosing = self.current_table.get_latest_definition()
 		position = (node.lineno, node.col_offset)
+		defkey = (self.module_table, position)
 		if node.names[0].name != "*":
 			for alias in node.names:
 				var = VariableTable(alias.asname if alias.asname else alias.name)
-				var.add_definition(DefinitionTable(self.module_table, position)) 
+				var.add_definition(DefinitionTable(defkey)) 
 				enclosing.merge_variable(var)
 		self.generic_visit(node)
 
@@ -100,8 +102,9 @@ class SymbolSlotCollector(ast.NodeVisitor):
 	def process_variable(self, name_node: ast.Name):
 		enclosing = self.current_table.get_latest_definition()
 		position = (name_node.lineno, name_node.col_offset)
+		defkey = (self.module_table, position)
 		var = VariableTable(name_node.id)
-		var.add_definition(DefinitionTable(self.module_table, position))
+		var.add_definition(DefinitionTable(defkey))
 		var = enclosing.merge_variable(var)
 
 		if isinstance(self.current_table, ClassTable):

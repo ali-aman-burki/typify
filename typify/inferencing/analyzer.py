@@ -3,12 +3,12 @@ import copy
 
 from typify.preprocessing.symbol_table import (
 	Table,
-	PackageTable, 
 	ModuleTable, 
-	InstanceTable 
+	InstanceTable,
 )
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
 
@@ -17,12 +17,12 @@ class Analyzer(ast.NodeVisitor):
 			self, 
 			module_meta: ModuleMeta, 
 			precedence: list[ModuleTable], 
-			module_object_map: dict[PackageTable | ModuleTable, InstanceTable],
+			sysmodules: dict[str, InstanceTable],
 			libs: dict[str, LibraryMeta]
 		):
 		self.module_meta = module_meta
 		self.precedence = precedence 
-		self.module_object_map = module_object_map
+		self.sysmodules = sysmodules
 		self.module_table = module_meta.table
 		self.current_table = self.module_table
 		self.latest_definition = self.current_table
@@ -36,14 +36,22 @@ class Analyzer(ast.NodeVisitor):
 		self.current_table = self.current_table.get_enclosing_table()
 
 	def visit_Module(self, node):
-		module_object = TypeUtils.instantiate(Builtins.ModuleClass, [])
+		module_object = TypeUtils.instantiate(Builtins.ModuleClass)
 		Table.transfer_content(self.module_table, module_object)
-		self.module_object_map[self.module_table] = module_object
-		if self.module_table.key == "__init__": 
-			self.module_object_map[self.module_table.parent] = module_object
+		self.sysmodules[self.module_table.fqn] = module_object
 		self.generic_visit(node)
 
 	def visit_Import(self, node):
+		position = (node.lineno, node.col_offset)
+		defkey = (self.module_table, position)
+		
+		for alias in node.names:
+			varname = alias.asname if alias.asname else alias.name.split(".")[0]
+			vartable = self.latest_definition.variables[varname]
+			vardef = vartable.lookup_definition(defkey)
+			object_chain = DependencyUtils.resolve_module_chain(alias.name, defkey, self.libs, self.sysmodules)
+			vardef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
+
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
@@ -58,7 +66,9 @@ class Analyzer(ast.NodeVisitor):
 
 		vartable = self.latest_definition.variables[class_name]
 		vardef = vartable.lookup_definition(defkey)
-		vardef.points_to.add(TypeUtils.instantiate(Builtins.TypeClass, []))
+		tinstance = TypeUtils.instantiate(Builtins.TypeClass)
+		tinstance.origin = classdef
+		vardef.points_to.add(tinstance)
 
 		self.latest_definition = classdef
 		self.push()
@@ -72,10 +82,14 @@ class Analyzer(ast.NodeVisitor):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
 		func_name = node.name
+		func_table = self.latest_definition.functions[func_name]
+		funcdef = func_table.lookup_definition(defkey)
 
 		vartable = self.latest_definition.variables[func_name]
 		vardef = vartable.lookup_definition(defkey)
-		vardef.points_to.add(TypeUtils.instantiate(Builtins.FunctionClass, []))
+		finstance = TypeUtils.instantiate(Builtins.FunctionClass)
+		finstance.origin = funcdef
+		vardef.points_to.add(finstance)
 
 	def visit_Return(self, node):
 		self.generic_visit(node)
