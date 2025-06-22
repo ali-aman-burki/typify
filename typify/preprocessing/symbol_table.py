@@ -35,7 +35,7 @@ class Table:
 	def to_dict(self):
 		data = {}
 		if self.points_to: 
-			data["type"] = ", ".join(repr(pt.type) for pt in self.points_to)
+			data["type"] = ", ".join({repr(pt.type) for pt in self.points_to})
 		if self.definitions:
 			data["definitions"] = {}
 			for m in self.definitions:

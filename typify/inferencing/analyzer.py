@@ -50,6 +50,8 @@ class Analyzer(ast.NodeVisitor):
 			vartable = self.latest_definition.variables[varname]
 			vardef = vartable.lookup_definition(defkey)
 			object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, alias.name)
+			if not object_chain: 
+				continue
 			vardef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
 
 		self.generic_visit(node)
@@ -58,6 +60,8 @@ class Analyzer(ast.NodeVisitor):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
 		object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, node.module, node.level)
+		if not object_chain: 
+			return
 		names = {alias.name for alias in node.names if alias.name != "*"}
 
 		if not names:
@@ -79,6 +83,8 @@ class Analyzer(ast.NodeVisitor):
 		vardef = vartable.lookup_definition(defkey)
 		tinstance = TypeUtils.instantiate(Builtins.TypeClass)
 		tinstance.origin = classdef
+		if class_name == "Generic":
+			print("added")
 		vardef.points_to.add(tinstance)
 
 		self.latest_definition = classdef

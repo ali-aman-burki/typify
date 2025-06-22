@@ -58,6 +58,8 @@ class DependencyUtils:
 					return [sysmodules[table.fqn] for table in chain]
 
 				modules = []
+				if chain[0].fqn not in sysmodules:
+					return modules
 				current_object = sysmodules[chain[0].fqn]
 				modules.append(current_object)
 
