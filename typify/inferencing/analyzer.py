@@ -27,6 +27,24 @@ class Analyzer(ast.NodeVisitor):
 		self.current_table = self.module_table
 		self.latest_definition = self.current_table
 		self.libs = libs
+		
+		self.pass_index = 0
+		self.unresolved_nodes = []
+
+	def process(self):
+		if self.pass_index == 0: 
+			self.visit(self.module_meta.tree)
+		else:
+			for node in self.unresolved_nodes: self.visit(node)
+		self.pass_index += 1
+
+	def deschedule(self, node):
+		if node in self.unresolved_nodes:
+			self.unresolved_nodes.remove(node)
+	
+	def reschedule(self, node):
+		if node not in self.unresolved_nodes:
+			self.unresolved_nodes.append(node)
 
 	def push(self):
 		self.current_table = self.latest_definition.get_enclosing_table()
@@ -39,20 +57,26 @@ class Analyzer(ast.NodeVisitor):
 		module_object = TypeUtils.instantiate(Builtins.ModuleClass)
 		Table.transfer_content(self.module_table, {module_object})
 		self.sysmodules[self.module_table.fqn] = module_object
+
+		self.deschedule(node)
 		self.generic_visit(node)
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
-		
+		unresolved = False
 		for alias in node.names:
 			varname = alias.asname if alias.asname else alias.name.split(".")[0]
 			vartable = self.latest_definition.variables[varname]
 			vardef = vartable.lookup_definition(defkey)
 			object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, alias.name)
-			if not object_chain: 
+			if not object_chain:
+				unresolved = True
 				continue
 			vardef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
+
+		if unresolved: self.reschedule(node)
+		else: self.deschedule(node)
 
 		self.generic_visit(node)
 	
@@ -60,7 +84,8 @@ class Analyzer(ast.NodeVisitor):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
 		object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, node.module, node.level)
-		if not object_chain: 
+		if not object_chain:
+			self.reschedule(node)
 			return
 		names = {alias.name for alias in node.names if alias.name != "*"}
 
@@ -69,7 +94,7 @@ class Analyzer(ast.NodeVisitor):
 		else:
 			#for tomorrow
 			pass
-
+		self.deschedule(node)
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):
@@ -83,12 +108,10 @@ class Analyzer(ast.NodeVisitor):
 		vardef = vartable.lookup_definition(defkey)
 		tinstance = TypeUtils.instantiate(Builtins.TypeClass)
 		tinstance.origin = classdef
-		if class_name == "Generic":
-			print("added")
 		vardef.points_to.add(tinstance)
-
 		self.latest_definition = classdef
 		self.push()
+		self.deschedule(node)
 		self.generic_visit(node)
 		self.pop()
 
@@ -107,6 +130,8 @@ class Analyzer(ast.NodeVisitor):
 		finstance = TypeUtils.instantiate(Builtins.FunctionClass)
 		finstance.origin = funcdef
 		vardef.points_to.add(finstance)
+
+		self.deschedule(node)
 
 	def visit_Return(self, node):
 		self.generic_visit(node)
