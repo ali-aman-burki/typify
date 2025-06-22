@@ -34,12 +34,13 @@ class SymbolSlotCollector(ast.NodeVisitor):
 	def visit_ImportFrom(self, node):
 		enclosing = self.current_table.get_latest_definition()
 		position = (node.lineno, node.col_offset)
-		if "*" not in node.names:
+		if node.names[0].name != "*":
 			for alias in node.names:
 				var = VariableTable(alias.asname if alias.asname else alias.name)
 				var.add_definition(DefinitionTable(self.module_table, position)) 
 				enclosing.merge_variable(var)
 		self.generic_visit(node)
+
 
 	def visit_ClassDef(self, node):
 		enclosing = self.current_table.get_latest_definition()
