@@ -26,13 +26,30 @@ class DependencyBundle:
 	resolving_sequence: list[ModuleMeta]
 
 class DependencyUtils:
+
 	@staticmethod
-	def resolve_module_chain(
-		fqn: str, 
+	def to_absolute_name(module_table: ModuleTable, name: str | None, level: int = 0) -> str:
+		if level == 0:
+			base_fqn = name or ""
+		else:
+			current_fqn = module_table.fqn
+			parts = current_fqn.split(".")
+
+			if level > len(parts): return []
+			base_parts = parts[:len(parts) - level]
+			if name: base_parts.extend(name.split("."))
+			base_fqn = ".".join(base_parts)
+		return base_fqn
+
+	@staticmethod
+	def resolve_module_objects(
 		defkey: tuple[ModuleTable, tuple[int, int]], 
 		libs: dict[str, LibraryMeta], 
-		sysmodules: dict[str, InstanceTable]
+		sysmodules: dict[str, InstanceTable],
+		name: str | None, 
+		level: int = 0
 	) -> list[InstanceTable]:
+		fqn = DependencyUtils.to_absolute_name(defkey[0], name, level)
 		for lib in libs.values():
 			if fqn in lib.fqn_map:
 				chain = lib.fqn_map[fqn]
@@ -51,7 +68,7 @@ class DependencyUtils:
 						continue
 
 					module_object = TypeUtils.instantiate(Builtins.ModuleClass)
-					Table.transfer_content(table, module_object)
+					Table.transfer_content(table, {module_object})
 
 					attr = VariableTable(table.key)
 					attrdef = attr.add_definition(DefinitionTable(defkey))
@@ -153,17 +170,8 @@ class DependencyTracker(ast.NodeVisitor):
 			else: result.append(table)
 		return result
 
-	def resolve_fqn_chain(self, module: str | None, level: int = 0) -> list[Table]:
-		if level == 0:
-			base_fqn = module or ""
-		else:
-			current_fqn = self.module_table.fqn
-			parts = current_fqn.split(".")
-
-			if level > len(parts): return []
-			base_parts = parts[:len(parts) - level]
-			if module: base_parts.extend(module.split("."))
-			base_fqn = ".".join(base_parts)
+	def resolve_fqn_chain(self, name: str | None, level: int = 0) -> list[Table]:
+		base_fqn = DependencyUtils.to_absolute_name(self.module_table, name, level)
 
 		for lib in self.libs.values():
 			if base_fqn in lib.fqn_map:

@@ -53,8 +53,9 @@ class Table:
 		return data
 	
 	@staticmethod
-	def transfer_content(src: Table, dst: Table):
-		dst.variables.update(src.variables)
+	def transfer_content(source: Table, destinations: set[Table]):
+		for dst in destinations:
+			dst.variables.update(source.variables)
 	
 	@staticmethod
 	def process_group(key: str, values: list[Table], defkey: tuple[Table, tuple[int, int]], precedence: list[ModuleTable]) -> Table:

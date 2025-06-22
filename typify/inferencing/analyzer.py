@@ -37,7 +37,7 @@ class Analyzer(ast.NodeVisitor):
 
 	def visit_Module(self, node):
 		module_object = TypeUtils.instantiate(Builtins.ModuleClass)
-		Table.transfer_content(self.module_table, module_object)
+		Table.transfer_content(self.module_table, {module_object})
 		self.sysmodules[self.module_table.fqn] = module_object
 		self.generic_visit(node)
 
@@ -49,12 +49,23 @@ class Analyzer(ast.NodeVisitor):
 			varname = alias.asname if alias.asname else alias.name.split(".")[0]
 			vartable = self.latest_definition.variables[varname]
 			vardef = vartable.lookup_definition(defkey)
-			object_chain = DependencyUtils.resolve_module_chain(alias.name, defkey, self.libs, self.sysmodules)
+			object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, alias.name)
 			vardef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
 
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
+		position = (node.lineno, node.col_offset)
+		defkey = (self.module_table, position)
+		object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, node.module, node.level)
+		names = {alias.name for alias in node.names if alias.name != "*"}
+
+		if not names:
+			Table.transfer_content(object_chain[-1], {self.module_table, self.sysmodules[self.module_table.fqn]})
+		else:
+			#for tomorrow
+			pass
+
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):
