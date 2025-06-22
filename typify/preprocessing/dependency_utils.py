@@ -70,7 +70,7 @@ class DependencyUtils:
 						continue
 
 					module_object = TypeUtils.instantiate(Builtins.ModuleClass)
-					Table.transfer_content(table, {module_object})
+					Table.transfer_names(table.variables, module_object)
 
 					attr = VariableTable(table.key)
 					attrdef = attr.add_definition(DefinitionTable(defkey))

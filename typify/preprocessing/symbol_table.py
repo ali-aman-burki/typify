@@ -53,9 +53,27 @@ class Table:
 		return data
 	
 	@staticmethod
-	def transfer_content(source: Table, destinations: set[Table]):
-		for dst in destinations:
-			dst.variables.update(source.variables)
+	def transfer_names(source_names: dict[str, VariableTable], destination: Table):
+		destination.variables.update(source_names)
+
+	@staticmethod
+	def deep_transfer_names(
+			source: Table, 
+			destination: Table, 
+			defkey: tuple[ModuleTable, tuple[int, int]],
+			precedence: list[ModuleTable]
+		) -> dict[str, VariableTable]:
+		names = {}
+		for modvar in source.variables.values():
+			modvardef = modvar.get_latest_definition(defkey, precedence)
+			vartable = VariableTable(modvar.key)
+			vardef = vartable.add_definition(DefinitionTable(defkey))
+			vardef.points_to.update(modvardef.points_to)
+			vartable.order_definitions(precedence)
+			names[vartable.key] = vartable = destination.merge_variable(vartable)
+			vartable.order_definitions(precedence)
+		
+		return names
 	
 	@staticmethod
 	def process_group(key: str, values: list[Table], defkey: tuple[Table, tuple[int, int]], precedence: list[ModuleTable]) -> Table:

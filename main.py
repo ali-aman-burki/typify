@@ -62,4 +62,6 @@ print(joined + "\n")
 Inferencer.infer(bundle)
 
 next(iter(bundle.libs.values())).export_to(Path(output_dir))
+# bundle.libs["builtinlib"].export_to(Path(output_dir) / "builtinlib")
+# bundle.libs["stdlib"].export_to(Path(output_dir) / "stdlib")
 

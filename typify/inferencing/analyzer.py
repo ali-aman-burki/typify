@@ -3,8 +3,10 @@ import copy
 
 from typify.preprocessing.symbol_table import (
 	Table,
+	VariableTable,
 	ModuleTable, 
 	InstanceTable,
+	DefinitionTable
 )
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.library_meta import LibraryMeta
@@ -29,25 +31,18 @@ class Analyzer(ast.NodeVisitor):
 		self.libs = libs
 
 		self.pass_index = 0
-		self.scheduled_nodes = []
+		self.processed_nodes = set()
 
 	def process(self):
-		if self.pass_index == 0: 
-			self.visit(self.module_meta.tree)
-		else:
-			for node in self.scheduled_nodes: self.visit(node)
+		self.visit(self.module_meta.tree)
 		self.pass_index += 1
 
-	def deschedule(self, node):
-		if node in self.scheduled_nodes:
-			self.scheduled_nodes.remove(node)
-	
-	def reschedule(self, node):
-		if node not in self.scheduled_nodes:
-			self.scheduled_nodes.append(node)
+	def mark_processed(self, node):
+		self.processed_nodes.add(node)
 
-	def push(self):
-		self.current_table = self.latest_definition.get_enclosing_table()
+	def push(self, entering_def: Table):
+		self.latest_definition = entering_def
+		self.current_table = entering_def.get_enclosing_table()
 	
 	def pop(self):
 		self.latest_definition = self.current_table.parent
@@ -55,45 +50,57 @@ class Analyzer(ast.NodeVisitor):
 
 	def visit_Module(self, node):
 		module_object = TypeUtils.instantiate(Builtins.ModuleClass)
-		Table.transfer_content(self.module_table, {module_object})
+		Table.transfer_names(self.module_table.variables, module_object)
 		self.sysmodules[self.module_table.fqn] = module_object
-
-		self.deschedule(node)
 		self.generic_visit(node)
 
 	def visit_Import(self, node):
+		if node in self.processed_nodes: return
+		
+		processed = False
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
-		should_schedule = False
 		for alias in node.names:
 			varname = alias.asname if alias.asname else alias.name.split(".")[0]
 			vartable = self.latest_definition.variables[varname]
 			vardef = vartable.lookup_definition(defkey)
 			object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, alias.name)
 			if not object_chain:
-				should_schedule = True
+				processed = True
 				continue
 			vardef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
 
-		if should_schedule: self.reschedule(node)
-		else: self.deschedule(node)
+		if processed: self.mark_processed(node)
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
+		if node in self.processed_nodes: return
+		
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
 		object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, node.module, node.level)
-		if not object_chain:
-			self.reschedule(node)
-			return
-		names = {alias.name for alias in node.names if alias.name != "*"}
+		
+		if not object_chain: return
 
-		if not names:
-			Table.transfer_content(object_chain[-1], {self.module_table, self.sysmodules[self.module_table.fqn]})
+		if node.names[0].name == "*":
+			current_mod_object = self.sysmodules[self.module_table.fqn]
+			result = Table.deep_transfer_names(object_chain[-1], self.module_table, defkey, self.precedence)
+			Table.transfer_names(result, current_mod_object)
 		else:
-			#for tomorrow
-			pass
-		self.deschedule(node)
+			for alias in node.names:
+				vartable = self.latest_definition.variables[alias.asname if alias.asname else alias.name]
+				vardef = vartable.lookup_definition(defkey)
+				if alias.name in object_chain[-1].variables:
+					modvar = object_chain[-1].variables[alias.name]
+					modvardef = modvar.get_latest_definition(defkey, self.precedence)
+					vardef.points_to.update(modvardef.points_to)
+				else:
+					fqn = DependencyUtils.to_absolute_name(self.module_table, node.module, node.level)
+					fqn += f".{alias.name}"
+					new_object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, fqn)
+					vardef.points_to.add(new_object_chain[-1])
+					
+		self.mark_processed(node)
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):
@@ -103,21 +110,30 @@ class Analyzer(ast.NodeVisitor):
 		class_table = self.latest_definition.classes[class_name]
 		classdef = class_table.lookup_definition(defkey)
 
+		if node in self.processed_nodes:
+			self.push(classdef)
+			self.generic_visit(node)
+			self.pop()
+			return
+
 		vartable = self.latest_definition.variables[class_name]
 		vardef = vartable.lookup_definition(defkey)
 		tinstance = TypeUtils.instantiate(Builtins.TypeClass)
 		tinstance.origin = classdef
 		vardef.points_to.add(tinstance)
-		self.latest_definition = classdef
-		self.push()
-		self.deschedule(node)
+
+		self.mark_processed(node)
+		self.push(classdef)
 		self.generic_visit(node)
 		self.pop()
+		
 
 	def visit_AsyncFunctionDef(self, node):
 		self.visit_FunctionDef(node)
 
 	def visit_FunctionDef(self, node): 
+		if node in self.processed_nodes: return
+
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_table, position)
 		func_name = node.name
@@ -130,7 +146,7 @@ class Analyzer(ast.NodeVisitor):
 		finstance.origin = funcdef
 		vardef.points_to.add(finstance)
 
-		self.deschedule(node)
+		self.mark_processed(node)
 
 	def visit_Return(self, node):
 		self.generic_visit(node)
