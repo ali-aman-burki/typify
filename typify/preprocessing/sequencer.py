@@ -41,11 +41,6 @@ class Sequencer:
 		return result
 
 	@staticmethod
-	def generate_resolving_sequence(graph):
-		sccs = Sequencer._tarjan(graph)
-		sequence = []
-		for scc in sccs:
-			for i in range(len(scc)):
-				for meta in scc:
-					sequence.append(meta)
-		return sequence
+	def generate_sequences(graph):
+		sequences = Sequencer._tarjan(graph)
+		return sequences

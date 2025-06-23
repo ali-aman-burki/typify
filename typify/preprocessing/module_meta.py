@@ -1,4 +1,4 @@
-from typify.preprocessing.symbol_table import Table, ModuleTable, VariableTable, PackageTable, LibraryTable
+from typify.preprocessing.symbol_table import Table, ModuleTable, NameTable, PackageTable, LibraryTable
 from typify.inferencing.typeutils import TypeExpr
 
 from pathlib import Path
@@ -13,7 +13,7 @@ class ModuleMeta:
 		self.tree: ast.AST = None
 		self.table = ModuleTable(src.stem)
 		self.vslots: dict[tuple[int, int], tuple[str, TypeExpr]] = {}
-		self.fslots: dict[tuple[int, int], tuple[str, dict[str, VariableTable], TypeExpr]] = {}
+		self.fslots: dict[tuple[int, int], tuple[str, dict[str, NameTable], TypeExpr]] = {}
 		self.trust_annotations = trust_annotations
 
 	def load_tree(self):

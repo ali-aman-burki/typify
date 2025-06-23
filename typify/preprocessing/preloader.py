@@ -9,8 +9,6 @@ from dataclasses import dataclass
 
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
-from typify.preprocessing.symbol_slot_collector import SymbolSlotCollector
-from typify.inferencing.commons import bind
 
 @dataclass
 class TypifyPaths:
@@ -94,10 +92,4 @@ print(json.dumps(info))
 		}
 
 		bundle = GraphBuilder.build_graph(libs)
-
-		for libmeta in libs.values():
-			for modmeta in libmeta.meta_map.values():
-				SymbolSlotCollector(modmeta).visit(modmeta.tree)
-
-		bind(libs)
 		return bundle

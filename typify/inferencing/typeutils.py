@@ -12,7 +12,7 @@ class TypeExpr:
 	
 	def __repr__(self):
 		if not self.base: return "$unresolved$"
-		fqn = self.base.get_type_class().fqn
+		fqn = self.base.fqn
 		joined = ", ".join(
 			(
 				f"[{', '.join(repr(a) for a in arg)}]" if isinstance(arg, list)
@@ -29,7 +29,7 @@ class TypeUtils:
 
 	@staticmethod
 	def instantiate(template: Table, args: list[TypeExpr | list[TypeExpr] | EllipsisType] | None = None) -> InstanceTable:
-		fqn = template.get_type_class().fqn if template else "$unresolved$"
+		fqn = template.fqn if template else "$unresolved$"
 		instance = InstanceTable(f"instance@{fqn}")
 		instance.type = TypeExpr(template, args if args else [])
 		return instance

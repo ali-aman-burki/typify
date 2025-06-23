@@ -55,13 +55,9 @@ for meta, deps in bundle.cleaned_graph.items():
     )
     print(f"{repr(meta)} -> [{joined}]")
 
-print("\nResolving Sequence: ")
-joined = " -> ".join(repr(meta) for meta in bundle.resolving_sequence)
-print(joined + "\n")
-
 Inferencer.infer(bundle)
 
 next(iter(bundle.libs.values())).export_to(Path(output_dir))
-# bundle.libs["builtinlib"].export_to(Path(output_dir) / "builtinlib")
-# bundle.libs["stdlib"].export_to(Path(output_dir) / "stdlib")
+bundle.libs["builtinlib"].export_to(Path(output_dir) / "builtinlib")
+bundle.libs["stdlib"].export_to(Path(output_dir) / "stdlib")
 

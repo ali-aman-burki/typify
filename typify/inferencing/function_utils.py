@@ -1,11 +1,11 @@
 import ast
 
-from typify.preprocessing.symbol_table import VariableTable, DefinitionTable, ModuleTable, InstanceTable
+from typify.preprocessing.symbol_table import NameTable, DefinitionTable, ModuleTable, InstanceTable
 
 class FunctionUtils:
 
 	@staticmethod
-	def call_function(caller: InstanceTable, function_name, arguments: dict[str, VariableTable], call_site: tuple[ModuleTable, tuple[int, int]]):
+	def call_function(caller: InstanceTable, function_name, arguments: dict[str, NameTable], call_site: tuple[ModuleTable, tuple[int, int]]):
 		fdt = caller.origin.functions[function_name].get_latest_definition()
 		
 		pass
@@ -22,36 +22,36 @@ class FunctionUtils:
 		return ""
 
 	@staticmethod
-	def collect_parameters(fdef: ast.FunctionDef, module_table: ModuleTable) -> dict[str, VariableTable]:
+	def collect_parameters(fdef: ast.FunctionDef, module_table: ModuleTable) -> dict[str, NameTable]:
 		args_node = fdef.args
-		parameters: dict[str, VariableTable] = {}
+		parameters: dict[str, NameTable] = {}
 
 		for arg in args_node.posonlyargs:
-			var = parameters[arg.arg] = VariableTable(arg.arg)
+			var = parameters[arg.arg] = NameTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
 			defkey = (module_table, position)
 			var.add_definition(DefinitionTable(defkey))
 
 		for arg in args_node.args:
-			var = parameters[arg.arg] = VariableTable(arg.arg)
+			var = parameters[arg.arg] = NameTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
 			defkey = (module_table, position)
 			var.add_definition(DefinitionTable(defkey))
 
 		if args_node.vararg:
-			var = parameters[args_node.vararg.arg] = VariableTable(args_node.vararg.arg)
+			var = parameters[args_node.vararg.arg] = NameTable(args_node.vararg.arg)
 			position = (args_node.vararg.lineno, args_node.vararg.col_offset)
 			defkey = (module_table, position)
 			var.add_definition(DefinitionTable(defkey))
 
 		for arg in args_node.kwonlyargs:
-			var = parameters[arg.arg] = VariableTable(arg.arg)
+			var = parameters[arg.arg] = NameTable(arg.arg)
 			position = (arg.lineno, arg.col_offset)
 			defkey = (module_table, position)
 			var.add_definition(DefinitionTable(defkey))
 
 		if args_node.kwarg:
-			var = parameters[args_node.kwarg.arg] = VariableTable(args_node.kwarg.arg)
+			var = parameters[args_node.kwarg.arg] = NameTable(args_node.kwarg.arg)
 			position = (args_node.kwarg.lineno, args_node.kwarg.col_offset)
 			defkey = (module_table, position)
 			var.add_definition(DefinitionTable(defkey))

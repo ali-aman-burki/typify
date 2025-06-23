@@ -12,7 +12,7 @@ class Table:
 		self.modules: dict[str, Table] = {}
 		self.classes: dict[str, Table] = {}
 		self.functions: dict[str, Table] = {}
-		self.variables: dict[str, Table] = {}
+		self.names: dict[str, Table] = {}
 		self.definitions: dict[Table, dict[str, DefinitionTable]] = {}
 		self.instances: list[Table] = []
 		self.path_chain: list[Table] = []
@@ -49,45 +49,42 @@ class Table:
 		if self.nonlocals: data["nonlocals"] = list(self.nonlocals)
 		if self.classes: data["classes"] = {key: value.to_dict() for key, value in self.classes.items()}
 		if self.functions: data["functions"] = {key: value.to_dict() for key, value in self.functions.items()}
-		if self.variables: data["variables"] = {key: value.to_dict() for key, value in self.variables.items()}
+		if self.names: data["names"] = {key: value.to_dict() for key, value in self.names.items()}
 		return data
 	
 	@staticmethod
-	def transfer_names(source_names: dict[str, VariableTable], destination: Table):
-		destination.variables.update(source_names)
+	def transfer_names(source_names: dict[str, NameTable], destination: Table):
+		destination.names.update(source_names)
 
 	@staticmethod
-	def deep_transfer_names(
+	def create_and_transfer_names(
 			source: Table, 
 			destination: Table, 
 			defkey: tuple[ModuleTable, tuple[int, int]],
-			precedence: list[ModuleTable]
-		) -> dict[str, VariableTable]:
+		) -> dict[str, NameTable]:
 		names = {}
-		for modvar in source.variables.values():
-			modvardef = modvar.get_latest_definition(defkey, precedence)
-			vartable = VariableTable(modvar.key)
+		for modvar in source.names.values():
+			modvardef = modvar.get_latest_definition()
+			vartable = NameTable(modvar.key)
 			vardef = vartable.add_definition(DefinitionTable(defkey))
 			vardef.points_to.update(modvardef.points_to)
-			vartable.order_definitions(precedence)
-			names[vartable.key] = vartable = destination.merge_variable(vartable)
-			vartable.order_definitions(precedence)
+			names[vartable.key] = vartable = destination.merge_name(vartable)
 		
 		return names
 	
 	@staticmethod
-	def process_group(key: str, values: list[Table], defkey: tuple[Table, tuple[int, int]], precedence: list[ModuleTable]) -> Table:
-		var = VariableTable(key)
+	def process_group(key: str, values: list[Table], defkey: tuple[Table, tuple[int, int]], processed_modules: list[ModuleTable]) -> Table:
+		var = NameTable(key)
 		var.add_definition(DefinitionTable(defkey))
 
 		for table in values:
-			tdef = table.get_latest_definition(defkey, precedence)
+			tdef = table.get_latest_definition(defkey, processed_modules)
 			var.points_to.update(tdef.points_to)
 		
 		return var
 
 	@staticmethod
-	def homogenize(dicts: list[dict[str, Table]], defkey: tuple[Table, tuple[int, int]], precedence: list[ModuleTable]) -> dict[str, Table]:
+	def homogenize(dicts: list[dict[str, Table]], defkey: tuple[Table, tuple[int, int]], processed_modules: list[ModuleTable]) -> dict[str, Table]:
 		key_groups = defaultdict(list)
 
 		for d in dicts:
@@ -96,7 +93,7 @@ class Table:
 
 		result = {}
 		for key, values in key_groups.items():
-			result[key] = Table.process_group(key, values, defkey, precedence)
+			result[key] = Table.process_group(key, values, defkey, processed_modules)
 
 		return result
 	
@@ -133,38 +130,10 @@ class Table:
 			result = result.get_enclosing_table()
 		return result
 
-	def get_latest_definition(self, anchor: tuple[ModuleTable, tuple[int, int]] = None, precedence: list[ModuleTable] = None) -> DefinitionTable:
-		if not self.definitions:
-			return self
-
-		if anchor is None:
-			last_module_dict = next(reversed(self.definitions.values()))
-			return next(reversed(last_module_dict.values()))
-
-		anchor_module, (anchor_line, anchor_col) = anchor
-
-		if precedence:
-			if anchor_module not in precedence:
-				return self
-
-			candidates = [m for m in precedence if m in self.definitions and precedence.index(m) <= precedence.index(anchor_module)]
-		else:
-			candidates = list(self.definitions.keys())
-
-		for module in reversed(candidates):
-			defs = self.definitions[module]
-
-			if module == anchor_module:
-				prior_defs = [
-					defn for defn in defs.values()
-					if defn.position < (anchor_line, anchor_col)
-				]
-				if prior_defs:
-					return prior_defs[-1]
-			else:
-				return next(reversed(defs.values()))
-
-		return self
+	def get_latest_definition(self) -> Table:
+		if not self.definitions: return self
+		last_module_dict = next(reversed(self.definitions.values()))
+		return next(reversed(last_module_dict.values()))
 
 	def register_fqn(self, fqn_map=None):
 		parent = self.get_enclosing_table()
@@ -198,11 +167,11 @@ class Table:
 		function_table.register_fqn()
 		return function_table
 
-	def set_variable(self, variable_table: VariableTable) -> VariableTable:
-		self.variables[variable_table.key] = variable_table
-		variable_table.parent = self
-		variable_table.register_fqn()
-		return variable_table
+	def set_name(self, name_table: NameTable) -> NameTable:
+		self.names[name_table.key] = name_table
+		name_table.parent = self
+		name_table.register_fqn()
+		return name_table
 
 	def merge_class(self, class_table: ClassTable) -> ClassTable:
 		if class_table.key in self.classes:
@@ -224,15 +193,15 @@ class Table:
 		else:
 			return self.set_function(function_table)
 
-	def merge_variable(self, variable_table: VariableTable) -> VariableTable:
-		if variable_table.key in self.variables:
-			for topdict in variable_table.definitions.values():
+	def merge_name(self, name_table: NameTable) -> NameTable:
+		if name_table.key in self.names:
+			for topdict in name_table.definitions.values():
 				for d in topdict.values():
-					self.variables[variable_table.key].add_definition(d)
-					d.parent = self.variables[variable_table.key]
-			return self.variables[variable_table.key]
+					self.names[name_table.key].add_definition(d)
+					d.parent = self.names[name_table.key]
+			return self.names[name_table.key]
 		else:
-			return self.set_variable(variable_table)
+			return self.set_name(name_table)
 
 	def add_definition(self, definition_table: DefinitionTable) -> DefinitionTable:
 		if definition_table.module not in self.definitions:
@@ -240,6 +209,7 @@ class Table:
 
 		self.definitions[definition_table.module][definition_table.key] = definition_table
 		definition_table.parent = self
+		definition_table.fqn = self.fqn
 		return definition_table
 
 	def lookup_definition(self, defkey: tuple[ModuleTable, tuple[int, int]]) -> DefinitionTable:
@@ -250,10 +220,10 @@ class Table:
 					return defn
 		return None
 
-	def order_definitions(self, module_precedence: list[ModuleTable]) -> dict[ModuleTable, dict[str, DefinitionTable]]:
+	def order_definitions(self, processed_modules: list[ModuleTable]) -> dict[ModuleTable, dict[str, DefinitionTable]]:
 		ordered_definitions = {}
 	
-		for mtable in module_precedence:
+		for mtable in processed_modules:
 			if mtable in self.definitions:
 				ordered_subdict = dict(
 					sorted(self.definitions[mtable].items(), key=lambda item: item[1].position)
@@ -283,7 +253,7 @@ class FunctionTable(Table):
 	def __init__(self, key):
 		super().__init__(key)
 
-class VariableTable(Table):
+class NameTable(Table):
 	def __init__(self, key):
 		super().__init__(key)
 

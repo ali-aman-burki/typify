@@ -1,4 +1,4 @@
-from typify.preprocessing.symbol_table import Table, VariableTable, ClassTable, FunctionTable
+from typify.preprocessing.symbol_table import Table, NameTable, ClassTable, FunctionTable
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.chain import Chain, Segment
 import ast
@@ -27,7 +27,7 @@ class Context:
 
 	def lookup(self, identifier: str, defTable: Table, where: list[str]):
 		mapping = {
-			"variables": defTable.variables,
+			"variables": defTable.names,
 			"functions": defTable.functions,
 			"classes": defTable.classes,
 		}
@@ -49,9 +49,9 @@ class Context:
 	def verify_lhs(self, node: ast.AST):
 		if isinstance(node, ast.Name):
 			name = node.id
-			if name not in self.current_table.get_latest_definition().variables:
-				self.current_table.get_latest_definition().merge_variable(VariableTable(name))
-			return self.current_table.get_latest_definition().variables[name]
+			if name not in self.current_table.get_latest_definition().names:
+				self.current_table.get_latest_definition().merge_name(NameTable(name))
+			return self.current_table.get_latest_definition().names[name]
 		return None
 
 	def resolve_start(self, start_segment: Segment) -> set[Table]:

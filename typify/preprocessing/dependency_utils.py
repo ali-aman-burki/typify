@@ -2,7 +2,7 @@ import ast
 
 from typify.preprocessing.symbol_table import (
     Table,
-	VariableTable,
+	NameTable,
     ModuleTable, 
     PackageTable, 
     InstanceTable,
@@ -23,7 +23,7 @@ class DependencyBundle:
 	sysmodules: dict[str, InstanceTable]
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
 	cleaned_graph: dict[ModuleMeta, set[ModuleMeta]]
-	resolving_sequence: list[ModuleMeta]
+	sequences: list[list[ModuleMeta]]
 
 class DependencyUtils:
 
@@ -70,13 +70,13 @@ class DependencyUtils:
 						continue
 
 					module_object = TypeUtils.instantiate(Builtins.ModuleClass)
-					Table.transfer_names(table.variables, module_object)
+					Table.transfer_names(table.names, module_object)
 
-					attr = VariableTable(table.key)
+					attr = NameTable(table.key)
 					attrdef = attr.add_definition(DefinitionTable(defkey))
 					attrdef.points_to.add(module_object)
 
-					current_object.set_variable(attr)
+					current_object.set_name(attr)
 					sysmodules[table.fqn] = module_object
 					current_object = module_object
 					modules.append(current_object)
@@ -96,10 +96,10 @@ class DependencyUtils:
 				sysmodules[fullname] = module_object
 
 			if current_object:
-				attr = VariableTable(parts[i])
+				attr = NameTable(parts[i])
 				attrdef = attr.add_definition(DefinitionTable(defkey))
 				attrdef.points_to.add(module_object)
-				current_object.set_variable(attr)
+				current_object.set_name(attr)
 
 			current_object = module_object
 			modules.append(module_object)
@@ -135,7 +135,7 @@ class GraphBuilder:
 			for key, deps in dependency_graph.items()
 		}
 
-		resolving_sequence = Sequencer.generate_resolving_sequence(cleaned_graph)
+		sequences = Sequencer.generate_sequences(cleaned_graph)
 
 		return DependencyBundle(
 			libs,
@@ -143,7 +143,7 @@ class GraphBuilder:
 			sysmodules,
 			dependency_graph,
 			cleaned_graph,
-			resolving_sequence
+			sequences
 		)
 
 class DependencyTracker(ast.NodeVisitor):

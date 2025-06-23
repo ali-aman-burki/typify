@@ -3,7 +3,9 @@ import copy
 
 from typify.preprocessing.symbol_table import (
 	Table,
-	VariableTable,
+	ClassTable,
+	FunctionTable,
+	NameTable,
 	ModuleTable, 
 	InstanceTable,
 	DefinitionTable
@@ -13,151 +15,153 @@ from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.function_utils import FunctionUtils
+
+from typify.inferencing.commons import bind, Flag
 
 class Analyzer(ast.NodeVisitor):
 	def __init__(
-			self, 
+			self,
 			module_meta: ModuleMeta, 
-			precedence: list[ModuleTable], 
 			sysmodules: dict[str, InstanceTable],
-			libs: dict[str, LibraryMeta]
+			libs: dict[str, LibraryMeta],
+			current_namespace: Table,
 		):
 		self.module_meta = module_meta
-		self.precedence = precedence 
 		self.sysmodules = sysmodules
-		self.module_table = module_meta.table
-		self.current_table = self.module_table
-		self.latest_definition = self.current_table
+		self.global_namespace = module_meta.table
+		self.current_namespace = current_namespace
+		self.vslots = self.module_meta.vslots
+		self.fslots = self.module_meta.fslots
 		self.libs = libs
 
-		self.pass_index = 0
-		self.processed_nodes = set()
+		self.current_namespace_object = None
 
 	def process(self):
+		print(f"starting {self.module_meta}: {Flag.builtins_initialized} {Flag.typing_initialized}")
 		self.visit(self.module_meta.tree)
-		self.pass_index += 1
 
-	def mark_processed(self, node):
-		self.processed_nodes.add(node)
+	def push(self, scope_def: Table):
+		self.current_namespace = scope_def.get_enclosing_table()
+		return scope_def
 
-	def push(self, entering_def: Table):
-		self.latest_definition = entering_def
-		self.current_table = entering_def.get_enclosing_table()
-	
 	def pop(self):
-		self.latest_definition = self.current_table.parent
-		self.current_table = self.current_table.get_enclosing_table()
+		self.current_namespace = self.current_namespace.get_enclosing_table()
+		return self.current_namespace
+	
+	def process_name(self, name: str, defkey: tuple[ModuleTable, tuple[int, int]]):
+		enclosing = self.current_namespace.get_latest_definition()
+		nametable = NameTable(name)
+		namedef = nametable.add_definition(DefinitionTable(defkey))
+		nametable = enclosing.merge_name(nametable)
+		self.current_namespace_object.merge_name(nametable)
+		return namedef
+
+	def process_target(self, target: ast.AST):
+		if isinstance(target, (ast.Tuple, ast.List)):
+			for elt in target.elts:
+				self.process_target(elt)
+		else:
+			position = (target.lineno, target.col_offset)
+			defkey = (self.global_namespace, position)
+			value = (ast.unparse(target), "$unresolved$")
+			self.vslots[position] = value
+
+			if isinstance(target, ast.Name):
+				self.process_name(target.id, defkey)
 
 	def visit_Module(self, node):
-		module_object = TypeUtils.instantiate(Builtins.ModuleClass)
-		Table.transfer_names(self.module_table.variables, module_object)
-		self.sysmodules[self.module_table.fqn] = module_object
+		self.current_namespace_object = TypeUtils.instantiate(Builtins.ModuleClass)
+		self.sysmodules[self.global_namespace.fqn] = self.current_namespace_object
 		self.generic_visit(node)
 
 	def visit_Import(self, node):
-		if node in self.processed_nodes: return
-		
-		processed = False
 		position = (node.lineno, node.col_offset)
-		defkey = (self.module_table, position)
+		defkey = (self.global_namespace, position)
 		for alias in node.names:
-			varname = alias.asname if alias.asname else alias.name.split(".")[0]
-			vartable = self.latest_definition.variables[varname]
-			vardef = vartable.lookup_definition(defkey)
+			namedef = self.process_name(alias.asname if alias.asname else alias.name.split(".")[0], defkey)
 			object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, alias.name)
-			if not object_chain:
-				processed = True
-				continue
-			vardef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
+			if object_chain: namedef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
 
-		if processed: self.mark_processed(node)
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
-		if node in self.processed_nodes: return
-		
+		enclosing = self.current_namespace.get_latest_definition()
 		position = (node.lineno, node.col_offset)
-		defkey = (self.module_table, position)
+		defkey = (self.global_namespace, position)
 		object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, node.module, node.level)
 		
-		if not object_chain: return
-
 		if node.names[0].name == "*":
-			current_mod_object = self.sysmodules[self.module_table.fqn]
-			result = Table.deep_transfer_names(object_chain[-1], self.module_table, defkey, self.precedence)
+			current_mod_object = self.sysmodules[self.global_namespace.fqn]
+			result = Table.create_and_transfer_names(object_chain[-1], enclosing, defkey)
 			Table.transfer_names(result, current_mod_object)
 		else:
 			for alias in node.names:
-				vartable = self.latest_definition.variables[alias.asname if alias.asname else alias.name]
-				vardef = vartable.lookup_definition(defkey)
-				if alias.name in object_chain[-1].variables:
-					modvar = object_chain[-1].variables[alias.name]
-					modvardef = modvar.get_latest_definition(defkey, self.precedence)
-					vardef.points_to.update(modvardef.points_to)
+				namedef = self.process_name(alias.asname if alias.asname else alias.name, defkey)
+				if alias.name in object_chain[-1].names:
+					mname = object_chain[-1].names[alias.name]
+					mnamedef = mname.get_latest_definition()
+					namedef.points_to.update(mnamedef.points_to)
 				else:
-					fqn = DependencyUtils.to_absolute_name(self.module_table, node.module, node.level)
+					fqn = DependencyUtils.to_absolute_name(self.global_namespace, node.module, node.level)
 					fqn += f".{alias.name}"
 					new_object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, fqn)
-					vardef.points_to.add(new_object_chain[-1])
-					
-		self.mark_processed(node)
+					namedef.points_to.add(new_object_chain[-1])
+				
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):
+		bind(self.libs)
+		enclosing = self.current_namespace.get_latest_definition()
 		position = (node.lineno, node.col_offset)
-		defkey = (self.module_table, position)
+		defkey = (self.global_namespace, position)
 		class_name = node.name
-		class_table = self.latest_definition.classes[class_name]
-		classdef = class_table.lookup_definition(defkey)
+		
+		classtable = ClassTable(class_name)
+		classdef = classtable.add_definition(DefinitionTable(defkey))
+		enclosing.merge_class(classtable)
 
-		if node in self.processed_nodes:
-			self.push(classdef)
-			self.generic_visit(node)
-			self.pop()
-			return
+		cinstance = TypeUtils.instantiate(Builtins.TypeClass)
+		namedef = self.process_name(class_name, defkey)
+		namedef.points_to.add(cinstance)
+		namedef.origin = classdef
+		self.current_namespace_object = cinstance
 
-		vartable = self.latest_definition.variables[class_name]
-		vardef = vartable.lookup_definition(defkey)
-		tinstance = TypeUtils.instantiate(Builtins.TypeClass)
-		tinstance.origin = classdef
-		vardef.points_to.add(tinstance)
-
-		self.mark_processed(node)
 		self.push(classdef)
 		self.generic_visit(node)
 		self.pop()
+
+	def visit_FunctionDef(self, node): 
+		enclosing = self.current_namespace.get_latest_definition()
+		parameters = FunctionUtils.collect_parameters(node, self.global_namespace)
+		position = (node.lineno, node.col_offset)
+		value = (node.name, parameters, "$unresolved$")
+		defkey = (self.global_namespace, position)
+		self.fslots[position] = value
+
+		function_name = node.name
 		
+		functable = FunctionTable(function_name)
+		funcdef = functable.add_definition(DefinitionTable(defkey))
+		funcdef.tree = node
+		funcdef.kind = FunctionUtils.get_function_kind(node)
+		enclosing.merge_function(functable)
+
+		finstance = TypeUtils.instantiate(Builtins.FunctionClass)
+		finstance.origin = funcdef
+		namedef = self.process_name(function_name, defkey)
+		namedef.points_to.add(finstance)
 
 	def visit_AsyncFunctionDef(self, node):
 		self.visit_FunctionDef(node)
 
-	def visit_FunctionDef(self, node): 
-		if node in self.processed_nodes: return
-
-		position = (node.lineno, node.col_offset)
-		defkey = (self.module_table, position)
-		func_name = node.name
-		func_table = self.latest_definition.functions[func_name]
-		funcdef = func_table.lookup_definition(defkey)
-
-		vartable = self.latest_definition.variables[func_name]
-		vardef = vartable.lookup_definition(defkey)
-		finstance = TypeUtils.instantiate(Builtins.FunctionClass)
-		finstance.origin = funcdef
-		vardef.points_to.add(finstance)
-
-		self.mark_processed(node)
-
-	def visit_Return(self, node):
-		self.generic_visit(node)
-
-	def visit_Call(self, node):
-		self.generic_visit(node)
-
 	def visit_AnnAssign(self, node):
+		self.process_target(node.target)
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):
+		for target in node.targets:
+			self.process_target(target)
 		self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):
