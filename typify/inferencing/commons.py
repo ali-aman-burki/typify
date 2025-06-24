@@ -1,5 +1,9 @@
 from typify.preprocessing.symbol_table import ClassTable
 from typify.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.symbol_table import (
+    InstanceTable,
+    ModuleTable,
+)
 
 def _safe_get(func):
 	try: return func()
@@ -14,41 +18,20 @@ class Typing:
 	AnyClass: ClassTable = None
 	ListClass: ClassTable = None
 
-class Flag:
-	builtins_initialized = False
-	typing_initialized = False
+def _bind_builtins(lib: LibraryMeta, namespace: InstanceTable, symbol: ModuleTable):
+	if lib.key == "builtinlib" and symbol.key == "builtins":
+		Builtins.ModuleClass = namespace.names.get("module", None)
+	if lib.key == "builtinlib" and symbol.key == "builtins":
+		Builtins.TypeClass = namespace.names.get("type", None)
+	if lib.key == "builtinlib" and symbol.key == "builtins":
+		Builtins.FunctionClass = namespace.names.get("function", None)
 
-def _bind_builtins(libs: dict[str, LibraryMeta]):
-	if Flag.builtins_initialized:
-		return
+def _bind_typing(lib: LibraryMeta, namespace: InstanceTable, symbol: ModuleTable):
+	if lib.key == "stdlib" and symbol.key == "typing":
+		Typing.AnyClass = namespace.names.get("Any", None)
+	if lib.key == "stdlib" and symbol.key == "typing":
+		Typing.ListClass = namespace.names.get("List", None)
 
-	if not Builtins.ModuleClass:
-		Builtins.ModuleClass = _safe_get(lambda: libs["builtinlib"].library_table.modules["builtins"].classes["module"])
-	if not Builtins.TypeClass:
-		Builtins.TypeClass = _safe_get(lambda: libs["builtinlib"].library_table.modules["builtins"].classes["type"])
-	if not Builtins.FunctionClass:
-		Builtins.FunctionClass = _safe_get(lambda: libs["builtinlib"].library_table.modules["builtins"].classes["function"])
-
-	Flag.builtins_initialized = all([
-		Builtins.ModuleClass,
-		Builtins.TypeClass,
-		Builtins.FunctionClass
-	])
-
-def _bind_typing(libs: dict[str, LibraryMeta]):
-	if Flag.typing_initialized:
-		return
-
-	if not Typing.AnyClass:
-		Typing.AnyClass = _safe_get(lambda: libs["stdlib"].library_table.modules["typing"].classes["Any"])
-	if not Typing.ListClass:
-		Typing.ListClass = _safe_get(lambda: libs["stdlib"].library_table.modules["typing"].classes["List"])
-
-	Flag.typing_initialized = all([
-		Typing.AnyClass,
-		Typing.ListClass
-	])
-
-def bind(libs: dict[str, LibraryMeta]):
-	_bind_builtins(libs)
-	_bind_typing(libs)
+def bind(lib: LibraryMeta, namespace: InstanceTable, symbol: ModuleTable):
+	_bind_builtins(lib, namespace, symbol)
+	_bind_typing(lib, namespace, symbol)

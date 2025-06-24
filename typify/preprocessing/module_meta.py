@@ -1,4 +1,8 @@
-from typify.preprocessing.symbol_table import Table, ModuleTable, NameTable, PackageTable, LibraryTable
+from typify.preprocessing.symbol_table import (
+    ModuleTable, 
+    NameTable
+)
+
 from typify.inferencing.typeutils import TypeExpr
 
 from pathlib import Path

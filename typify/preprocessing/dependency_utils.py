@@ -19,7 +19,8 @@ from dataclasses import dataclass
 @dataclass
 class DependencyBundle:
 	libs: dict[str, LibraryMeta]
-	meta_map: dict[ModuleTable, ModuleMeta]
+	mod_meta_map: dict[ModuleTable, ModuleMeta]
+	meta_lib_map: dict[ModuleMeta, LibraryMeta]
 	sysmodules: dict[str, InstanceTable]
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
 	cleaned_graph: dict[ModuleMeta, set[ModuleMeta]]
@@ -68,7 +69,7 @@ class DependencyUtils:
 						current_object = sysmodules[table.fqn]
 						modules.append(current_object)
 						continue
-
+					
 					module_object = TypeUtils.instantiate(Builtins.ModuleClass)
 					Table.transfer_names(table.names, module_object)
 
@@ -108,17 +109,17 @@ class DependencyUtils:
 
 class GraphBuilder:
 	@staticmethod
-	def build_graph(libs: dict[str, LibraryMeta]) -> DependencyBundle:
-		meta_map: dict[ModuleTable, ModuleMeta] = {}
+	def build_graph(libs: dict[str, LibraryMeta], meta_lib_map: dict[ModuleMeta, LibraryMeta]) -> DependencyBundle:
+		mod_meta_map: dict[ModuleTable, ModuleMeta] = {}
 		sysmodules: dict[PackageTable | ModuleTable, InstanceTable] = {}
 		dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]] = {}
 
 		for lib in libs.values():
-			meta_map.update(lib.meta_map)
+			mod_meta_map.update(lib.mod_meta_map)
 			sysmodules.update(lib.sysmodules)
 
-		for meta in meta_map.values():
-			tracker = DependencyTracker(libs, meta_map, dependency_graph, meta)
+		for meta in mod_meta_map.values():
+			tracker = DependencyTracker(libs, mod_meta_map, dependency_graph, meta)
 
 			meta.load_tree()
 			builtin_node = ast.ImportFrom(module="builtins", names=[ast.alias(name="*", asname=None)], level=0)
@@ -139,7 +140,8 @@ class GraphBuilder:
 
 		return DependencyBundle(
 			libs,
-			meta_map,
+			mod_meta_map,
+			meta_lib_map,
 			sysmodules,
 			dependency_graph,
 			cleaned_graph,
@@ -150,12 +152,12 @@ class DependencyTracker(ast.NodeVisitor):
 	def __init__(
 		self,
 		libs: dict[str, LibraryMeta],
-		meta_map: dict[ModuleTable, ModuleMeta],
+		mod_meta_map: dict[ModuleTable, ModuleMeta],
 		dependency_graph: dict[ModuleMeta, set[tuple[ModuleMeta, str]]],
 		module_meta: ModuleMeta
 	):
 		self.libs = libs
-		self.meta_map = meta_map
+		self.mod_meta_map = mod_meta_map
 		self.module_meta = module_meta
 		self.module_table = module_meta.table
 		self.dependency_graph = dependency_graph
@@ -163,7 +165,7 @@ class DependencyTracker(ast.NodeVisitor):
 		self.in_function = 0
 	
 	def as_module_metas(self, modules: list[Table]) -> set[ModuleMeta]:
-		return {self.meta_map[table] for table in modules if table in self.meta_map}
+		return {self.mod_meta_map[table] for table in modules if table in self.mod_meta_map}
 
 	def filter_chain(self, chain: list[PackageTable | ModuleTable]):
 		result = []

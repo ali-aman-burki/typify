@@ -25,21 +25,25 @@ class Analyzer(ast.NodeVisitor):
 			module_meta: ModuleMeta, 
 			sysmodules: dict[str, InstanceTable],
 			libs: dict[str, LibraryMeta],
-			current_namespace: Table,
+			starting_namespace: Table,
 		):
 		self.module_meta = module_meta
 		self.sysmodules = sysmodules
 		self.global_namespace = module_meta.table
-		self.current_namespace = current_namespace
+		self.starting_namespace = starting_namespace
+		self.current_namespace = starting_namespace
 		self.vslots = self.module_meta.vslots
 		self.fslots = self.module_meta.fslots
 		self.libs = libs
 
+		self.snapshot_log: list[set[str]] = []
 		self.current_namespace_object = None
 
-	def process(self):
-		print(f"starting {self.module_meta}: {Flag.builtins_initialized} {Flag.typing_initialized}")
-		self.visit(self.module_meta.tree)
+	def add_to_snapshot(self, points_to: set[InstanceTable]):
+		immutable = {pt.key for pt in points_to}
+		self.snapshot_log.append(immutable)
+	
+	def snapshot(self): return [s.copy() for s in self.snapshot_log]
 
 	def push(self, scope_def: Table):
 		self.current_namespace = scope_def.get_enclosing_table()
@@ -70,9 +74,18 @@ class Analyzer(ast.NodeVisitor):
 			if isinstance(target, ast.Name):
 				self.process_name(target.id, defkey)
 
+	def run(self):
+		bind(self.libs)
+		self.snapshot_log.clear()
+		self.current_namespace = self.starting_namespace
+		self.current_namespace_object = None
+		self.visit(self.module_meta.tree)
+	
 	def visit_Module(self, node):
-		self.current_namespace_object = TypeUtils.instantiate(Builtins.ModuleClass)
-		self.sysmodules[self.global_namespace.fqn] = self.current_namespace_object
+		self.current_namespace_object = self.sysmodules.setdefault(
+			self.global_namespace.fqn,
+			TypeUtils.instantiate(Builtins.ModuleClass)
+		)
 		self.generic_visit(node)
 
 	def visit_Import(self, node):
@@ -81,7 +94,9 @@ class Analyzer(ast.NodeVisitor):
 		for alias in node.names:
 			namedef = self.process_name(alias.asname if alias.asname else alias.name.split(".")[0], defkey)
 			object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, alias.name)
-			if object_chain: namedef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
+			if object_chain:
+				namedef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
+				self.add_to_snapshot(namedef.points_to)
 
 		self.generic_visit(node)
 	
@@ -95,9 +110,12 @@ class Analyzer(ast.NodeVisitor):
 			current_mod_object = self.sysmodules[self.global_namespace.fqn]
 			result = Table.create_and_transfer_names(object_chain[-1], enclosing, defkey)
 			Table.transfer_names(result, current_mod_object)
+			for namedef in result.values():
+				self.add_to_snapshot(namedef.points_to)
 		else:
 			for alias in node.names:
 				namedef = self.process_name(alias.asname if alias.asname else alias.name, defkey)
+				print(len(object_chain[-1].names))				
 				if alias.name in object_chain[-1].names:
 					mname = object_chain[-1].names[alias.name]
 					mnamedef = mname.get_latest_definition()
@@ -108,10 +126,11 @@ class Analyzer(ast.NodeVisitor):
 					new_object_chain = DependencyUtils.resolve_module_objects(defkey, self.libs, self.sysmodules, fqn)
 					namedef.points_to.add(new_object_chain[-1])
 				
+				self.add_to_snapshot(namedef.points_to)
+				
 		self.generic_visit(node)
 
 	def visit_ClassDef(self, node):
-		bind(self.libs)
 		enclosing = self.current_namespace.get_latest_definition()
 		position = (node.lineno, node.col_offset)
 		defkey = (self.global_namespace, position)
@@ -125,11 +144,14 @@ class Analyzer(ast.NodeVisitor):
 		namedef = self.process_name(class_name, defkey)
 		namedef.points_to.add(cinstance)
 		namedef.origin = classdef
-		self.current_namespace_object = cinstance
+		self.add_to_snapshot(namedef.points_to)
 
+		previous_namespace_object = self.current_namespace_object
+		self.current_namespace_object = cinstance
 		self.push(classdef)
 		self.generic_visit(node)
 		self.pop()
+		self.current_namespace_object = previous_namespace_object
 
 	def visit_FunctionDef(self, node): 
 		enclosing = self.current_namespace.get_latest_definition()
@@ -151,6 +173,8 @@ class Analyzer(ast.NodeVisitor):
 		finstance.origin = funcdef
 		namedef = self.process_name(function_name, defkey)
 		namedef.points_to.add(finstance)
+
+		self.add_to_snapshot(namedef.points_to)
 
 	def visit_AsyncFunctionDef(self, node):
 		self.visit_FunctionDef(node)

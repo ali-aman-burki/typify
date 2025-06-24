@@ -72,31 +72,6 @@ class Table:
 		
 		return names
 	
-	@staticmethod
-	def process_group(key: str, values: list[Table], defkey: tuple[Table, tuple[int, int]], processed_modules: list[ModuleTable]) -> Table:
-		var = NameTable(key)
-		var.add_definition(DefinitionTable(defkey))
-
-		for table in values:
-			tdef = table.get_latest_definition(defkey, processed_modules)
-			var.points_to.update(tdef.points_to)
-		
-		return var
-
-	@staticmethod
-	def homogenize(dicts: list[dict[str, Table]], defkey: tuple[Table, tuple[int, int]], processed_modules: list[ModuleTable]) -> dict[str, Table]:
-		key_groups = defaultdict(list)
-
-		for d in dicts:
-			for key, value in d.items():
-				key_groups[key].append(value)
-
-		result = {}
-		for key, values in key_groups.items():
-			result[key] = Table.process_group(key, values, defkey, processed_modules)
-
-		return result
-	
 	def get_type_class(self):
 		if isinstance(self, DefinitionTable):
 			if isinstance(self.parent, ClassTable):

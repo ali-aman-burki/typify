@@ -63,8 +63,8 @@ print(json.dumps(info))
 				if not p:
 					continue
 				resolved = Path(p).resolve()
-				label = next((k for k, v in paths_dict.items() if v == p), resolved.name)
-				result[label] = resolved
+				key = next((k for k, v in paths_dict.items() if v == p), resolved.name)
+				result[key] = resolved
 			return result
 
 		preload_raw = config["preload"]
@@ -87,9 +87,10 @@ print(json.dumps(info))
 	@staticmethod
 	def load(config) -> DependencyBundle:
 		paths = Preloader.get_paths(config)
+		meta_lib_map = {}
 		libs: dict[str, LibraryMeta] = {
-			label: LibraryMeta(preload_path) for label, preload_path in paths.preload.items()
+			key: LibraryMeta(preload_path, key, meta_lib_map) for key, preload_path in paths.preload.items()
 		}
 
-		bundle = GraphBuilder.build_graph(libs)
+		bundle = GraphBuilder.build_graph(libs, meta_lib_map)
 		return bundle

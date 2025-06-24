@@ -11,11 +11,13 @@ from pathlib import Path
 from collections import defaultdict
 
 class LibraryMeta:
-	def __init__(self, src: Path):
+	def __init__(self, src: Path, key: str, meta_lib_map: dict[ModuleMeta, 'LibraryMeta']):
 		self.src = Path(src).resolve()
+		self.key = key
 		self.library_table = LibraryTable(self.src.name)
 		self.sysmodules: dict[str, InstanceTable] = {}
-		self.meta_map: dict[ModuleTable, ModuleMeta] = {}
+		self.mod_meta_map: dict[ModuleTable, ModuleMeta] = {}
+		self.meta_lib_map = meta_lib_map
 		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
 		self.fqn_map: dict[str, list[Table]] = {}
 
@@ -59,8 +61,9 @@ class LibraryMeta:
 				init_path = dir_path / f"__init__{ext}"
 				if init_path.is_file():
 					meta = ModuleMeta(init_path, package_table.trust_annotations)
+					self.meta_lib_map[meta] = self
 					package_table.set_module(meta.table, self.fqn_map)
-					self.meta_map[meta.table] = meta
+					self.mod_meta_map[meta.table] = meta
 					break  # Prefer .pyi over .py
 
 		# Second pass: collect .py and .pyi candidates (excluding __init__)
@@ -80,12 +83,13 @@ class LibraryMeta:
 
 			table = package_map[parent]
 			meta = ModuleMeta(chosen_path, True if chosen_path.suffix == ".pyi" else table.trust_annotations)
+			self.meta_lib_map[meta] = self
 			table.set_module(meta.table, self.fqn_map)
-			self.meta_map[meta.table] = meta
+			self.mod_meta_map[meta.table] = meta
 
 
 
 	def export_to(self, path: Path):
-		for meta in self.meta_map.values():
+		for meta in self.mod_meta_map.values():
 			meta.export_symbols(self.src, path)
 			meta.export_typeslots(self.src, path)
