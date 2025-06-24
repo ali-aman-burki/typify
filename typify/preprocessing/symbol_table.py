@@ -34,7 +34,7 @@ class Table:
 
 	def to_dict(self):
 		data = {}
-		if self.points_to: 
+		if self.points_to:
 			data["points_to"] = ", ".join([repr(pt.type) for pt in self.points_to])
 		if self.definitions:
 			data["definitions"] = {}
@@ -72,16 +72,8 @@ class Table:
 		
 		return names
 	
-	def get_type_class(self):
-		if isinstance(self, DefinitionTable):
-			if isinstance(self.parent, ClassTable):
-				return self.parent
-		elif isinstance(self, ClassTable):
-			return self
-		else:
-			return None
-	
 	def __str__(self): return self.fqn
+	def __repr__(self): return self.fqn
 
 	def export_to_json(self, file_path: Path):
 		with file_path.open("w", encoding="utf-8") as f:
@@ -235,6 +227,9 @@ class NameTable(Table):
 class InstanceTable(Table):
 	def __init__(self, key):
 		super().__init__(key)
+	
+	def is_null(self) -> bool:
+		return self.key == "instance@$unresolved$"
 
 class DefinitionTable(Table):
 	def __init__(self, defkey: tuple[Table, tuple[int, int]]):

@@ -28,8 +28,8 @@ class TypeExpr:
 class TypeUtils:
 
 	@staticmethod
-	def instantiate(template: Table, args: list[TypeExpr | list[TypeExpr] | EllipsisType] | None = None) -> InstanceTable:
-		fqn = template.fqn if template else "$unresolved$"
+	def instantiate(template: InstanceTable, args: list[TypeExpr | list[TypeExpr] | EllipsisType] | None = None) -> InstanceTable:
+		fqn = repr(template.type) if template else "$unresolved$"
 		instance = InstanceTable(f"instance@{fqn}")
 		instance.type = TypeExpr(template, args if args else [])
 		return instance

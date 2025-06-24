@@ -32,24 +32,31 @@ class Executor(ast.NodeVisitor):
 			  context: Context,
 			  symbol: Table,
 			  namespace: InstanceTable, 
-			  tree: ast.AST):
+			  tree: ast.AST,
+			  snapshot_log: list[set[str]] = None
+		):
 		self.context = context
 		self.symbol = symbol
 		self.namespace = namespace
 		self.tree = tree
-		self.snapshot_log = [{namespace}]
+		self.snapshot_log = snapshot_log
 
-	def execute(self):
-		self.visit(self.tree)
-	
+	def execute(self): self.visit(self.tree)
+	def snapshot(self): return [s.copy() for s in self.snapshot_log]
+
+	def add_to_snapshot(self, points_to: set[InstanceTable]):
+		immutable = {pt.key for pt in points_to}
+		self.snapshot_log.append(immutable)
+
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)
 		defkey = (self.context.module_meta.table, position)
 		namedef = self.process_name(name, defkey)
 		
-		entering_namespace = TypeUtils.instantiate(Builtins.TypeClass, TypeExpr(namedef))
+		entering_namespace = TypeUtils.instantiate(Builtins.TypeClass, [TypeExpr(namedef)])
 		namedef.points_to.add(entering_namespace)
+		self.add_to_snapshot(namedef.points_to)
 
 		class_table = ClassTable(name)
 		entering_symbol = class_table.add_definition(DefinitionTable(defkey))
@@ -59,7 +66,8 @@ class Executor(ast.NodeVisitor):
 			self.context, 
 			entering_symbol, 
 			entering_namespace, 
-			ast.Module(class_tree.body, type_ignores=[])
+			ast.Module(class_tree.body, type_ignores=[]),
+			self.snapshot_log
 		).execute()
 	
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef):
@@ -68,12 +76,13 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.context.module_meta.table, position)
 		namedef = self.process_name(name, defkey)
 
-		func_type = TypeUtils.instantiate(Builtins.FunctionClass, TypeExpr(namedef))
+		func_type = TypeUtils.instantiate(Builtins.FunctionClass, [])
 		namedef.points_to.add(func_type)
+		self.add_to_snapshot(namedef.points_to)
 
 		function_table = FunctionTable(name)
 		function_table.add_definition(DefinitionTable(defkey))
-		self.symbol.merge_class(function_table)
+		self.symbol.merge_function(function_table)
 	
 	def visit_AnnAssign(self, node):
 		self.process_target(node.target)
@@ -102,6 +111,7 @@ class Executor(ast.NodeVisitor):
 		nametable = NameTable(name)
 		namedef = nametable.add_definition(DefinitionTable(defkey))
 		self.namespace.merge_name(nametable)
+		self.symbol.merge_name(nametable)
 		return namedef
 	
 	def process_target(self, target: ast.AST):

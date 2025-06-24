@@ -5,22 +5,25 @@ from typify.preprocessing.symbol_table import (
     ModuleTable,
 )
 
-def _safe_get(func):
-	try: return func()
-	except Exception: return None
-
 class Builtins:
-	ModuleClass: ClassTable = None
-	TypeClass: ClassTable = None
-	FunctionClass: ClassTable = None
+	ModuleClass: InstanceTable = None
+	TypeClass: InstanceTable = None
+	FunctionClass: InstanceTable = None
 
 class Typing:
-	AnyClass: ClassTable = None
-	ListClass: ClassTable = None
+	AnyClass: InstanceTable = None
+	ListClass: InstanceTable = None
 
 def _bind_builtins(lib: LibraryMeta, namespace: InstanceTable, symbol: ModuleTable):
-	if lib.key == "builtinlib" and symbol.key == "builtins":
-		Builtins.ModuleClass = namespace.names.get("module", None)
+	if not Builtins.ModuleClass or Builtins.ModuleClass.is_null():
+		if lib.key == "builtinlib" and symbol.key == "builtins":
+			ModuleClassName = namespace.names.get("module", None)
+			if ModuleClassName:
+				points_to = ModuleClassName.get_latest_definition().points_to
+				for pt in points_to:
+					Builtins.ModuleClass = pt
+					break
+
 	if lib.key == "builtinlib" and symbol.key == "builtins":
 		Builtins.TypeClass = namespace.names.get("type", None)
 	if lib.key == "builtinlib" and symbol.key == "builtins":

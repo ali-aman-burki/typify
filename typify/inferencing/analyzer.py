@@ -17,7 +17,7 @@ from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.function_utils import FunctionUtils
 
-from typify.inferencing.commons import bind, Flag
+from typify.inferencing.commons import bind
 
 class Analyzer(ast.NodeVisitor):
 	def __init__(
