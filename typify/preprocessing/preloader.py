@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
+from typify.preprocessing.class_collector import Collector
+from typify.inferencing.commons import bind, Context
 
 @dataclass
 class TypifyPaths:
@@ -93,4 +95,6 @@ print(json.dumps(info))
 		}
 
 		bundle = GraphBuilder.build_graph(libs, meta_lib_map)
+		for meta in bundle.mod_meta_map.values():
+			collector = Collector(meta, meta.table, meta.tree)
 		return bundle

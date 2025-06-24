@@ -1,9 +1,18 @@
-from typify.preprocessing.symbol_table import DefinitionTable
+from typify.preprocessing.symbol_table import DefinitionTable, InstanceTable
 from typify.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.module_meta import ModuleMeta
+
+from dataclasses import dataclass
 
 def _safe_get(func):
 	try: return func()
 	except Exception: return None
+
+@dataclass
+class Context:
+	module_meta: ModuleMeta
+	libs: dict[str, LibraryMeta]
+	sysmodules: dict[str, InstanceTable]
 
 class Builtins:
 	ModuleClass: DefinitionTable = None

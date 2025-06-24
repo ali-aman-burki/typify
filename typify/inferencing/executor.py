@@ -1,13 +1,11 @@
 import ast
 import copy
 
-from typify.inferencing.commons import Builtins
+from typify.inferencing.commons import Builtins, Context
 from typify.inferencing.typeutils import (
     TypeUtils, 
     TypeExpr
 )
-from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.symbol_table import (
 	 ModuleTable,
 	 NameTable,
@@ -17,14 +15,6 @@ from typify.preprocessing.symbol_table import (
 	 ClassTable,
 	 FunctionTable
 )
-
-from dataclasses import dataclass
-
-@dataclass
-class Context:
-	module_meta: ModuleMeta
-	libs: dict[str, LibraryMeta]
-	sysmodules: dict[str, InstanceTable]
 
 class Executor(ast.NodeVisitor):
 	def __init__(
@@ -54,7 +44,7 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.context.module_meta.table, position)
 		namedef = self.process_name(name, defkey)
 		
-		entering_namespace = TypeUtils.instantiate(Builtins.TypeClass, [])
+		entering_namespace = TypeUtils.instantiate(Builtins.TypeClass)
 		namedef.points_to.add(entering_namespace)
 		self.add_to_snapshot(namedef.points_to)
 
@@ -76,7 +66,7 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.context.module_meta.table, position)
 		namedef = self.process_name(name, defkey)
 
-		func_type = TypeUtils.instantiate(Builtins.FunctionClass, [])
+		func_type = TypeUtils.instantiate(Builtins.FunctionClass)
 		namedef.points_to.add(func_type)
 		self.add_to_snapshot(namedef.points_to)
 
