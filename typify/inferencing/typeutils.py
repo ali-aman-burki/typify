@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typify.preprocessing.symbol_table import Table, InstanceTable
+from typify.preprocessing.symbol_table import Table, InstanceTable, DefinitionTable
 from types import EllipsisType
 
 import ast
@@ -12,7 +12,7 @@ class TypeExpr:
 	
 	def __repr__(self):
 		if not self.base: return "$unresolved$"
-		fqn = self.base.fqn
+		fqn = self.base.parent.fqn
 		joined = ", ".join(
 			(
 				f"[{', '.join(repr(a) for a in arg)}]" if isinstance(arg, list)
@@ -28,8 +28,9 @@ class TypeExpr:
 class TypeUtils:
 
 	@staticmethod
-	def instantiate(template: InstanceTable, args: list[TypeExpr | list[TypeExpr] | EllipsisType] | None = None) -> InstanceTable:
-		fqn = repr(template.type) if template else "$unresolved$"
+	def instantiate(template: DefinitionTable, args: list[TypeExpr | list[TypeExpr] | EllipsisType] | None = None) -> InstanceTable:
+		fqn = template.parent.fqn if template else "$unresolved$"
+		
 		instance = InstanceTable(f"instance@{fqn}")
 		instance.type = TypeExpr(template, args if args else [])
 		return instance

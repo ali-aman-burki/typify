@@ -54,7 +54,7 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.context.module_meta.table, position)
 		namedef = self.process_name(name, defkey)
 		
-		entering_namespace = TypeUtils.instantiate(Builtins.TypeClass, [TypeExpr(namedef)])
+		entering_namespace = TypeUtils.instantiate(Builtins.TypeClass, [])
 		namedef.points_to.add(entering_namespace)
 		self.add_to_snapshot(namedef.points_to)
 
