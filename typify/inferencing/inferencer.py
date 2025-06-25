@@ -1,4 +1,5 @@
 from collections import deque, defaultdict
+
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.symbol_table import InstanceTable
