@@ -13,11 +13,9 @@ from typify.preprocessing.symbol_table import (
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import DependencyUtils
-from typify.inferencing.commons import Builtins
+from typify.inferencing.commons import Types
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.function_utils import FunctionUtils
-
-from typify.inferencing.commons import bind
 
 class Analyzer(ast.NodeVisitor):
 	def __init__(
@@ -75,7 +73,6 @@ class Analyzer(ast.NodeVisitor):
 				self.process_name(target.id, defkey)
 
 	def run(self):
-		bind(self.libs)
 		self.snapshot_log.clear()
 		self.current_namespace = self.starting_namespace
 		self.current_namespace_object = None
@@ -84,7 +81,7 @@ class Analyzer(ast.NodeVisitor):
 	def visit_Module(self, node):
 		self.current_namespace_object = self.sysmodules.setdefault(
 			self.global_namespace.fqn,
-			TypeUtils.instantiate(Builtins.ModuleClass)
+			TypeUtils.instantiate(Types.ModuleType)
 		)
 		self.generic_visit(node)
 
@@ -140,7 +137,7 @@ class Analyzer(ast.NodeVisitor):
 		classdef = classtable.add_definition(DefinitionTable(defkey))
 		enclosing.merge_class(classtable)
 
-		cinstance = TypeUtils.instantiate(Builtins.TypeClass)
+		cinstance = TypeUtils.instantiate(Types.TypeType)
 		namedef = self.process_name(class_name, defkey)
 		namedef.points_to.add(cinstance)
 		namedef.origin = classdef
@@ -169,7 +166,7 @@ class Analyzer(ast.NodeVisitor):
 		funcdef.kind = FunctionUtils.get_function_kind(node)
 		enclosing.merge_function(functable)
 
-		finstance = TypeUtils.instantiate(Builtins.FunctionClass)
+		finstance = TypeUtils.instantiate(None)
 		finstance.origin = funcdef
 		namedef = self.process_name(function_name, defkey)
 		namedef.points_to.add(finstance)

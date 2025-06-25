@@ -70,7 +70,7 @@ class DependencyUtils:
 						modules.append(current_object)
 						continue
 					
-					module_object = TypeUtils.instantiate(Builtins.ModuleClass)
+					module_object = TypeUtils.instantiate(Builtins.get_type("module"))
 					Table.transfer_names(table.names, module_object)
 
 					attr = NameTable(table.key)
@@ -93,7 +93,7 @@ class DependencyUtils:
 			module_object = sysmodules.get(fullname)
 
 			if not module_object:
-				module_object = TypeUtils.instantiate(Builtins.ModuleClass)
+				module_object = TypeUtils.instantiate(Builtins.get_type("module"))
 				sysmodules[fullname] = module_object
 
 			if current_object:

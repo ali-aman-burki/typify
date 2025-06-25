@@ -1,16 +1,13 @@
 from typify.preprocessing.dependency_utils import DependencyBundle
+from typify.inferencing.typeutils import (
+    TypeUtils, 
+    TypeExpr
+)
+from typify.inferencing.commons import Builtins
 from typify.inferencing.executor import (
     Context,
 	Executor
 )
-
-from typify.inferencing.commons import (
-    Builtins,
-	bind
-)
-from typify.inferencing.typeutils import TypeUtils
-
-from dataclasses import dataclass
 
 class Inferencer:
 
@@ -30,16 +27,25 @@ class Inferencer:
 		for sequence in sequences:
 			for i in range(len(sequence)):
 				for meta in sequence:
-					context = context_map[meta]
-					symbol = meta.table
-					namespace = TypeUtils.instantiate(Builtins.ModuleClass)
-					executor = Executor(context, symbol, namespace, meta.tree, [])
-					sysmodules[meta.table.fqn] = namespace
-					executor.execute()
-					bind(libs)
+					sysmodules.setdefault(
+						meta.table.fqn, 
+						TypeUtils.instantiate(Builtins.get_type("module"))
+					)
+
+					Executor(
+						context=context_map[meta], 
+						symbol=meta.table, 
+						namespace=sysmodules[meta.table.fqn], 
+						tree=meta.tree,
+						snapshot_log=[]
+					).execute()
+					
+					TypeUtils.update_type_expr(
+						sysmodules[meta.table.fqn], 
+						TypeExpr(Builtins.get_type("module"))
+					)
 					processed.append(meta)
-		for instance in sysmodules.values():
-			print(f"Module: {instance.key}")
+
 		print("\nSequence Followed:")
 		joined = " -> ".join(f"{meta}" for meta in processed)
 		print(joined)

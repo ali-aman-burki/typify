@@ -1,7 +1,10 @@
 import ast
 import copy
 
-from typify.inferencing.commons import Builtins, Context
+from typify.inferencing.commons import (
+    Context,
+	Builtins
+)
 from typify.inferencing.typeutils import (
     TypeUtils, 
     TypeExpr
@@ -43,14 +46,15 @@ class Executor(ast.NodeVisitor):
 		position = (class_tree.lineno, class_tree.col_offset)
 		defkey = (self.context.module_meta.table, position)
 		namedef = self.process_name(name, defkey)
-		
-		entering_namespace = TypeUtils.instantiate(Builtins.TypeClass)
-		namedef.points_to.add(entering_namespace)
-		self.add_to_snapshot(namedef.points_to)
 
 		class_table = ClassTable(name)
 		entering_symbol = class_table.add_definition(DefinitionTable(defkey))
 		self.symbol.merge_class(class_table)
+		
+		entering_namespace = TypeUtils.instantiate(Builtins.get_type("type"))
+		entering_namespace.origin = entering_symbol
+		namedef.points_to.add(entering_namespace)
+		self.add_to_snapshot(namedef.points_to)
 	
 		Executor(
 			self.context, 
@@ -66,13 +70,14 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.context.module_meta.table, position)
 		namedef = self.process_name(name, defkey)
 
-		func_type = TypeUtils.instantiate(Builtins.FunctionClass)
-		namedef.points_to.add(func_type)
-		self.add_to_snapshot(namedef.points_to)
-
 		function_table = FunctionTable(name)
-		function_table.add_definition(DefinitionTable(defkey))
+		fdef = function_table.add_definition(DefinitionTable(defkey))
 		self.symbol.merge_function(function_table)
+
+		func_type = TypeUtils.instantiate(Builtins.get_type("function"))
+		namedef.points_to.add(func_type)
+		func_type.origin = fdef
+		self.add_to_snapshot(namedef.points_to)
 	
 	def visit_AnnAssign(self, node):
 		self.process_target(node.target)

@@ -3,7 +3,6 @@ import json
 import ast
 
 from pathlib import Path
-from collections import defaultdict
 
 class Table:
 	def __init__(self, key: str):
@@ -26,16 +25,15 @@ class Table:
 		self.parent: Table = None
 
 		self.kind: str = ""
-		self.type = None
+		self.type_expr = None
 		self.points_to: set[InstanceTable] = set()
 		self.origin: DefinitionTable = None
-		self.template_used: Table = None
 		self.tree: ast.FunctionDef = None		
 
 	def to_dict(self):
 		data = {}
 		if self.points_to:
-			data["points_to"] = ", ".join([repr(pt.type) for pt in self.points_to])
+			data["points_to"] = ", ".join([repr(pt.type_expr) for pt in self.points_to])
 		if self.definitions:
 			data["definitions"] = {}
 			for m in self.definitions:
@@ -225,12 +223,9 @@ class NameTable(Table):
 		super().__init__(key)
 
 class InstanceTable(Table):
-	def __init__(self, key):
-		super().__init__(key)
+	def __init__(self):
+		super().__init__("instance@$unresolved$")
 	
-	def is_null(self) -> bool:
-		return self.key == "instance@$unresolved$"
-
 class DefinitionTable(Table):
 	def __init__(self, defkey: tuple[Table, tuple[int, int]]):
 		super().__init__(f"{defkey[0].fqn}:{defkey[1][0]}:{defkey[1][1]}")

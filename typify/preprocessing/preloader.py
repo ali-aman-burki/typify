@@ -9,8 +9,7 @@ from dataclasses import dataclass
 
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
-from typify.preprocessing.class_collector import Collector
-from typify.inferencing.commons import bind, Context
+from typify.inferencing.commons import bind_builtin_lib
 
 @dataclass
 class TypifyPaths:
@@ -20,7 +19,7 @@ class TypifyPaths:
 class Preloader:
 
 	@staticmethod
-	def extract_current_env(python_executable=sys.executable) -> dict[str, Union[str, Path, list[Path]]]:
+	def _extract_current_env(python_executable=sys.executable) -> dict[str, Union[str, Path, list[Path]]]:
 		script = """
 import site, json
 
@@ -47,8 +46,8 @@ print(json.dumps(info))
 		}
 	
 	@staticmethod
-	def get_paths(config: dict[str, Union[str, dict[str, str]]]) -> TypifyPaths:
-		defaults = Preloader.extract_current_env()
+	def _get_paths(config: dict[str, Union[str, dict[str, str]]]) -> TypifyPaths:
+		defaults = Preloader._extract_current_env()
 		config.setdefault("preload", "")
 		config.setdefault("ondemand", "CURRENT_ENV")
 		paths_dict: dict[str, str] = config.get("paths", {})
@@ -88,13 +87,12 @@ print(json.dumps(info))
 
 	@staticmethod
 	def load(config) -> DependencyBundle:
-		paths = Preloader.get_paths(config)
+		paths = Preloader._get_paths(config)
 		meta_lib_map = {}
 		libs: dict[str, LibraryMeta] = {
 			key: LibraryMeta(preload_path, key, meta_lib_map) for key, preload_path in paths.preload.items()
 		}
 
 		bundle = GraphBuilder.build_graph(libs, meta_lib_map)
-		for meta in bundle.mod_meta_map.values():
-			collector = Collector(meta, meta.table, meta.tree)
+		bind_builtin_lib(libs.get("builtinlib", None))
 		return bundle
