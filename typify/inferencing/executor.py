@@ -76,6 +76,8 @@ class Executor(ast.NodeVisitor):
 			self.context.sysmodules,
 			node.module, node.level
 		)
+		if not object_chain: return
+		
 		if node.names[0].name == "*":
 			result = Table.create_and_transfer_names(object_chain[-1], self.symbol, defkey)
 			Table.transfer_names(result, self.namespace)
