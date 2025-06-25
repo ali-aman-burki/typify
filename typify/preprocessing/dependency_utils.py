@@ -20,7 +20,6 @@ from dataclasses import dataclass
 class DependencyBundle:
 	libs: dict[str, LibraryMeta]
 	mod_meta_map: dict[ModuleTable, ModuleMeta]
-	meta_lib_map: dict[ModuleMeta, LibraryMeta]
 	sysmodules: dict[str, InstanceTable]
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
 	cleaned_graph: dict[ModuleMeta, set[ModuleMeta]]
@@ -59,8 +58,9 @@ class DependencyUtils:
 					return [sysmodules[table.fqn] for table in chain]
 
 				modules = []
-				if chain[0].fqn not in sysmodules:
-					return modules
+
+				if chain[0].fqn not in sysmodules: break
+				
 				current_object = sysmodules[chain[0].fqn]
 				modules.append(current_object)
 
@@ -84,32 +84,11 @@ class DependencyUtils:
 
 				return modules
 
-		parts = fqn.split(".")
-		modules = []
-		current_object = None
-
-		for i in range(len(parts)):
-			fullname = ".".join(parts[:i+1])
-			module_object = sysmodules.get(fullname)
-
-			if not module_object:
-				module_object = TypeUtils.instantiate(Builtins.get_type("module"))
-				sysmodules[fullname] = module_object
-
-			if current_object:
-				attr = NameTable(parts[i])
-				attrdef = attr.add_definition(DefinitionTable(defkey))
-				attrdef.points_to.add(module_object)
-				current_object.set_name(attr)
-
-			current_object = module_object
-			modules.append(module_object)
-
-		return modules
+		return []
 
 class GraphBuilder:
 	@staticmethod
-	def build_graph(libs: dict[str, LibraryMeta], meta_lib_map: dict[ModuleMeta, LibraryMeta]) -> DependencyBundle:
+	def build_graph(libs: dict[str, LibraryMeta]) -> DependencyBundle:
 		mod_meta_map: dict[ModuleTable, ModuleMeta] = {}
 		sysmodules: dict[PackageTable | ModuleTable, InstanceTable] = {}
 		dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]] = {}
@@ -141,7 +120,6 @@ class GraphBuilder:
 		return DependencyBundle(
 			libs,
 			mod_meta_map,
-			meta_lib_map,
 			sysmodules,
 			dependency_graph,
 			cleaned_graph,

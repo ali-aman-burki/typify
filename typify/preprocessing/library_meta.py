@@ -11,13 +11,12 @@ from pathlib import Path
 from collections import defaultdict
 
 class LibraryMeta:
-	def __init__(self, src: Path, key: str, meta_lib_map: dict[ModuleMeta, 'LibraryMeta']):
+	def __init__(self, src: Path, key: str):
 		self.src = Path(src).resolve()
 		self.key = key
 		self.library_table = LibraryTable(self.src.name)
 		self.sysmodules: dict[str, InstanceTable] = {}
 		self.mod_meta_map: dict[ModuleTable, ModuleMeta] = {}
-		self.meta_lib_map = meta_lib_map
 		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
 		self.fqn_map: dict[str, list[Table]] = {}
 
@@ -61,7 +60,6 @@ class LibraryMeta:
 				init_path = dir_path / f"__init__{ext}"
 				if init_path.is_file():
 					meta = ModuleMeta(init_path, package_table.trust_annotations)
-					self.meta_lib_map[meta] = self
 					package_table.set_module(meta.table, self.fqn_map)
 					self.mod_meta_map[meta.table] = meta
 					break  # Prefer .pyi over .py
@@ -83,7 +81,6 @@ class LibraryMeta:
 
 			table = package_map[parent]
 			meta = ModuleMeta(chosen_path, True if chosen_path.suffix == ".pyi" else table.trust_annotations)
-			self.meta_lib_map[meta] = self
 			table.set_module(meta.table, self.fqn_map)
 			self.mod_meta_map[meta.table] = meta
 

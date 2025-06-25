@@ -4,13 +4,12 @@ from collections import defaultdict
 
 from typify.inferencing.typeutils import TypeUtils
 from typify.preprocessing.dependency_utils import DependencyUtils
+from typify.inferencing.resolver import Resolver
 from typify.inferencing.commons import (
 	Context,
 	Builtins
 )
 from typify.preprocessing.symbol_table import (
-	 ModuleTable,
-	 NameTable,
 	 InstanceTable,
 	 DefinitionTable,
 	 Table,
@@ -33,6 +32,8 @@ class Executor(ast.NodeVisitor):
 		self.tree = tree
 		self.snapshot_log = snapshot_log if snapshot_log else []
 
+		self.resolver = Resolver(self.context, self.symbol, self.namespace)
+
 	def execute(self): self.visit(self.tree)
 
 	def snapshot(self): 
@@ -54,16 +55,22 @@ class Executor(ast.NodeVisitor):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.context.module_meta.table, position)
 		for alias in node.names:
-			namedef = self.process_name(alias.asname if alias.asname else alias.name.split(".")[0], defkey)
+			namedef = self.resolver.create_name(
+				alias.asname if alias.asname else alias.name.split(".")[0], 
+				defkey,
+				self.namespace,
+				self.symbol
+			)
 			object_chain = DependencyUtils.resolve_module_objects(
 				defkey, 
 				self.context.libs, 
 				self.context.sysmodules, 
 				alias.name
 			)
-			if object_chain:
-				namedef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
-				self.add_to_snapshot(namedef.points_to)
+			if not object_chain: continue
+
+			namedef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
+			self.add_to_snapshot(namedef.points_to)
 
 		self.generic_visit(node)
 	
@@ -76,8 +83,9 @@ class Executor(ast.NodeVisitor):
 			self.context.sysmodules,
 			node.module, node.level
 		)
-		if not object_chain: return
 		
+		if not object_chain: return
+
 		if node.names[0].name == "*":
 			result = Table.create_and_transfer_names(object_chain[-1], self.symbol, defkey)
 			Table.transfer_names(result, self.namespace)
@@ -85,7 +93,12 @@ class Executor(ast.NodeVisitor):
 				self.add_to_snapshot(namedef.points_to)
 		else:
 			for alias in node.names:
-				namedef = self.process_name(alias.asname if alias.asname else alias.name, defkey)
+				namedef = self.resolver.create_name(
+					alias.asname if alias.asname else alias.name, 
+					defkey,
+					self.namespace,
+					self.symbol
+				)
 				if alias.name in object_chain[-1].names:
 					mname = object_chain[-1].names[alias.name]
 					mnamedef = mname.get_latest_definition()
@@ -103,6 +116,8 @@ class Executor(ast.NodeVisitor):
 						self.context.sysmodules,
 						fqn
 					)
+					if not new_object_chain: return
+					
 					namedef.points_to.add(new_object_chain[-1])
 				
 				self.add_to_snapshot(namedef.points_to)
@@ -113,7 +128,12 @@ class Executor(ast.NodeVisitor):
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)
 		defkey = (self.context.module_meta.table, position)
-		namedef = self.process_name(name, defkey)
+		namedef = self.resolver.create_name(
+			name,
+			defkey,
+			self.namespace,
+			self.symbol
+		)
 
 		class_table = ClassTable(name)
 		entering_symbol = class_table.add_definition(DefinitionTable(defkey))
@@ -124,6 +144,8 @@ class Executor(ast.NodeVisitor):
 		namedef.points_to.add(entering_namespace)
 		self.add_to_snapshot(namedef.points_to)
 	
+		self.context.symbol_map[entering_symbol] = entering_namespace
+
 		Executor(
 			self.context,
 			entering_symbol,
@@ -136,7 +158,12 @@ class Executor(ast.NodeVisitor):
 		name = func_tree.name
 		position = (func_tree.lineno, func_tree.col_offset)
 		defkey = (self.context.module_meta.table, position)
-		namedef = self.process_name(name, defkey)
+		namedef = self.resolver.create_name(
+			name,
+			defkey,
+			self.namespace,
+			self.symbol
+		)
 
 		function_table = FunctionTable(name)
 		fdef = function_table.add_definition(DefinitionTable(defkey))
@@ -148,13 +175,12 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(namedef.points_to)
 	
 	def visit_AnnAssign(self, node):
-		self.process_target(node.target)
+		self.resolver.resolve_target(node.target)
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):
 		for target in node.targets:
-			self.process_target(target)
-		self.generic_visit(node)
+			self.resolver.resolve_target(target)
 	
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(
@@ -169,21 +195,3 @@ class Executor(ast.NodeVisitor):
 		ast.copy_location(toAssign.value, node)
 		toAssign = ast.fix_missing_locations(toAssign)
 		self.visit_Assign(toAssign)
-
-	def process_name(self, name: str, defkey: tuple[ModuleTable, tuple[int, int]]):
-		nametable = NameTable(name)
-		namedef = nametable.add_definition(DefinitionTable(defkey))
-		self.namespace.merge_name(nametable)
-		self.symbol.merge_name(nametable)
-		return namedef
-	
-	def process_target(self, target: ast.AST):
-		if isinstance(target, (ast.Tuple, ast.List)):
-			for elt in target.elts:
-				self.process_target(elt)
-		else:
-			position = (target.lineno, target.col_offset)
-			defkey = (self.context.module_meta.table, position)
-			if isinstance(target, ast.Name):
-				namedef = self.process_name(target.id, defkey)
-				self.symbol.merge_name(namedef.parent)

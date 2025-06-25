@@ -1,6 +1,12 @@
-from typify.preprocessing.symbol_table import DefinitionTable, InstanceTable, ClassTable
+from typify.preprocessing.symbol_table import (
+    DefinitionTable, 
+    InstanceTable, 
+    Table
+)
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.symbol_table import ModuleTable
+from typify.preprocessing.libs import RequiredLibs
 
 from dataclasses import dataclass
 
@@ -9,18 +15,22 @@ class Context:
 	module_meta: ModuleMeta
 	libs: dict[str, LibraryMeta]
 	sysmodules: dict[str, InstanceTable]
+	symbol_map: dict[Table, InstanceTable]
 
 class Builtins:
-	lib: LibraryMeta = None
 	
-	def get_type(type_name: str) -> DefinitionTable | None:
-		if Builtins.lib and "builtins" in Builtins.lib.library_table.modules:
-			module = Builtins.lib.library_table.modules["builtins"]
-			if type_name in module.classes:
-				return module.classes[type_name].get_latest_definition()
+	@staticmethod
+	def module() -> ModuleTable:
+		try:
+			result = RequiredLibs.preloaded["builtinlib"].library_table.modules["builtins"]
+			return result
+		except Exception:
 			return None
-		return None
-
-
-def bind_builtin_lib(lib: LibraryMeta):
-	Builtins.lib = lib
+	
+	@staticmethod
+	def get_type(type_name: str) -> DefinitionTable | None:
+		try: 
+			result = Builtins.module().classes[type_name].get_latest_definition()
+			return result
+		except Exception: 
+			return None

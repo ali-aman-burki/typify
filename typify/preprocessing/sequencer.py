@@ -1,5 +1,7 @@
 from typify.preprocessing.module_meta import ModuleMeta
 
+from collections import defaultdict
+
 class Sequencer:
 	
 	@staticmethod
@@ -46,11 +48,17 @@ class Sequencer:
 	def generate_sequences(graph: dict[ModuleMeta, set[ModuleMeta]]) -> list[list[ModuleMeta]]:
 		sequences: list[list[ModuleMeta]] = Sequencer._tarjan(graph)
 
-		def module_priority(meta):
-			if meta.table.fqn == "builtins": return 0
-			return 1
+		reverse_deps: dict[ModuleMeta, int] = defaultdict(int)
+		for src, targets in graph.items():
+			for tgt in targets:
+				reverse_deps[tgt] += 1
 
-		for seq in sequences: seq.sort(key=module_priority)
+		def module_priority(meta: ModuleMeta) -> int:
+			return -reverse_deps.get(meta, 0)
+
+		for seq in sequences:
+			seq.sort(key=module_priority)
+
 		return sequences
 
 

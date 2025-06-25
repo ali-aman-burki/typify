@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
-from typify.inferencing.commons import bind_builtin_lib
+from typify.preprocessing.libs import RequiredLibs
 
 @dataclass
 class TypifyPaths:
@@ -88,11 +88,9 @@ print(json.dumps(info))
 	@staticmethod
 	def load(config) -> DependencyBundle:
 		paths = Preloader._get_paths(config)
-		meta_lib_map = {}
-		libs: dict[str, LibraryMeta] = {
-			key: LibraryMeta(preload_path, key, meta_lib_map) for key, preload_path in paths.preload.items()
+		RequiredLibs.preloaded = {
+			key: LibraryMeta(preload_path, key) for key, preload_path in paths.preload.items()
 		}
 
-		bundle = GraphBuilder.build_graph(libs, meta_lib_map)
-		bind_builtin_lib(libs.get("builtinlib", None))
+		bundle = GraphBuilder.build_graph(RequiredLibs.preloaded)
 		return bundle
