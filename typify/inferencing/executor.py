@@ -1,13 +1,12 @@
 import ast
 import copy
+from collections import defaultdict
 
+from typify.inferencing.typeutils import TypeUtils
+from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.commons import (
-    Context,
+	Context,
 	Builtins
-)
-from typify.inferencing.typeutils import (
-    TypeUtils, 
-    TypeExpr
 )
 from typify.preprocessing.symbol_table import (
 	 ModuleTable,
@@ -26,20 +25,87 @@ class Executor(ast.NodeVisitor):
 			  symbol: Table,
 			  namespace: InstanceTable, 
 			  tree: ast.AST,
-			  snapshot_log: list[set[str]] = None
+			  snapshot_log: list[set[InstanceTable]] = None
 		):
 		self.context = context
 		self.symbol = symbol
 		self.namespace = namespace
 		self.tree = tree
-		self.snapshot_log = snapshot_log
+		self.snapshot_log = snapshot_log if snapshot_log else []
 
 	def execute(self): self.visit(self.tree)
-	def snapshot(self): return [s.copy() for s in self.snapshot_log]
+
+	def snapshot(self): 
+		result = []
+		for points_to in self.snapshot_log:
+			counter = defaultdict(int)
+			labeled = set()
+			for pt in points_to:
+				counter[pt.key] += 1
+				label = f"{pt.key}#{counter[pt.key]}"
+				labeled.add(label)
+			result.append(labeled)
+		return result
 
 	def add_to_snapshot(self, points_to: set[InstanceTable]):
-		immutable = {pt.key for pt in points_to}
-		self.snapshot_log.append(immutable)
+		self.snapshot_log.append(points_to.copy())
+
+	def visit_Import(self, node):
+		position = (node.lineno, node.col_offset)
+		defkey = (self.context.module_meta.table, position)
+		for alias in node.names:
+			namedef = self.process_name(alias.asname if alias.asname else alias.name.split(".")[0], defkey)
+			object_chain = DependencyUtils.resolve_module_objects(
+				defkey, 
+				self.context.libs, 
+				self.context.sysmodules, 
+				alias.name
+			)
+			if object_chain:
+				namedef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
+				self.add_to_snapshot(namedef.points_to)
+
+		self.generic_visit(node)
+	
+	def visit_ImportFrom(self, node):
+		position = (node.lineno, node.col_offset)
+		defkey = (self.context.module_meta.table, position)
+		object_chain = DependencyUtils.resolve_module_objects(
+			defkey,
+			self.context.libs,
+			self.context.sysmodules,
+			node.module, node.level
+		)
+		if node.names[0].name == "*":
+			result = Table.create_and_transfer_names(object_chain[-1], self.symbol, defkey)
+			Table.transfer_names(result, self.namespace)
+			for namedef in result.values():
+				self.add_to_snapshot(namedef.points_to)
+		else:
+			for alias in node.names:
+				namedef = self.process_name(alias.asname if alias.asname else alias.name, defkey)
+				if alias.name in object_chain[-1].names:
+					mname = object_chain[-1].names[alias.name]
+					mnamedef = mname.get_latest_definition()
+					namedef.points_to.update(mnamedef.points_to)
+				else:
+					fqn = DependencyUtils.to_absolute_name(
+						self.context.module_meta.table, 
+						node.module, 
+						node.level
+					)
+					fqn += f".{alias.name}"
+					new_object_chain = DependencyUtils.resolve_module_objects(
+						defkey,
+						self.context.libs,
+						self.context.sysmodules,
+						fqn
+					)
+					namedef.points_to.add(new_object_chain[-1])
+				
+				self.add_to_snapshot(namedef.points_to)
+				
+		self.generic_visit(node)
 
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
 		name = class_tree.name
@@ -57,9 +123,9 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(namedef.points_to)
 	
 		Executor(
-			self.context, 
-			entering_symbol, 
-			entering_namespace, 
+			self.context,
+			entering_symbol,
+			entering_namespace,
 			ast.Module(class_tree.body, type_ignores=[]),
 			self.snapshot_log
 		).execute()

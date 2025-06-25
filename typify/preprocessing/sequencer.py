@@ -1,3 +1,5 @@
+from typify.preprocessing.module_meta import ModuleMeta
+
 class Sequencer:
 	
 	@staticmethod
@@ -41,6 +43,16 @@ class Sequencer:
 		return result
 
 	@staticmethod
-	def generate_sequences(graph):
-		sequences = Sequencer._tarjan(graph)
+	def generate_sequences(graph: dict[ModuleMeta, set[ModuleMeta]]) -> list[list[ModuleMeta]]:
+		sequences: list[list[ModuleMeta]] = Sequencer._tarjan(graph)
+
+		def module_priority(meta):
+			if meta.table.fqn == "builtins": return 0
+			return 1
+
+		for seq in sequences: seq.sort(key=module_priority)
 		return sequences
+
+
+
+
