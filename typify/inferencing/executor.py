@@ -2,6 +2,7 @@ import ast
 import copy
 from collections import defaultdict
 
+from typify.inferencing.function_utils import FunctionUtils
 from typify.inferencing.typeutils import TypeUtils
 from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.resolver import Resolver
@@ -10,11 +11,12 @@ from typify.inferencing.commons import (
 	Builtins
 )
 from typify.preprocessing.symbol_table import (
-	 InstanceTable,
-	 DefinitionTable,
-	 Table,
-	 ClassTable,
-	 FunctionTable
+	NameTable,
+	InstanceTable,
+	DefinitionTable,
+	Table,
+	ClassTable,
+	FunctionTable
 )
 
 class Executor(ast.NodeVisitor):
@@ -55,12 +57,11 @@ class Executor(ast.NodeVisitor):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.context.module_meta.table, position)
 		for alias in node.names:
-			namedef = self.resolver.create_name(
-				alias.asname if alias.asname else alias.name.split(".")[0], 
-				defkey,
-				self.namespace,
-				self.symbol
-			)
+			nametable = NameTable(alias.asname if alias.asname else alias.name.split(".")[0])
+			namedef = nametable.add_definition(DefinitionTable(defkey))
+			nametable = self.symbol.merge_name(nametable)
+			self.namespace.override_name(nametable)
+
 			object_chain = DependencyUtils.resolve_module_objects(
 				defkey, 
 				self.context.libs, 
@@ -93,12 +94,11 @@ class Executor(ast.NodeVisitor):
 				self.add_to_snapshot(namedef.points_to)
 		else:
 			for alias in node.names:
-				namedef = self.resolver.create_name(
-					alias.asname if alias.asname else alias.name, 
-					defkey,
-					self.namespace,
-					self.symbol
-				)
+				nametable = NameTable(alias.asname if alias.asname else alias.name.split(".")[0])
+				namedef = nametable.add_definition(DefinitionTable(defkey))
+				nametable = self.symbol.merge_name(nametable)
+				self.namespace.override_name(nametable)
+
 				if alias.name in object_chain[-1].names:
 					mname = object_chain[-1].names[alias.name]
 					mnamedef = mname.get_latest_definition()
@@ -117,7 +117,7 @@ class Executor(ast.NodeVisitor):
 						fqn
 					)
 					if not new_object_chain: return
-					
+
 					namedef.points_to.add(new_object_chain[-1])
 				
 				self.add_to_snapshot(namedef.points_to)
@@ -128,22 +128,13 @@ class Executor(ast.NodeVisitor):
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)
 		defkey = (self.context.module_meta.table, position)
-		namedef = self.resolver.create_name(
-			name,
-			defkey,
-			self.namespace,
-			self.symbol
-		)
 
 		class_table = ClassTable(name)
 		entering_symbol = class_table.add_definition(DefinitionTable(defkey))
 		self.symbol.merge_class(class_table)
-		
+
 		entering_namespace = TypeUtils.instantiate(Builtins.get_type("type"))
 		entering_namespace.origin = entering_symbol
-		namedef.points_to.add(entering_namespace)
-		self.add_to_snapshot(namedef.points_to)
-	
 		self.context.symbol_map[entering_symbol] = entering_namespace
 
 		Executor(
@@ -153,25 +144,36 @@ class Executor(ast.NodeVisitor):
 			ast.Module(class_tree.body, type_ignores=[]),
 			self.snapshot_log
 		).execute()
-	
+
+		nametable = NameTable(name)
+		namedef = nametable.add_definition(DefinitionTable(defkey))
+		self.namespace.merge_name(nametable)
+		self.symbol.merge_name(nametable)
+		namedef.points_to.add(entering_namespace)
+
+		self.add_to_snapshot(namedef.points_to)
+		
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef):
-		name = func_tree.name
 		position = (func_tree.lineno, func_tree.col_offset)
 		defkey = (self.context.module_meta.table, position)
-		namedef = self.resolver.create_name(
-			name,
-			defkey,
-			self.namespace,
-			self.symbol
-		)
+		name = func_tree.name
+
+		nametable = NameTable(name)
+		namedef = nametable.add_definition(DefinitionTable(defkey))
+		self.namespace.merge_name(nametable)
+		self.symbol.merge_name(nametable)
 
 		function_table = FunctionTable(name)
-		fdef = function_table.add_definition(DefinitionTable(defkey))
+		function_def = function_table.add_definition(DefinitionTable(defkey))
+		function_def.tree = func_tree
+		parameters = FunctionUtils.collect_parameters(func_tree, defkey[0])
+		for p in parameters.values(): function_def.merge_name(p)
 		self.symbol.merge_function(function_table)
 
-		func_type = TypeUtils.instantiate(Builtins.get_type("function"))
-		namedef.points_to.add(func_type)
-		func_type.origin = fdef
+		func_obj = TypeUtils.instantiate(Builtins.get_type("function"))
+		func_obj.origin = function_def
+		namedef.points_to.add(func_obj)
+
 		self.add_to_snapshot(namedef.points_to)
 	
 	def visit_AnnAssign(self, node):
@@ -179,8 +181,10 @@ class Executor(ast.NodeVisitor):
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):
+		resolved_value = self.resolver.resolve_value(node.value)
 		for target in node.targets:
-			self.resolver.resolve_target(target)
+			resolved_target = self.resolver.resolve_target(target)
+			self.resolver.process_assignment(resolved_target, resolved_value)
 	
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(

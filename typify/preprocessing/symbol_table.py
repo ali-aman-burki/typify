@@ -77,6 +77,9 @@ class Table:
 		with file_path.open("w", encoding="utf-8") as f:
 			json.dump(self.to_dict(), f, indent=4)
 
+	def override_name(self, nametable: NameTable):
+		self.names[nametable.key] = nametable
+
 	def get_enclosing_table(self):
 		result = self.parent
 		if isinstance(result, DefinitionTable):
@@ -225,6 +228,7 @@ class NameTable(Table):
 class InstanceTable(Table):
 	def __init__(self):
 		super().__init__("instance@$unresolved$")
+		self.store: list[InstanceTable] = []
 	
 class DefinitionTable(Table):
 	def __init__(self, defkey: tuple[Table, tuple[int, int]]):

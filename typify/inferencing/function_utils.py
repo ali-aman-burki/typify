@@ -5,12 +5,6 @@ from typify.preprocessing.symbol_table import NameTable, DefinitionTable, Module
 class FunctionUtils:
 
 	@staticmethod
-	def call_function(caller: InstanceTable, function_name, arguments: dict[str, NameTable], call_site: tuple[ModuleTable, tuple[int, int]]):
-		fdt = caller.origin.functions[function_name].get_latest_definition()
-		
-		pass
-
-	@staticmethod
 	def get_function_kind(fdef: ast.FunctionDef) -> str:
 		for decorator in fdef.decorator_list:
 			if isinstance(decorator, ast.Name):
