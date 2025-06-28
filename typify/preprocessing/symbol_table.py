@@ -25,7 +25,6 @@ class Table:
 		self.parent: Table = None
 
 		self.kind: str = ""
-		self.type_expr = None
 		self.points_to: set[InstanceTable] = set()
 		self.origin: DefinitionTable = None
 		self.tree: ast.FunctionDef = None		
@@ -33,7 +32,7 @@ class Table:
 	def to_dict(self):
 		data = {}
 		if self.points_to:
-			data["points_to"] = ", ".join([repr(pt.type_expr) for pt in self.points_to])
+			data["points_to"] = ", ".join([repr(pt.key) for pt in self.points_to])
 		if self.definitions:
 			data["definitions"] = {}
 			for m in self.definitions:

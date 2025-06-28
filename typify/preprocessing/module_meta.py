@@ -1,14 +1,8 @@
-from typify.preprocessing.symbol_table import (
-    ModuleTable, 
-    NameTable
-)
-
-from typify.inferencing.typeutils import TypeExpr
+from typify.preprocessing.symbol_table import ModuleTable
 
 from pathlib import Path
 
 import ast
-import json
 
 class ModuleMeta:
 
@@ -16,8 +10,6 @@ class ModuleMeta:
 		self.src = src
 		self.tree: ast.AST = None
 		self.table = ModuleTable(src.stem)
-		self.vslots: dict[tuple[int, int], tuple[str, TypeExpr]] = {}
-		self.fslots: dict[tuple[int, int], tuple[str, dict[str, NameTable], TypeExpr]] = {}
 		self.trust_annotations = trust_annotations
 
 	def load_tree(self):
@@ -41,18 +33,5 @@ class ModuleMeta:
 		self.table.export_to_json(output_path)
 
 	def export_typeslots(self, working_directory: Path, export_path: Path):
-		output_path = self.mirror_export_path(working_directory, export_path, suffix="types")
-		output_path.parent.mkdir(parents=True, exist_ok=True)
-
-		output = {
-			"vdefs": {
-				f"{k[0]}:{k[1]}": f"{v[0]}: {v[1]}" for k, v in self.vslots.items()
-			},
-			"fdefs": {
-				f"{k[0]}:{k[1]}": f"def {v[0]}(...) -> {v[2]}" for k, v in self.fslots.items()
-			}
-		}
-
-		with output_path.open("w", encoding="utf-8") as f:
-			json.dump(output, f, indent="\t")
+		pass
 
