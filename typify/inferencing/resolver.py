@@ -92,6 +92,9 @@ class Resolver:
 		elif isinstance(node, ast.List):
 			typeclass = Builtins.get_type("list")
 			instance = TypeUtils.instantiate(typeclass)
+			for elt in node.elts:
+				group = self.resolve_target(elt)
+				instance.store.append(group)
 			return {instance}
 		
 		elif isinstance(node, ast.Set):
@@ -102,6 +105,9 @@ class Resolver:
 		elif isinstance(node, ast.Tuple):
 			typeclass = Builtins.get_type("tuple")
 			instance = TypeUtils.instantiate(typeclass)
+			for elt in node.elts:
+				group = self.resolve_target(elt)
+				instance.store.append(group)
 			return {instance}
 		
 		elif isinstance(node, ast.Dict):

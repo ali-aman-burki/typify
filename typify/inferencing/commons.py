@@ -34,3 +34,21 @@ class Builtins:
 			return result
 		except Exception: 
 			return None
+
+class Typing:
+	
+	@staticmethod
+	def module() -> ModuleTable:
+		try:
+			result = RequiredLibs.preloaded["stdlib"].library_table.modules["typing"]
+			return result
+		except Exception:
+			return None
+	
+	@staticmethod
+	def get_type(type_name: str) -> DefinitionTable | None:
+		try: 
+			result = Typing.module().classes[type_name].get_latest_definition()
+			return result
+		except Exception: 
+			return None

@@ -177,7 +177,9 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(namedef.points_to)
 	
 	def visit_AnnAssign(self, node):
-		self.resolver.resolve_target(node.target)
+		resolved_value = self.resolver.resolve_value(node.value)
+		resolved_target = self.resolver.resolve_target(node.target)
+		self.resolver.process_assignment(resolved_target, resolved_value)
 		self.generic_visit(node)
 
 	def visit_Assign(self, node):

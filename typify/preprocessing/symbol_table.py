@@ -228,7 +228,9 @@ class NameTable(Table):
 class InstanceTable(Table):
 	def __init__(self):
 		super().__init__("instance@$unresolved$")
-		self.store: list[InstanceTable] = []
+		self.typedef: DefinitionTable = None
+		self.typevars: dict[InstanceTable, InstanceTable] = {}
+		self.store: list[set[InstanceTable]] = []
 	
 class DefinitionTable(Table):
 	def __init__(self, defkey: tuple[Table, tuple[int, int]]):
