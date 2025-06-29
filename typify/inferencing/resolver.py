@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import ast
 
-from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.typeutils import TypeUtils, TypeExpr
 from typify.preprocessing.symbol_table import (
 	Table,
 	NameTable,
@@ -165,10 +165,12 @@ class Resolver:
 				if node.attr in pt.names:
 					namedef = pt.names[node.attr].get_latest_definition()
 					results.update(namedef.points_to)
-			return results
+			return results if results else {TypeUtils.instantiate(Typing.get_type("Any"))}
 		else:
 			return {TypeUtils.instantiate(Typing.get_type("Any"))}
 	
+	#TODO: in the future, remove hardcoded logic for tuple and generalize it based on generics
+	#TODO: add support for starred unpacking
 	def process_assignment(
 			self, 
 			resolved_target: PackGroup, 
@@ -176,10 +178,16 @@ class Resolver:
 		):
 		targets: set[TargetEntry] = set()
 		for pt in resolved_value:
-			for group in resolved_target.groups:
+			for i in range(len(resolved_target.groups)):
+				group = resolved_target.groups[i]
 				if isinstance(group, PackGroup):
-					instances = TypeUtils.instantiate_from_type_expr(pt.type_expr.typeargs[0])
-					self.process_assignment(group, instances)
+					next_instances = TypeUtils.instantiate_from_type_expr(pt.type_expr.typeargs[0])
+					if pt.type_expr.typedef == Builtins.get_type("tuple"):
+						if len(pt.store) > i:
+							next_instances = pt.store[i]
+						elif len(pt.type_expr.typeargs) > i:
+							next_instances = TypeUtils.instantiate_from_type_expr(pt.type_expr.typeargs[i])
+					self.process_assignment(group, next_instances)
 				else:
 					for target_entry in group:
 						target_entry.definition.points_to.add(pt)
