@@ -3,12 +3,16 @@ import copy
 from collections import defaultdict
 
 from typify.inferencing.function_utils import FunctionUtils
-from typify.inferencing.typeutils import TypeUtils
 from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.resolver import Resolver
+from typify.inferencing.typeutils import (
+    TypeUtils, 
+    TypeExpr
+)
 from typify.inferencing.commons import (
 	Context,
-	Builtins
+	Builtins,
+	Typing
 )
 from typify.preprocessing.symbol_table import (
 	NameTable,
@@ -44,8 +48,8 @@ class Executor(ast.NodeVisitor):
 			counter = defaultdict(int)
 			labeled = set()
 			for pt in points_to:
-				counter[pt.key] += 1
-				label = f"{pt.key}#{counter[pt.key]}"
+				counter[pt.label()] += 1
+				label = f"{pt.label()}#{counter[pt.label()]}"
 				labeled.add(label)
 			result.append(labeled)
 		return result
@@ -68,7 +72,9 @@ class Executor(ast.NodeVisitor):
 				self.context.sysmodules, 
 				alias.name
 			)
-			if not object_chain: continue
+			if not object_chain:
+				namedef.points_to.add(TypeUtils.instantiate(Typing.get_type("Any")))
+				continue
 
 			namedef.points_to.add(object_chain[-1] if alias.asname else object_chain[0])
 			self.add_to_snapshot(namedef.points_to)
@@ -85,9 +91,8 @@ class Executor(ast.NodeVisitor):
 			node.module, node.level
 		)
 		
-		if not object_chain: return
-
 		if node.names[0].name == "*":
+			if not object_chain: return
 			result = Table.create_and_transfer_names(object_chain[-1], self.symbol, defkey)
 			Table.transfer_names(result, self.namespace)
 			for namedef in result.values():
@@ -98,7 +103,11 @@ class Executor(ast.NodeVisitor):
 				namedef = nametable.add_definition(DefinitionTable(defkey))
 				nametable = self.symbol.merge_name(nametable)
 				self.namespace.override_name(nametable)
-
+				
+				if not object_chain: 
+					namedef.points_to.add(TypeUtils.instantiate(Typing.get_type("Any")))
+					return
+				
 				if alias.name in object_chain[-1].names:
 					mname = object_chain[-1].names[alias.name]
 					mnamedef = mname.get_latest_definition()
@@ -133,7 +142,10 @@ class Executor(ast.NodeVisitor):
 		entering_symbol = class_table.add_definition(DefinitionTable(defkey))
 		self.symbol.merge_class(class_table)
 
-		entering_namespace = TypeUtils.instantiate(Builtins.get_type("type"))
+		entering_namespace = TypeUtils.instantiate(
+			Builtins.get_type("type"), 
+			[TypeExpr(entering_symbol)]
+		)
 		entering_namespace.origin = entering_symbol
 		self.context.symbol_map[entering_symbol] = entering_namespace
 
@@ -186,6 +198,7 @@ class Executor(ast.NodeVisitor):
 		resolved_value = self.resolver.resolve_value(node.value)
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
+			self.resolver.pretty_print_packgroup(resolved_target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
 	
 	def visit_AugAssign(self, node):

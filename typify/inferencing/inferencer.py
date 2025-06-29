@@ -2,10 +2,10 @@ from collections import deque, defaultdict
 
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.inferencing.commons import Builtins
-from typify.inferencing.typeutils import TypeUtils
-from typify.inferencing.executor import Context, Executor
 from typify.preprocessing.symbol_table import InstanceTable
+from typify.inferencing.commons import Builtins
+from typify.inferencing.typeutils import TypeUtils, TypeExpr
+from typify.inferencing.executor import Context, Executor
 
 class Inferencer:
 
@@ -62,10 +62,7 @@ class Inferencer:
 				snapshots[meta] = new_snapshot
 				pass_counts[meta.table.fqn] = 1
 				processed.append(meta)
-				TypeUtils.correct_instance_type(
-					sysmodules[meta.table.fqn],
-					Builtins.get_type("module")
-				)
+				sysmodules[meta.table.fqn].type_expr = TypeExpr(Builtins.get_type("module"))
 				continue
 
 			worklist: deque[ModuleMeta] = deque(sequence)
@@ -85,10 +82,7 @@ class Inferencer:
 							worklist.append(dependent)
 							in_worklist.add(dependent)
 
-				TypeUtils.correct_instance_type(
-					sysmodules[meta.table.fqn],
-					Builtins.get_type("module")
-				)
+				sysmodules[meta.table.fqn].type_expr = TypeExpr(Builtins.get_type("module"))
 				processed.append(meta)
 
 			for meta in sequence:

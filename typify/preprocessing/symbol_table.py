@@ -30,9 +30,11 @@ class Table:
 		self.tree: ast.FunctionDef = None		
 
 	def to_dict(self):
+		from typify.inferencing.typeutils import TypeUtils
+
 		data = {}
 		if self.points_to:
-			data["points_to"] = ", ".join([repr(pt.key) for pt in self.points_to])
+			data["type"] = ", ".join([pt.type_rep() for pt in self.points_to])
 		if self.definitions:
 			data["definitions"] = {}
 			for m in self.definitions:
@@ -226,10 +228,15 @@ class NameTable(Table):
 
 class InstanceTable(Table):
 	def __init__(self):
-		super().__init__("instance@$unresolved$")
-		self.typedef: DefinitionTable = None
-		self.typevars: dict[InstanceTable, InstanceTable] = {}
+		super().__init__("typify@instance")
+		self.type_expr = None
 		self.store: list[set[InstanceTable]] = []
+	
+	def label(self):
+		return f"instance@{repr(self.type_expr)}"
+	
+	def type_rep(self):
+		return repr(self.type_expr)
 	
 class DefinitionTable(Table):
 	def __init__(self, defkey: tuple[Table, tuple[int, int]]):

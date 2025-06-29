@@ -7,7 +7,61 @@ from typify.preprocessing.symbol_table import (
 )
 from typify.inferencing.commons import Typing
 
+class TypeExpr:
+
+	def __init__(self, typedef: DefinitionTable, typeargs: list[TypeExpr] = None):
+		self.typedef = typedef
+		self.typeargs = typeargs or []
+		self.typevars: dict[InstanceTable, TypeExpr] = {} #TODO: later, init based on typedef
+		TypeUtils.update_typevars(self.typevars, self.typeargs)
+
+	def __eq__(self, other: TypeExpr):
+		if not isinstance(other, TypeExpr):
+			return NotImplemented
+		if self.typedef != other.typedef or len(self.typeargs) != len(other.typeargs):
+			return False
+		return all(a == b for a, b in zip(self.typeargs, other.typeargs))
+
+	def __hash__(self):
+		return hash((self.typedef, tuple(self.typeargs)))
+
+	def __repr__(self):
+		fqn = self.typedef.parent.key if self.typedef else "$Unresolved$"
+		strs = []
+		for typeexpr in self.typevars.values():
+			strs.append(repr(typeexpr))
+		joined = ", ".join(strs)
+		joined = f"[{joined}]" if joined else joined
+		return fqn + f"{joined}"
+		
 class TypeUtils:
+
+	@staticmethod
+	def unify(typeargs: list[TypeExpr] = None) -> TypeExpr:
+		typeargs = typeargs or []
+		union_def = Typing.get_type("Union")
+
+		def flatten_recursive(
+				types: list[TypeExpr], 
+				seen: dict[TypeExpr, None]
+			) -> None:
+			for t in types:
+				if t.typedef == union_def:
+					flatten_recursive(t.typeargs, seen)
+				else:
+					seen[t] = None
+
+		seen: dict[TypeExpr, None] = {}
+		flatten_recursive(typeargs, seen)
+
+		unique = list(seen.keys())
+
+		if not unique:
+			return TypeExpr(Typing.get_type("Any"))
+		if len(unique) == 1:
+			return unique[0]
+
+		return TypeExpr(union_def, unique)
 
 	@staticmethod
 	def instantiate(
@@ -16,23 +70,8 @@ class TypeUtils:
 		) -> InstanceTable:
 
 		instance = InstanceTable()
-		TypeUtils.correct_instance_type(instance, typedef, typeargs)
+		instance.type_expr = TypeExpr(typedef, typeargs)
 		return instance
-
-	@staticmethod
-	def correct_instance_type(
-		instance: InstanceTable,
-		typedef: DefinitionTable, 
-		typeargs: list[InstanceTable] | None = None
-		):
-
-		typeargs = typeargs if typeargs else []
-		instance.typedef = typedef
-		#init typevars from typedef
-
-		TypeUtils.update_typevars(instance.typevars, typeargs) 
-		fqn = typedef.parent.fqn if typedef else "$unresolved$"
-		instance.key = f"instance@{fqn}"
 
 	@staticmethod
 	def update_typevars(
