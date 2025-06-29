@@ -198,7 +198,6 @@ class Executor(ast.NodeVisitor):
 		resolved_value = self.resolver.resolve_value(node.value)
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
-			self.resolver.pretty_print_packgroup(resolved_target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
 	
 	def visit_AugAssign(self, node):

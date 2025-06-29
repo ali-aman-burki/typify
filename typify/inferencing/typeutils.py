@@ -37,6 +37,16 @@ class TypeExpr:
 class TypeUtils:
 
 	@staticmethod
+	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> set[InstanceTable]:
+		result = set()
+		if unified_type_expr.typedef == Typing.get_type("Union"):
+			for typeexpr in unified_type_expr.typeargs:
+				result.add(TypeUtils.instantiate(typeexpr.typedef, typeexpr.typeargs))
+		else:
+			result.add(TypeUtils.instantiate(unified_type_expr.typedef, unified_type_expr.typeargs))
+		return result
+
+	@staticmethod
 	def unify(typeargs: list[TypeExpr] = None) -> TypeExpr:
 		typeargs = typeargs or []
 		union_def = Typing.get_type("Union")

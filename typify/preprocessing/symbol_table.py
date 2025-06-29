@@ -34,7 +34,7 @@ class Table:
 
 		data = {}
 		if self.points_to:
-			data["type"] = ", ".join([pt.type_rep() for pt in self.points_to])
+			data["type"] = repr(TypeUtils.unify([pt.type_expr for pt in self.points_to]))
 		if self.definitions:
 			data["definitions"] = {}
 			for m in self.definitions:
@@ -229,7 +229,8 @@ class NameTable(Table):
 class InstanceTable(Table):
 	def __init__(self):
 		super().__init__("typify@instance")
-		self.type_expr = None
+		from typify.inferencing.typeutils import TypeExpr
+		self.type_expr: TypeExpr = None
 		self.store: list[set[InstanceTable]] = []
 	
 	def label(self):

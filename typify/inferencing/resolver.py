@@ -137,7 +137,20 @@ class Resolver:
 		
 		elif isinstance(node, ast.Dict):
 			typeclass = Builtins.get_type("dict")
-			instance = TypeUtils.instantiate(typeclass)
+			keyargs = []
+			valueargs = []
+			for elt in node.keys:
+				resolved = self.resolve_value(elt)
+				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				keyargs.append(unified)
+			for elt in node.values:
+				resolved = self.resolve_value(elt)
+				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				valueargs.append(unified)
+			instance = TypeUtils.instantiate(
+				typeclass, 
+				[TypeUtils.unify(keyargs), TypeUtils.unify(valueargs)]
+			)
 			return {instance}
 		
 		elif isinstance(node, ast.Name):
@@ -161,14 +174,19 @@ class Resolver:
 			resolved_target: PackGroup, 
 			resolved_value: set[InstanceTable]
 		):
-		for group in resolved_target.groups:
-			if isinstance(group, PackGroup):
-				self.process_assignment(group, resolved_value)
-			else:
-				for item in group:
-					nametable = item.name
-					namedef = nametable.add_definition(item.definition)
-					namedef.points_to.update(resolved_value)
+		targets: set[TargetEntry] = set()
+		for pt in resolved_value:
+			for group in resolved_target.groups:
+				if isinstance(group, PackGroup):
+					instances = TypeUtils.instantiate_from_type_expr(pt.type_expr.typeargs[0])
+					self.process_assignment(group, instances)
+				else:
+					for target_entry in group:
+						target_entry.definition.points_to.add(pt)
+						targets.add(target_entry)
+		
+		for target in targets:
+			target.name.add_definition(target.definition)
 	
 	def pretty_print_packgroup(self, pg: PackGroup, indent: int = 0):
 		indent_str = "  " * indent
