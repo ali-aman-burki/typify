@@ -1,6 +1,32 @@
 import ast
 
-from typify.preprocessing.symbol_table import NameTable, DefinitionTable, ModuleTable, InstanceTable
+from typify.inferencing.resolver import Resolver
+from typify.preprocessing.symbol_table import (
+	NameTable, 
+	DefinitionTable, 
+	ModuleTable
+)
+from typify.inferencing.typeutils import (
+	TypeUtils,
+	TypeExpr
+)
+from typify.inferencing.commons import (
+	Typing, 
+	Builtins
+)
+
+from dataclasses import dataclass
+
+@dataclass
+class ParameterEntry:
+	name: str
+	nametable: NameTable
+	is_vararg: bool = False
+	is_kwarg: bool = False
+	is_kwonly: bool = False
+	is_posonly: bool = False
+
+	position_index: int = None
 
 class FunctionUtils:
 
@@ -16,39 +42,178 @@ class FunctionUtils:
 		return ""
 
 	@staticmethod
-	def collect_parameters(fdef: ast.FunctionDef, module_table: ModuleTable) -> dict[str, NameTable]:
+	def run_function():
+		pass
+	
+	@staticmethod
+	def map_call_arguments(
+		call_node: ast.Call,
+		parameters: dict[str, ParameterEntry],
+		resolver: Resolver,
+		module_table: ModuleTable
+	) -> dict[str, NameTable]:
+
+		resolved_args: dict[str, NameTable] = {}
+		vararg_param = next((p for p in parameters.values() if p.is_vararg), None)
+
+		positional_param_entries = [
+			p for p in parameters.values()
+			if not (p.is_vararg or p.is_kwarg or p.is_kwonly)
+			and p.name not in {kw.arg for kw in call_node.keywords if kw.arg is not None}
+		]
+
+		for i, arg_node in enumerate(call_node.args[:len(positional_param_entries)]):
+			param_entry = positional_param_entries[i]
+			position = (arg_node.lineno, arg_node.col_offset)
+			defkey = (module_table, position)
+			new_namedef = DefinitionTable(defkey)
+
+			for instance in resolver.resolve_value(arg_node):
+				new_namedef.points_to.add(instance)
+
+			name_copy = NameTable(param_entry.name)
+			name_copy.add_definition(new_namedef)
+			resolved_args[param_entry.name] = name_copy
+		
+		extra_args = call_node.args[len(positional_param_entries):]
+
+		if vararg_param and extra_args:
+			store = []
+			typeargs = []
+			position = (extra_args[0].lineno, extra_args[0].col_offset)
+			defkey = (module_table, position)
+			for elt in extra_args:
+				resolved = resolver.resolve_value(elt)
+				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				typeargs.append(unified)
+				store.append(resolved)
+				
+			instance = TypeUtils.instantiate(Builtins.get_type("tuple"), typeargs)
+			instance.store = store
+			
+			new_namedef = DefinitionTable(defkey)
+			new_namedef.points_to.add(instance)
+
+			name_copy = NameTable(vararg_param.name)
+			name_copy.add_definition(new_namedef)
+			resolved_args[vararg_param.name] = name_copy
+
+		# Keyword arguments
+		for kw in call_node.keywords:
+			if kw.arg is None:
+				continue
+			if kw.arg in parameters:
+				param_entry = parameters[kw.arg]
+				position = (kw.value.lineno, kw.value.col_offset)
+				defkey = (module_table, position)
+				new_namedef = DefinitionTable(defkey)
+
+				for instance in resolver.resolve_value(kw.value):
+					new_namedef.points_to.add(instance)
+
+				name_copy = NameTable(kw.arg)
+				name_copy.add_definition(new_namedef)
+				resolved_args[kw.arg] = name_copy
+
+		# Retain original param entries if not overridden
+		for pname, param_entry in parameters.items():
+			if pname not in resolved_args:
+				resolved_args[pname] = param_entry.nametable
+
+		return resolved_args
+
+	#TODO: add support *varargs and **kwargs
+	@staticmethod
+	def collect_parameters(
+		fdef: ast.FunctionDef,
+		module_table: ModuleTable,
+		resolver: Resolver
+	) -> dict[str, ParameterEntry]:
+
 		args_node = fdef.args
-		parameters: dict[str, NameTable] = {}
+		parameters: dict[str, ParameterEntry] = {}
+		position_counter = 0
 
-		for arg in args_node.posonlyargs:
-			var = parameters[arg.arg] = NameTable(arg.arg)
+		def register_arg(
+			arg: "ast.arg",
+			default_value: ast.expr = None,
+			*,
+			is_posonly=False,
+			is_kwonly=False
+		) -> ParameterEntry:
+			nonlocal position_counter
+
+			name = arg.arg
+			nametable = NameTable(name)
 			position = (arg.lineno, arg.col_offset)
 			defkey = (module_table, position)
-			var.add_definition(DefinitionTable(defkey))
+			namedef = nametable.add_definition(DefinitionTable(defkey))
 
-		for arg in args_node.args:
-			var = parameters[arg.arg] = NameTable(arg.arg)
-			position = (arg.lineno, arg.col_offset)
-			defkey = (module_table, position)
-			var.add_definition(DefinitionTable(defkey))
+			if default_value is not None:
+				for instance in resolver.resolve_value(default_value):
+					namedef.points_to.add(instance)
 
+			entry = ParameterEntry(
+				name=name,
+				nametable=nametable,
+				is_posonly=is_posonly,
+				is_kwonly=is_kwonly,
+				position_index=position_counter
+			)
+			position_counter += 1
+			parameters[name] = entry
+			return entry
+
+		# Positional-only args
+		posonly_defaults = [None] * (len(args_node.posonlyargs) - len(args_node.defaults)) + args_node.defaults[:len(args_node.posonlyargs)]
+		for arg, default in zip(args_node.posonlyargs, posonly_defaults):
+			register_arg(arg, default, is_posonly=True)
+
+		# Regular args
+		regular_defaults = args_node.defaults[-len(args_node.args):] if args_node.defaults else []
+		regular_defaults = [None] * (len(args_node.args) - len(regular_defaults)) + regular_defaults
+		for arg, default in zip(args_node.args, regular_defaults):
+			register_arg(arg, default)
+
+		# *args
 		if args_node.vararg:
-			var = parameters[args_node.vararg.arg] = NameTable(args_node.vararg.arg)
+			name = args_node.vararg.arg
+			nametable = NameTable(name)
 			position = (args_node.vararg.lineno, args_node.vararg.col_offset)
 			defkey = (module_table, position)
-			var.add_definition(DefinitionTable(defkey))
+			namedef = nametable.add_definition(DefinitionTable(defkey))
+			tuple_instance = TypeUtils.instantiate(Builtins.get_type("tuple"))
+			namedef.points_to.add(tuple_instance)
+			parameters[name] = ParameterEntry(
+				name=name,
+				nametable=nametable,
+				is_vararg=True,
+				position_index=position_counter
+			)
+			position_counter += 1
 
-		for arg in args_node.kwonlyargs:
-			var = parameters[arg.arg] = NameTable(arg.arg)
-			position = (arg.lineno, arg.col_offset)
-			defkey = (module_table, position)
-			var.add_definition(DefinitionTable(defkey))
+		# Keyword-only args
+		for arg, default in zip(args_node.kwonlyargs, args_node.kw_defaults):
+			register_arg(arg, default, is_kwonly=True)
 
+		# **kwargs
 		if args_node.kwarg:
-			var = parameters[args_node.kwarg.arg] = NameTable(args_node.kwarg.arg)
+			name = args_node.kwarg.arg
+			nametable = NameTable(name)
 			position = (args_node.kwarg.lineno, args_node.kwarg.col_offset)
 			defkey = (module_table, position)
-			var.add_definition(DefinitionTable(defkey))
+			namedef = nametable.add_definition(DefinitionTable(defkey))
+			dict_expr = TypeExpr(Builtins.get_type("dict"), [TypeExpr(Builtins.get_type("str")), TypeExpr(Typing.get_type("Any"))])
+			dict_instance = TypeUtils.instantiate_from_type_expr(dict_expr)
+			namedef.points_to.update(dict_instance)
+			parameters[name] = ParameterEntry(
+				name=name,
+				nametable=nametable,
+				is_kwarg=True
+			)
 
 		return parameters
-	
+
+
+
+		

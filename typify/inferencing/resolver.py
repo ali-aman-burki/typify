@@ -3,10 +3,11 @@ from dataclasses import dataclass
 
 import ast
 
-from typify.inferencing.typeutils import TypeUtils, TypeExpr
+from typify.inferencing.typeutils import TypeUtils
 from typify.preprocessing.symbol_table import (
 	Table,
 	NameTable,
+	ClassTable,
 	PackageTable,
 	LibraryTable,
 	InstanceTable,
@@ -39,19 +40,20 @@ class Resolver:
 		self.symbol = symbol
 		self.namespace = namespace
 
-	def lookup_name(self, name: str) -> NameTable:
+	def LEGB_lookup(self, name: str) -> NameTable:
 		current_symbol = self.symbol
-		
+
 		while not isinstance(current_symbol, (LibraryTable, PackageTable)):
-			if name in current_symbol.names: 
-				return current_symbol.names[name]
-			else:
+			if isinstance(current_symbol, ClassTable):
 				current_symbol = current_symbol.get_enclosing_table()
-		
-		if name in Builtins.module().names:
-			return Builtins.module().names[name]
-		
-		return None
+				continue
+
+			result = current_symbol.names.get(name)
+			if result: return result
+
+			current_symbol = current_symbol.get_enclosing_table()
+
+		return Builtins.module().names.get(name, None)
 
 	def resolve_target(self, expr: ast.expr) -> PackGroup:
 		position = (expr.lineno, expr.col_offset)
@@ -90,7 +92,8 @@ class Resolver:
 		else:
 			return PackGroup(groups=[], starred=False)
 
-			
+	
+	#TODO: need support for literal types i.e Literal[...]
 	def resolve_value(self, node: ast.Expr) -> set[InstanceTable]:
 		if isinstance(node, ast.Constant):
 			typeclass = Builtins.get_type(type(node.value).__name__)
@@ -154,7 +157,7 @@ class Resolver:
 			return {instance}
 		
 		elif isinstance(node, ast.Name):
-			name = self.lookup_name(node.id)
+			name = self.LEGB_lookup(node.id)
 			if name: return name.get_latest_definition().points_to
 			return {TypeUtils.instantiate(Typing.get_type("Any"))}
 		

@@ -178,8 +178,9 @@ class Executor(ast.NodeVisitor):
 		function_table = FunctionTable(name)
 		function_def = function_table.add_definition(DefinitionTable(defkey))
 		function_def.tree = func_tree
-		parameters = FunctionUtils.collect_parameters(func_tree, defkey[0])
-		for p in parameters.values(): function_def.merge_name(p)
+		parameters = FunctionUtils.collect_parameters(func_tree, defkey[0], self.resolver)
+		for p in parameters.values(): 
+			function_def.merge_name(p.nametable)
 		self.symbol.merge_function(function_table)
 
 		func_obj = TypeUtils.instantiate(Builtins.get_type("function"))
@@ -188,17 +189,31 @@ class Executor(ast.NodeVisitor):
 
 		self.add_to_snapshot(namedef.points_to)
 	
+	def visit_Call(self, node):
+		func_objs = self.resolver.resolve_value(node.func)
+		for func in func_objs:
+			func_tree = func.origin.tree
+			param_map = FunctionUtils.collect_parameters(func_tree, self.context.module_meta.table, self.resolver)
+			argmap = FunctionUtils.map_call_arguments(node, param_map, self.resolver, self.context.module_meta.table)
+			self.pretty_print_argmap(argmap)
+
+	def pretty_print_argmap(self, argmap: dict[str, NameTable]):
+		print("[Call Argument Map]")
+		for name, nametable in argmap.items():
+			print(f"  {name}:")
+			defn = nametable.get_latest_definition()
+			pts = ", ".join(repr(pt.type_expr) for pt in defn.points_to)
+			print(f"    ↳ Defined at line {defn.position[0]} → {pts or '$unresolved$'}")
+
 	def visit_AnnAssign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
-		self.generic_visit(node)
 
 	def visit_Assign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
-			self.resolver.pretty_print_packgroup(resolved_target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
 	
 	def visit_AugAssign(self, node):
