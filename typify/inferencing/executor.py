@@ -192,10 +192,12 @@ class Executor(ast.NodeVisitor):
 	def visit_Call(self, node):
 		func_objs = self.resolver.resolve_value(node.func)
 		for func in func_objs:
-			func_tree = func.origin.tree
-			param_map = FunctionUtils.collect_parameters(func_tree, self.context.module_meta.table, self.resolver)
-			argmap = FunctionUtils.map_call_arguments(node, param_map, self.resolver, self.context.module_meta.table)
-			self.pretty_print_argmap(argmap)
+			if func.type_expr.typedef != Typing.get_type("Any"):
+				func_tree = func.origin.tree
+				print(ast.unparse(node))
+				param_map = FunctionUtils.collect_parameters(func_tree, self.context.module_meta.table, self.resolver)
+				argmap = FunctionUtils.map_call_arguments(node, param_map, self.resolver, self.context.module_meta.table)
+				self.pretty_print_argmap(argmap)
 
 	def pretty_print_argmap(self, argmap: dict[str, NameTable]):
 		print("[Call Argument Map]")
