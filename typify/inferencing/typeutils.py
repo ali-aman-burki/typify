@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import ast
 
 from typify.preprocessing.symbol_table import (
 	InstanceTable, 
@@ -35,6 +35,13 @@ class TypeExpr:
 		return fqn + f"{joined}"
 		
 class TypeUtils:
+
+	@staticmethod
+	def type_expr_from_instances(instances: set[InstanceTable]):
+		type_exprs = []
+		for instance in instances:
+			type_exprs.append(instance.type_expr)
+		return TypeUtils.unify(type_exprs)
 
 	@staticmethod
 	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> set[InstanceTable]:
@@ -101,3 +108,22 @@ class TypeUtils:
 	@staticmethod
 	def get_safe(lst, index, default=None):
 		return lst[index] if 0 <= index < len(lst) else default
+	
+	@staticmethod
+	def has_complete_return(stmts: list[ast.stmt]) -> bool:
+		for stmt in stmts:
+			if isinstance(stmt, ast.Return): return True
+			elif isinstance(stmt, ast.If):
+				then = TypeUtils.has_complete_return(stmt.body)
+				orelse = TypeUtils.has_complete_return(stmt.orelse)
+				if then and orelse: return True
+			elif isinstance(stmt, (ast.For, ast.While)): continue
+			elif isinstance(stmt, ast.Try):
+				blocks = [stmt.body, stmt.orelse, stmt.finalbody] + [h.body for h in stmt.handlers]
+				if all(TypeUtils.has_complete_return(b) for b in blocks if b): return True
+			elif isinstance(stmt, ast.With):
+				if TypeUtils.has_complete_return(stmt.body): return True
+			elif isinstance(stmt, ast.Match):
+				if all(TypeUtils.has_complete_return(case.body) for case in stmt.cases): return True
+			elif isinstance(stmt, (ast.FunctionDef, ast.ClassDef)): continue
+		return False

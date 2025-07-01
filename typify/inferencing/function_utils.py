@@ -4,7 +4,9 @@ from typify.inferencing.resolver import Resolver
 from typify.preprocessing.symbol_table import (
 	NameTable, 
 	DefinitionTable, 
-	ModuleTable
+	ModuleTable,
+	CallFrameTable,
+	InstanceTable
 )
 from typify.inferencing.typeutils import (
 	TypeUtils,
@@ -12,7 +14,8 @@ from typify.inferencing.typeutils import (
 )
 from typify.inferencing.commons import (
 	Typing, 
-	Builtins
+	Builtins,
+	Context
 )
 
 from dataclasses import dataclass
@@ -25,8 +28,6 @@ class ParameterEntry:
 	is_kwarg: bool = False
 	is_kwonly: bool = False
 	is_posonly: bool = False
-
-	position_index: int = None
 
 class FunctionUtils:
 
@@ -42,15 +43,58 @@ class FunctionUtils:
 		return ""
 
 	@staticmethod
-	def run_function():
-		pass
+	def run_function(
+		call_site_context: Context, 
+		arguments: dict[str, NameTable], 
+		function_table: DefinitionTable
+	) -> set[InstanceTable]:
+		
+		from typify.inferencing.executor import Executor
+		
+		tree = function_table.tree
+		call_frame = CallFrameTable(f"frame@{function_table.parent.fqn}")
+		call_frame.parent = function_table.parent
+		for arg in arguments.values():
+			call_frame.set_name(arg)
+		
+		mod = call_frame.get_enclosing_module() 
+		
+		call_frame_context = Context(
+			call_site_context.meta_map[mod], 
+			call_site_context.libs, 
+			call_site_context.sysmodules,
+			call_site_context.symbol_map, 
+			call_site_context.meta_map
+		)
+
+		executor = Executor(
+			call_frame_context, 
+			call_frame,
+			call_frame, 
+			ast.Module(tree.body, type_ignores=[]), 
+			[]
+		)
+
+		returns = executor.execute()
+
+		for name in call_frame.names:
+			if name in function_table.names:
+				for namedef in call_frame.names[name].definitions.values():
+					function_table.names[name].merge_definition(namedef)
+			else:
+				nametable = function_table.set_name(NameTable(name))
+				for namedef in call_frame.names[name].definitions.values():
+					newnamedef = nametable.add_definition(DefinitionTable((namedef.module, namedef.position)))
+					newnamedef.points_to = namedef.points_to.copy()
+
+		function_table.points_to.update(returns)
+		return returns
 	
 	@staticmethod
 	def map_call_arguments(
 		call_node: ast.Call,
 		parameters: dict[str, ParameterEntry],
 		resolver: Resolver,
-		module_table: ModuleTable
 	) -> dict[str, NameTable]:
 
 		resolved_args: dict[str, NameTable] = {}
@@ -64,8 +108,10 @@ class FunctionUtils:
 
 		for i, arg_node in enumerate(call_node.args[:len(positional_param_entries)]):
 			param_entry = positional_param_entries[i]
-			position = (arg_node.lineno, arg_node.col_offset)
-			defkey = (module_table, position)
+			module = param_entry.nametable.get_latest_definition().module
+			position = param_entry.nametable.get_latest_definition().position
+			defkey = (module, position)
+
 			new_namedef = DefinitionTable(defkey)
 
 			for instance in resolver.resolve_value(arg_node):
@@ -74,23 +120,24 @@ class FunctionUtils:
 			name_copy = NameTable(param_entry.name)
 			name_copy.add_definition(new_namedef)
 			resolved_args[param_entry.name] = name_copy
-		
+
 		extra_args = call_node.args[len(positional_param_entries):]
 
 		if vararg_param and extra_args:
 			store = []
 			typeargs = []
-			position = (extra_args[0].lineno, extra_args[0].col_offset)
-			defkey = (module_table, position)
+			module = param_entry.nametable.get_latest_definition().module
+			position = param_entry.nametable.get_latest_definition().position
+			defkey = (module, position)
 			for elt in extra_args:
 				resolved = resolver.resolve_value(elt)
 				unified = TypeUtils.unify([r.type_expr for r in resolved])
 				typeargs.append(unified)
 				store.append(resolved)
-				
+
 			instance = TypeUtils.instantiate(Builtins.get_type("tuple"), typeargs)
 			instance.store = store
-			
+
 			new_namedef = DefinitionTable(defkey)
 			new_namedef.points_to.add(instance)
 
@@ -104,8 +151,9 @@ class FunctionUtils:
 				continue
 			if kw.arg in parameters:
 				param_entry = parameters[kw.arg]
-				position = (kw.value.lineno, kw.value.col_offset)
-				defkey = (module_table, position)
+				module = param_entry.nametable.get_latest_definition().module
+				position = param_entry.nametable.get_latest_definition().position
+				defkey = (module, position)
 				new_namedef = DefinitionTable(defkey)
 
 				for instance in resolver.resolve_value(kw.value):
@@ -122,6 +170,7 @@ class FunctionUtils:
 
 		return resolved_args
 
+
 	#TODO: add support *varargs and **kwargs
 	@staticmethod
 	def collect_parameters(
@@ -132,17 +181,14 @@ class FunctionUtils:
 
 		args_node = fdef.args
 		parameters: dict[str, ParameterEntry] = {}
-		position_counter = 0
 
 		def register_arg(
-			arg: "ast.arg",
+			arg: ast.arg,
 			default_value: ast.expr = None,
 			*,
 			is_posonly=False,
 			is_kwonly=False
 		) -> ParameterEntry:
-			nonlocal position_counter
-
 			name = arg.arg
 			nametable = NameTable(name)
 			position = (arg.lineno, arg.col_offset)
@@ -158,9 +204,7 @@ class FunctionUtils:
 				nametable=nametable,
 				is_posonly=is_posonly,
 				is_kwonly=is_kwonly,
-				position_index=position_counter
 			)
-			position_counter += 1
 			parameters[name] = entry
 			return entry
 
@@ -188,9 +232,7 @@ class FunctionUtils:
 				name=name,
 				nametable=nametable,
 				is_vararg=True,
-				position_index=position_counter
 			)
-			position_counter += 1
 
 		# Keyword-only args
 		for arg, default in zip(args_node.kwonlyargs, args_node.kw_defaults):

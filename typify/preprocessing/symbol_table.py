@@ -12,14 +12,14 @@ class Table:
 		self.classes: dict[str, Table] = {}
 		self.functions: dict[str, Table] = {}
 		self.names: dict[str, Table] = {}
-		self.definitions: dict[Table, dict[str, DefinitionTable]] = {}
+		self.definitions: dict[str, DefinitionTable] = {}
 		self.instances: list[Table] = []
 		self.path_chain: list[Table] = []
 		self.fqn = ""
 		self.trust_annotations = False
 
 		self.bases: list = []
-		self.params: list = []
+		self.parameters = {}
 		self.globals: set[ast.AST] = set()
 		self.nonlocals: set[ast.AST] = set()
 		self.parent: Table = None
@@ -33,14 +33,8 @@ class Table:
 		from typify.inferencing.typeutils import TypeUtils
 
 		data = {}
-		if self.points_to:
-			data["type"] = repr(TypeUtils.unify([pt.type_expr for pt in self.points_to]))
-		if self.definitions:
-			data["definitions"] = {}
-			for m in self.definitions:
-				subdict = self.definitions[m]
-				for k, v in subdict.items():
-					data["definitions"][k] = v.to_dict()
+		if self.points_to: data["type"] = repr(TypeUtils.unify([pt.type_expr for pt in self.points_to]))
+		if self.definitions: data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
 		if self.globals: data["globals"] = list(self.globals)
 		if self.packages: data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}
 		if self.modules: data["modules"] = {key: value.to_dict() for key, value in self.modules.items()}
@@ -99,10 +93,9 @@ class Table:
 			result = result.get_enclosing_table()
 		return result
 
-	def get_latest_definition(self) -> Table:
+	def get_latest_definition(self) -> Table | DefinitionTable:
 		if not self.definitions: return self
-		last_module_dict = next(reversed(self.definitions.values()))
-		return next(reversed(last_module_dict.values()))
+		return next(reversed(self.definitions.values()))
 
 	def register_fqn(self, fqn_map=None):
 		parent = self.get_enclosing_table()
@@ -144,43 +137,45 @@ class Table:
 
 	def merge_class(self, class_table: ClassTable) -> ClassTable:
 		if class_table.key in self.classes:
-			for topdict in class_table.definitions.values():
-				for d in topdict.values():
-					self.classes[class_table.key].add_definition(d)
-					d.parent = self.classes[class_table.key]
+			for d in class_table.definitions.values():
+				self.classes[class_table.key].add_definition(d)
+				d.parent = self.classes[class_table.key]
 			return self.classes[class_table.key]
 		else:
 			return self.set_class(class_table)
 	
 	def merge_function(self, function_table: FunctionTable) -> FunctionTable:
 		if function_table.key in self.functions:
-			for topdict in function_table.definitions.values():
-				for d in topdict.values():
-					self.functions[function_table.key].add_definition(d)
-					d.parent = self.functions[function_table.key]
+			for d in function_table.definitions.values():
+				self.functions[function_table.key].add_definition(d)
+				d.parent = self.functions[function_table.key]
 			return self.functions[function_table.key]
 		else:
 			return self.set_function(function_table)
 
-	def merge_name(self, name_table: NameTable) -> NameTable:
+	def merge_name(self, name_table: NameTable, merge_def=False) -> NameTable:
 		if name_table.key in self.names:
-			for topdict in name_table.definitions.values():
-				for d in topdict.values():
-					self.names[name_table.key].add_definition(d)
-					d.parent = self.names[name_table.key]
+			for d in name_table.definitions.values():
+				if merge_def: self.names[name_table.key].merge_definition(d)
+				else: self.names[name_table.key].add_definition(d)
+				d.parent = self.names[name_table.key]
 			return self.names[name_table.key]
 		else:
 			return self.set_name(name_table)
 
 	def add_definition(self, definition_table: DefinitionTable) -> DefinitionTable:
-		if definition_table.module not in self.definitions:
-			self.definitions[definition_table.module] = {}
-
-		self.definitions[definition_table.module][definition_table.key] = definition_table
+		self.definitions[definition_table.key] = definition_table
 		definition_table.parent = self
 		definition_table.fqn = self.fqn
 		return definition_table
 
+	def merge_definition(self, definition_table: DefinitionTable) -> DefinitionTable:
+		if definition_table.key in self.definitions:
+			self.definitions[definition_table.key].points_to.update(definition_table.points_to)
+			return self.definitions[definition_table.key]
+		else:
+			return self.add_definition(definition_table)
+			
 	def lookup_definition(self, defkey: tuple[ModuleTable, tuple[int, int]]) -> DefinitionTable:
 		mtable, (line, col) = defkey
 		if mtable in self.definitions:
@@ -188,19 +183,6 @@ class Table:
 				if defn.position == (line, col):
 					return defn
 		return None
-
-	def order_definitions(self, processed_modules: list[ModuleTable]) -> dict[ModuleTable, dict[str, DefinitionTable]]:
-		ordered_definitions = {}
-	
-		for mtable in processed_modules:
-			if mtable in self.definitions:
-				ordered_subdict = dict(
-					sorted(self.definitions[mtable].items(), key=lambda item: item[1].position)
-				)
-				ordered_definitions[mtable] = ordered_subdict
-
-		self.definitions = ordered_definitions
-		return self.definitions
 	
 class LibraryTable(Table):
 	def __init__(self, key):
@@ -226,6 +208,10 @@ class NameTable(Table):
 	def __init__(self, key):
 		super().__init__(key)
 
+class CallFrameTable(Table):
+	def __init__(self, key):
+		super().__init__(key)
+
 class InstanceTable(Table):
 	def __init__(self):
 		super().__init__("typify@instance")
@@ -238,6 +224,9 @@ class InstanceTable(Table):
 	
 	def type_rep(self):
 		return repr(self.type_expr)
+	
+	def __repr__(self):
+		return self.label()
 	
 class DefinitionTable(Table):
 	def __init__(self, defkey: tuple[Table, tuple[int, int]]):

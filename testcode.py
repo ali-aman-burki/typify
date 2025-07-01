@@ -1,37 +1,143 @@
-import tempfile
-from pathlib import Path
-from typify.preprocessing.library_meta import LibraryMeta
+import ast
+from typify.inferencing.typeutils import TypeUtils
 
-def write(p: Path, content=""):
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(content)
+def test_has_complete_return():
+    # Case 1: Flat unconditional return
+    src = "def f():\n    return 42"
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == True, "Case 1 failed"
 
-with tempfile.TemporaryDirectory() as tempdir:
-    temp = Path(tempdir)
+    # Case 2: If-else both return
+    src = """
+def f():
+    if cond:
+        return 1
+    else:
+        return 2
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == True, "Case 2 failed"
 
-    # Test structure
-    # /lib/
-    # ├── __init__.py
-    # ├── py.typed
-    # ├── foo.py
-    # ├── bar.pyi
-    # └── sub/
-    #     ├── __init__.py
-    #     ├── sub1.py
-    #     └── sub2.pyi
-    lib_dir = temp / "lib"
-    write(lib_dir / "__init__.py")
-    write(lib_dir / "py.typed")
-    write(lib_dir / "foo.py")
-    write(lib_dir / "bar.pyi")
+    # Case 3: If without else
+    src = """
+def f():
+    if cond:
+        return 1
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == False, "Case 3 failed"
 
-    sub = lib_dir / "sub"
-    write(sub / "__init__.py")
-    write(sub / "sub1.py")
-    write(sub / "sub2.pyi")
+    # Case 4: Nested if-else all branches return
+    src = """
+def f():
+    if x:
+        if y:
+            return 1
+        else:
+            return 2
+    else:
+        return 3
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == True, "Case 4 failed"
 
-    lib = LibraryMeta(lib_dir)
+    # Case 5: Match with all arms returning
+    src = """
+def f():
+    match something:
+        case 1:
+            return "one"
+        case 2:
+            return "two"
+        case _:
+            return "fallback"
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == True, "Case 5 failed"
 
-    print("\n[MODULE META FLAGS]")
-    for meta in lib.meta_map.values():
-        print(f"{meta.src_path.relative_to(temp)} | is_stub: {meta.is_stub:<5} | trust_annotations: {meta.trust_annotations}")
+    # Case 6: Match with a missing return
+    src = """
+def f():
+    match something:
+        case 1:
+            return "one"
+        case _:
+            x = 123
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == False, "Case 6 failed"
+
+    # Case 7: Try-finally with all paths returning
+    src = """
+def f():
+    try:
+        return 1
+    except:
+        return 2
+    else:
+        return 3
+    finally:
+        return 4
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == True, "Case 7 failed"
+
+    # Case 8: While loop with return (not guaranteed to run)
+    src = """
+def f():
+    while x:
+        return True
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == False, "Case 8 failed"
+
+    # Case 9: Deep nesting with missing else
+    src = """
+def f():
+    if a:
+        if b:
+            return 1
+        # missing else here
+    else:
+        return 2
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == False, "Case 9 failed"
+
+    # Case 10: Top-level if else, but nested one missing
+    src = """
+def f():
+    if a:
+        if b:
+            return 1
+        else:
+            x = 2
+    else:
+        return 3
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == False, "Case 10 failed"
+
+    # Case 11: All branches and sub-branches return
+    src = """
+def f():
+    if x:
+        if y:
+            return 1
+        else:
+            return 2
+    elif z:
+        return 3
+    else:
+        if w:
+            return 4
+        else:
+            return 5
+"""
+    body = ast.parse(src).body[0].body
+    assert TypeUtils.has_complete_return(body) == True, "Case 11 failed"
+
+    print("✅ All tests passed for has_complete_return")
+
+# Run the test suite
+test_has_complete_return()

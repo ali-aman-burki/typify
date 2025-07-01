@@ -12,7 +12,8 @@ from typify.inferencing.typeutils import (
 from typify.inferencing.commons import (
 	Context,
 	Builtins,
-	Typing
+	Typing,
+	ConstantObjects
 )
 from typify.preprocessing.symbol_table import (
 	NameTable,
@@ -20,7 +21,8 @@ from typify.preprocessing.symbol_table import (
 	DefinitionTable,
 	Table,
 	ClassTable,
-	FunctionTable
+	FunctionTable,
+	CallFrameTable
 )
 
 class Executor(ast.NodeVisitor):
@@ -37,10 +39,17 @@ class Executor(ast.NodeVisitor):
 		self.namespace = namespace
 		self.tree = tree
 		self.snapshot_log = snapshot_log if snapshot_log else []
+		self.returns: set[InstanceTable] = set()
 
 		self.resolver = Resolver(self.context, self.symbol, self.namespace)
 
-	def execute(self): self.visit(self.tree)
+	def execute(self): 
+		self.visit(self.tree)
+		if isinstance(self.namespace, CallFrameTable):
+			if not TypeUtils.has_complete_return(self.tree.body):
+				self.returns.add(ConstantObjects.get("NoneType"))
+			print(self.returns)
+		return self.returns
 
 	def snapshot(self): 
 		result = []
@@ -56,6 +65,10 @@ class Executor(ast.NodeVisitor):
 
 	def add_to_snapshot(self, points_to: set[InstanceTable]):
 		self.snapshot_log.append(points_to.copy())
+
+	def visit_Return(self, node):
+		resolved = self.resolver.resolve_value(node.value)
+		self.returns.update(resolved)
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
@@ -178,9 +191,7 @@ class Executor(ast.NodeVisitor):
 		function_table = FunctionTable(name)
 		function_def = function_table.add_definition(DefinitionTable(defkey))
 		function_def.tree = func_tree
-		parameters = FunctionUtils.collect_parameters(func_tree, defkey[0], self.resolver)
-		for p in parameters.values(): 
-			function_def.merge_name(p.nametable)
+		function_def.parameters = FunctionUtils.collect_parameters(func_tree, defkey[0], self.resolver)
 		self.symbol.merge_function(function_table)
 
 		func_obj = TypeUtils.instantiate(Builtins.get_type("function"))
@@ -190,22 +201,15 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(namedef.points_to)
 	
 	def visit_Call(self, node):
-		func_objs = self.resolver.resolve_value(node.func)
-		for func in func_objs:
-			if func.type_expr.typedef != Typing.get_type("Any"):
-				func_tree = func.origin.tree
-				print(ast.unparse(node))
-				param_map = FunctionUtils.collect_parameters(func_tree, self.context.module_meta.table, self.resolver)
-				argmap = FunctionUtils.map_call_arguments(node, param_map, self.resolver, self.context.module_meta.table)
-				self.pretty_print_argmap(argmap)
+		self.resolver.resolve_value(node)
 
 	def pretty_print_argmap(self, argmap: dict[str, NameTable]):
 		print("[Call Argument Map]")
 		for name, nametable in argmap.items():
 			print(f"  {name}:")
 			defn = nametable.get_latest_definition()
-			pts = ", ".join(repr(pt.type_expr) for pt in defn.points_to)
-			print(f"    ↳ Defined at line {defn.position[0]} → {pts or '$unresolved$'}")
+			t = repr(TypeUtils.unify([pt.type_expr for pt in defn.points_to]))
+			print(f"    ↳ Defined at line {defn.position[0]} → {t}")
 
 	def visit_AnnAssign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)

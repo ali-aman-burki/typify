@@ -1,9 +1,11 @@
-from __future__ import annotations
-from dataclasses import dataclass
 
 import ast
 
 from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.unpacking_utils import (
+	TargetEntry,
+	PackGroup
+)
 from typify.preprocessing.symbol_table import (
 	Table,
 	NameTable,
@@ -16,18 +18,9 @@ from typify.preprocessing.symbol_table import (
 from typify.inferencing.commons import (
 	Context,
 	Builtins,
-	Typing
+	Typing,
+	ConstantObjects
 )
-
-@dataclass(frozen=True)
-class TargetEntry:
-    name: NameTable
-    definition: DefinitionTable
-
-@dataclass
-class PackGroup:
-	groups: list[set[TargetEntry] | PackGroup]
-	starred: bool
 
 class Resolver:
 	def __init__(
@@ -48,7 +41,7 @@ class Resolver:
 				current_symbol = current_symbol.get_enclosing_table()
 				continue
 
-			result = current_symbol.names.get(name)
+			result = current_symbol.get_latest_definition().names.get(name)
 			if result: return result
 
 			current_symbol = current_symbol.get_enclosing_table()
@@ -95,9 +88,11 @@ class Resolver:
 	
 	#TODO: need support for literal types i.e Literal[...]
 	def resolve_value(self, node: ast.Expr) -> set[InstanceTable]:
+		from typify.inferencing.function_utils import FunctionUtils
+		
 		if isinstance(node, ast.Constant):
-			typeclass = Builtins.get_type(type(node.value).__name__)
-			instance = TypeUtils.instantiate(typeclass)
+			type_name = type(node.value).__name__
+			instance = ConstantObjects.get(type_name)
 			return {instance}
 		
 		elif isinstance(node, ast.JoinedStr):
@@ -156,6 +151,17 @@ class Resolver:
 			)
 			return {instance}
 		
+		elif isinstance(node, ast.Call):
+			candidates = self.resolve_value(node.func)
+			for candidate in candidates:
+				if candidate.type_expr.typedef == Builtins.get_type("function"):
+					function_table = candidate.origin
+					param_map = function_table.parameters
+					argmap = FunctionUtils.map_call_arguments(node, param_map, self)
+					return FunctionUtils.run_function(self.context, argmap, function_table)
+				
+			return {TypeUtils.instantiate(Typing.get_type("Any"))}
+		
 		elif isinstance(node, ast.Name):
 			name = self.LEGB_lookup(node.id)
 			if name: return name.get_latest_definition().points_to
@@ -198,15 +204,3 @@ class Resolver:
 		
 		for target in targets:
 			target.name.add_definition(target.definition)
-	
-	def pretty_print_packgroup(self, pg: PackGroup, indent: int = 0):
-		indent_str = "  " * indent
-		star = "Starred " if pg.starred else ""
-		print(f"{indent_str}{star}PackGroup:")
-		for group in pg.groups:
-			if isinstance(group, PackGroup):
-				self.pretty_print_packgroup(group, indent + 1)
-			else:
-				print(f"{indent_str}  Group:")
-				for entry in group:
-					print(f"{indent_str}    - {entry.name.key} (line {entry.definition.position[0]})")

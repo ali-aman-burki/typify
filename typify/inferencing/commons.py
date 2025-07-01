@@ -16,9 +16,33 @@ class Context:
 	libs: dict[str, LibraryMeta]
 	sysmodules: dict[str, InstanceTable]
 	symbol_map: dict[Table, InstanceTable]
+	meta_map: dict[ModuleTable, ModuleMeta]
 
-class Builtins:
+class ConstantObjects:
 	
+	i_dict = {
+		"int": None,
+		"float": None,
+		"complex": None,
+		"str": None,
+		"bytes": None,
+		"bool": None,
+		"NoneType": None,
+		"ellipsis": None
+	}
+
+
+	@staticmethod
+	def get(type_name: str):
+		from typify.inferencing.typeutils import TypeUtils
+		result = ConstantObjects.i_dict.get(type_name, None)
+		if not result:
+			result = TypeUtils.instantiate(Builtins.get_type(type_name))
+			ConstantObjects.i_dict[type_name] = result
+		return result
+	
+class Builtins:
+
 	@staticmethod
 	def module() -> ModuleTable:
 		try:
@@ -34,6 +58,7 @@ class Builtins:
 			return result
 		except Exception: 
 			return None
+	
 
 class Typing:
 	

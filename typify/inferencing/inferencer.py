@@ -2,7 +2,7 @@ from collections import deque, defaultdict
 
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import InstanceTable
+from typify.preprocessing.symbol_table import InstanceTable, ModuleTable
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils, TypeExpr
 from typify.inferencing.executor import Context, Executor
@@ -11,15 +11,15 @@ class Inferencer:
 
 	@staticmethod
 	def infer(bundle: DependencyBundle) -> None:
-		mod_meta_map: dict[str, ModuleMeta] = bundle.mod_meta_map
+		meta_map: dict[ModuleTable, ModuleMeta] = bundle.meta_map
 		sequences: list[list[ModuleMeta]] = bundle.sequences
 		sysmodules: dict[str, InstanceTable] = bundle.sysmodules
 		libs = bundle.libs
 		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = bundle.cleaned_graph
 
 		context_map: dict[ModuleMeta, Context] = {
-			meta: Context(meta, libs, sysmodules, {})
-			for meta in mod_meta_map.values()
+			meta: Context(meta, libs, sysmodules, {}, meta_map)
+			for meta in meta_map.values()
 		}
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
 		processed: list[ModuleMeta] = []
