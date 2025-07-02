@@ -54,7 +54,7 @@ class FunctionUtils:
 		tree = function_table.tree
 		call_frame = CallFrameTable(f"frame@{function_table.parent.fqn}")
 		call_frame.parent = function_table.parent
-		for arg in arguments.values():
+		for arg in arguments.values(): 
 			call_frame.set_name(arg)
 		
 		mod = call_frame.get_enclosing_module() 
@@ -126,8 +126,8 @@ class FunctionUtils:
 		if vararg_param and extra_args:
 			store = []
 			typeargs = []
-			module = param_entry.nametable.get_latest_definition().module
-			position = param_entry.nametable.get_latest_definition().position
+			module = vararg_param.nametable.get_latest_definition().module
+			position = vararg_param.nametable.get_latest_definition().position
 			defkey = (module, position)
 			for elt in extra_args:
 				resolved = resolver.resolve_value(elt)

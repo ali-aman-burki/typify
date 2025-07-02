@@ -48,7 +48,6 @@ class Executor(ast.NodeVisitor):
 		if isinstance(self.namespace, CallFrameTable):
 			if not TypeUtils.has_complete_return(self.tree.body):
 				self.returns.add(ConstantObjects.get("NoneType"))
-			print(self.returns)
 		return self.returns
 
 	def snapshot(self): 
@@ -201,7 +200,7 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(namedef.points_to)
 	
 	def visit_Call(self, node):
-		self.resolver.resolve_value(node)
+		self.add_to_snapshot(self.resolver.resolve_value(node))
 
 	def pretty_print_argmap(self, argmap: dict[str, NameTable]):
 		print("[Call Argument Map]")
