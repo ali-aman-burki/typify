@@ -73,11 +73,10 @@ class DependencyUtils:
 					module_object = TypeUtils.instantiate(Builtins.get_type("module"))
 					Table.transfer_names(table.names, module_object)
 
-					attr = NameTable(table.key)
-					attrdef = attr.add_definition(DefinitionTable(defkey))
+					attrdef = DefinitionTable(defkey)
 					attrdef.points_to.add(module_object)
+					current_object.get_name(table.key).new_def(attrdef)
 
-					current_object.set_name(attr)
 					sysmodules[table.fqn] = module_object
 					current_object = module_object
 					modules.append(current_object)

@@ -1,6 +1,7 @@
 
 import ast
 
+from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.unpacking_utils import (
 	TargetEntry,
@@ -25,11 +26,13 @@ from typify.inferencing.commons import (
 class Resolver:
 	def __init__(
 			self, 
-			context: Context, 
+			context: Context,
+			module_meta: ModuleMeta,
 			symbol: Table, 
 			namespace: InstanceTable
 		):
 		self.context = context
+		self.module_meta = module_meta
 		self.symbol = symbol
 		self.namespace = namespace
 
@@ -40,8 +43,8 @@ class Resolver:
 			if isinstance(current_symbol, ClassTable):
 				current_symbol = current_symbol.get_enclosing_table()
 				continue
-
-			result = current_symbol.get_latest_definition().names.get(name)
+			
+			result = self.context.symbol_map[current_symbol.get_latest_definition()].names.get(name)
 			if result: return result
 
 			current_symbol = current_symbol.get_enclosing_table()
@@ -50,12 +53,16 @@ class Resolver:
 
 	def resolve_target(self, expr: ast.expr) -> PackGroup:
 		position = (expr.lineno, expr.col_offset)
-		defkey = (self.context.module_meta.table, position)
+		defkey = (self.module_meta.table, position)
 
 		if isinstance(expr, ast.Name):
-			nametable = self.symbol.merge_name(NameTable(expr.id))
-			self.namespace.override_name(nametable)
-			entry = TargetEntry(nametable, DefinitionTable(defkey))
+			symbol_name = self.symbol.get_name(expr.id)
+			namespace_name = self.namespace.get_name(expr.id)
+			entry = TargetEntry(
+				definition=DefinitionTable(defkey), 
+				namespace_name=namespace_name,
+				symbol_name=symbol_name
+			)
 			return PackGroup(groups=[{entry}], starred=False)
 
 		elif isinstance(expr, (ast.Tuple, ast.List)):
@@ -74,13 +81,22 @@ class Resolver:
 			group: set[TargetEntry] = set()
 			for instance in instances:
 				if expr.attr in instance.names:
-					group.add(TargetEntry(instance.names[expr.attr], DefinitionTable(defkey)))
+					entry = TargetEntry(
+						definition=DefinitionTable(defkey), 
+						namespace_name=instance.names[expr.attr])
+					group.add(entry)
 				else:
-					newname = NameTable(expr.attr)
+					
+					symbol_name = None
 					if instance.origin:
-						newname = instance.origin.set_name(newname)
-					instance.override_name(newname)
-					group.add(TargetEntry(newname, DefinitionTable(defkey)))
+						symbol_name = instance.origin.get_name(expr.attr)
+					namespace_name = instance.get_name(expr.attr)
+					entry = TargetEntry(
+						definition=DefinitionTable(defkey), 
+						namespace_name=namespace_name,
+						symbol_name=symbol_name
+					)
+					group.add(entry)
 			return PackGroup(groups=[group], starred=False)
 		else:
 			return PackGroup(groups=[], starred=False)
@@ -203,4 +219,8 @@ class Resolver:
 						targets.add(target_entry)
 		
 		for target in targets:
-			target.name.add_definition(target.definition)
+			target.namespace_name.new_def(target.definition)
+			if target.symbol_name:
+				ndef = DefinitionTable((target.definition.module, target.definition.position))
+				ndef.points_to.update(target.definition.points_to)
+				target.symbol_name.merge_def(ndef)	

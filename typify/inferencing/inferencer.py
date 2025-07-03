@@ -2,7 +2,7 @@ from collections import deque, defaultdict
 
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import InstanceTable, ModuleTable
+from typify.preprocessing.symbol_table import InstanceTable, ModuleTable, Table
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils, TypeExpr
 from typify.inferencing.executor import Context, Executor
@@ -17,10 +17,8 @@ class Inferencer:
 		libs = bundle.libs
 		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = bundle.cleaned_graph
 
-		context_map: dict[ModuleMeta, Context] = {
-			meta: Context(meta, libs, sysmodules, {}, meta_map)
-			for meta in meta_map.values()
-		}
+		context = Context(libs, sysmodules, {}, meta_map)
+
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
 		processed: list[ModuleMeta] = []
 		pass_counts: dict[str, int] = {}
@@ -45,9 +43,10 @@ class Inferencer:
 					meta.table.fqn,
 					TypeUtils.instantiate(Builtins.get_type("module"))
 				)
-				context_map[meta].symbol_map[meta.table] = sysmodules[meta.table.fqn]
+				context.symbol_map[meta.table] = sysmodules[meta.table.fqn]
 				executor = Executor(
-					context=context_map[meta],
+					context=context,
+					module_meta=meta,
 					symbol=meta.table,
 					namespace=sysmodules[meta.table.fqn],
 					tree=meta.tree,

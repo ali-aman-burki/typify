@@ -12,7 +12,6 @@ from dataclasses import dataclass
 
 @dataclass
 class Context:
-	module_meta: ModuleMeta
 	libs: dict[str, LibraryMeta]
 	sysmodules: dict[str, InstanceTable]
 	symbol_map: dict[Table, InstanceTable]

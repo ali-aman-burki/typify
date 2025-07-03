@@ -44,7 +44,7 @@ class FunctionUtils:
 
 	@staticmethod
 	def run_function(
-		call_site_context: Context, 
+		context: Context, 
 		arguments: dict[str, NameTable], 
 		function_table: DefinitionTable
 	) -> set[InstanceTable]:
@@ -54,39 +54,30 @@ class FunctionUtils:
 		tree = function_table.tree
 		call_frame = CallFrameTable(f"frame@{function_table.parent.fqn}")
 		call_frame.parent = function_table.parent
-		for arg in arguments.values(): 
-			call_frame.set_name(arg)
+
+		for argname in arguments: 
+			namespace_name = call_frame.get_name(argname)
+			symbol_name = function_table.get_name(argname)
+			for argdef in arguments[argname].definitions.values():
+				ndef = DefinitionTable((argdef.module, argdef.position))
+				ndef.points_to.update(argdef.points_to)
+				namespace_name.new_def(ndef)
+				symbol_name.merge_def(ndef)
 		
 		mod = call_frame.get_enclosing_module() 
-		
-		call_frame_context = Context(
-			call_site_context.meta_map[mod], 
-			call_site_context.libs, 
-			call_site_context.sysmodules,
-			call_site_context.symbol_map, 
-			call_site_context.meta_map
-		)
+		context.symbol_map[function_table] = call_frame
+		context_meta = context.meta_map[mod]
 
 		executor = Executor(
-			call_frame_context, 
-			call_frame,
+			context,
+			context_meta,
+			function_table,
 			call_frame, 
 			ast.Module(tree.body, type_ignores=[]), 
 			[]
 		)
 
 		returns = executor.execute()
-
-		for name in call_frame.names:
-			if name in function_table.names:
-				for namedef in call_frame.names[name].definitions.values():
-					function_table.names[name].merge_definition(namedef)
-			else:
-				nametable = function_table.set_name(NameTable(name))
-				for namedef in call_frame.names[name].definitions.values():
-					newnamedef = nametable.add_definition(DefinitionTable((namedef.module, namedef.position)))
-					newnamedef.points_to = namedef.points_to.copy()
-
 		function_table.points_to.update(returns)
 		return returns
 	
@@ -118,7 +109,7 @@ class FunctionUtils:
 				new_namedef.points_to.add(instance)
 
 			name_copy = NameTable(param_entry.name)
-			name_copy.add_definition(new_namedef)
+			name_copy.new_def(new_namedef)
 			resolved_args[param_entry.name] = name_copy
 
 		extra_args = call_node.args[len(positional_param_entries):]
@@ -142,7 +133,7 @@ class FunctionUtils:
 			new_namedef.points_to.add(instance)
 
 			name_copy = NameTable(vararg_param.name)
-			name_copy.add_definition(new_namedef)
+			name_copy.new_def(new_namedef)
 			resolved_args[vararg_param.name] = name_copy
 
 		# Keyword arguments
@@ -160,7 +151,7 @@ class FunctionUtils:
 					new_namedef.points_to.add(instance)
 
 				name_copy = NameTable(kw.arg)
-				name_copy.add_definition(new_namedef)
+				name_copy.new_def(new_namedef)
 				resolved_args[kw.arg] = name_copy
 
 		# Retain original param entries if not overridden
@@ -193,7 +184,7 @@ class FunctionUtils:
 			nametable = NameTable(name)
 			position = (arg.lineno, arg.col_offset)
 			defkey = (module_table, position)
-			namedef = nametable.add_definition(DefinitionTable(defkey))
+			namedef = nametable.new_def(DefinitionTable(defkey))
 
 			if default_value is not None:
 				for instance in resolver.resolve_value(default_value):
@@ -225,7 +216,7 @@ class FunctionUtils:
 			nametable = NameTable(name)
 			position = (args_node.vararg.lineno, args_node.vararg.col_offset)
 			defkey = (module_table, position)
-			namedef = nametable.add_definition(DefinitionTable(defkey))
+			namedef = nametable.new_def(DefinitionTable(defkey))
 			tuple_instance = TypeUtils.instantiate(Builtins.get_type("tuple"))
 			namedef.points_to.add(tuple_instance)
 			parameters[name] = ParameterEntry(
@@ -244,7 +235,7 @@ class FunctionUtils:
 			nametable = NameTable(name)
 			position = (args_node.kwarg.lineno, args_node.kwarg.col_offset)
 			defkey = (module_table, position)
-			namedef = nametable.add_definition(DefinitionTable(defkey))
+			namedef = nametable.new_def(DefinitionTable(defkey))
 			dict_expr = TypeExpr(Builtins.get_type("dict"), [TypeExpr(Builtins.get_type("str")), TypeExpr(Typing.get_type("Any"))])
 			dict_instance = TypeUtils.instantiate_from_type_expr(dict_expr)
 			namedef.points_to.update(dict_instance)

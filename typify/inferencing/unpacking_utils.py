@@ -8,8 +8,9 @@ from typify.preprocessing.symbol_table import (
 
 @dataclass(frozen=True)
 class TargetEntry:
-    name: NameTable
-    definition: DefinitionTable
+	definition: DefinitionTable
+	namespace_name: NameTable
+	symbol_name: NameTable = None
 
 @dataclass
 class PackGroup:
@@ -17,7 +18,7 @@ class PackGroup:
 	starred: bool
 
 class UnpackingUtils:
-      
+	  
 	@staticmethod
 	def pretty_print_packgroup(pg: PackGroup, indent: int = 0):
 		indent_str = "  " * indent
