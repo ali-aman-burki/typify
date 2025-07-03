@@ -76,7 +76,9 @@ class Executor(ast.NodeVisitor):
 
 	def visit_Return(self, node):
 		resolved = self.resolver.resolve_value(node.value)
+		self.symbol.points_to.update(resolved)
 		self.returns.update(resolved)
+		self.add_to_snapshot(resolved)
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)

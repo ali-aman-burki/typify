@@ -77,11 +77,15 @@ class FunctionUtils:
 			tree=ast.Module(tree.body, type_ignores=[]), 
 			snapshot_log=[]
 		)
-		signature = CallSignature(function_table.key, arguments)
-		returns = executor.execute()
+		signature = CallSignature(function_table, arguments)
 
-		function_table.points_to.update(returns)
-		return returns
+		if not call_stack.contains(signature):
+			call_stack.push(signature)
+			returns = executor.execute()
+			call_stack.pop()
+			return returns
+		else:
+			return {TypeUtils.instantiate(Typing.get_type("Any"))}
 	
 	@staticmethod
 	def map_call_arguments(
