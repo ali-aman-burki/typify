@@ -122,7 +122,7 @@ class Executor(ast.NodeVisitor):
 			if not object_chain: return
 			for name in object_chain[-1].names.values():
 				lat_def = name.get_latest_definition()
-				self.namespace.get_name(lat_def).new_def(lat_def)
+				self.namespace.get_name(name.key).new_def(lat_def)
 				self.add_to_snapshot(lat_def.points_to)
 		else:
 			for alias in node.names:

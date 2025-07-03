@@ -56,6 +56,7 @@ class TypeUtils:
 	@staticmethod
 	def unify(typeargs: list[TypeExpr] = None) -> TypeExpr:
 		typeargs = typeargs or []
+		typeargs = [item for item in typeargs if item.typedef is not None]
 		union_def = Typing.get_type("Union")
 
 		def flatten_recursive(
