@@ -1,5 +1,4 @@
 import ast
-from dataclasses import dataclass
 
 from typify.inferencing.resolver import Resolver
 from typify.preprocessing.symbol_table import (
