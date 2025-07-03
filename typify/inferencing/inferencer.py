@@ -2,10 +2,11 @@ from collections import deque, defaultdict
 
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import InstanceTable, ModuleTable, Table
+from typify.preprocessing.symbol_table import InstanceTable, ModuleTable
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils, TypeExpr
 from typify.inferencing.executor import Context, Executor
+from typify.inferencing.call_stack import CallStack
 
 class Inferencer:
 
@@ -18,7 +19,7 @@ class Inferencer:
 		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = bundle.cleaned_graph
 
 		context = Context(libs, sysmodules, {}, meta_map)
-		call_stack = []
+		call_stack = CallStack()
 
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
 		processed: list[ModuleMeta] = []

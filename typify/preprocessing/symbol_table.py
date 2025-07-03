@@ -33,7 +33,7 @@ class Table:
 		from typify.inferencing.typeutils import TypeUtils
 
 		data = {}
-		if self.points_to: data["type"] = repr(TypeUtils.unify([pt.type_expr for pt in self.points_to]))
+		if self.points_to: data["type"] = repr(TypeUtils.unify(self.points_to))
 		if self.definitions: data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
 		if self.globals: data["globals"] = list(self.globals)
 		if self.packages: data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}

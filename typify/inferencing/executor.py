@@ -215,7 +215,7 @@ class Executor(ast.NodeVisitor):
 		function_table = self.symbol.get_function(name)
 		function_def = function_table.merge_def(DefinitionTable(defkey))
 		function_def.tree = func_tree
-		function_def.parameters = FunctionUtils.collect_parameters(func_tree, defkey[0], self.resolver)
+		function_def.parameters = FunctionUtils.collect_parameters(func_tree, self.resolver)
 
 		func_obj = TypeUtils.instantiate(Builtins.get_type("function"))
 		func_obj.origin = function_def
@@ -235,7 +235,7 @@ class Executor(ast.NodeVisitor):
 		for name, nametable in argmap.items():
 			print(f"  {name}:")
 			defn = nametable.get_latest_definition()
-			t = repr(TypeUtils.unify([pt.type_expr for pt in defn.points_to]))
+			t = repr(TypeUtils.unify(defn.points_to))
 			print(f"    ↳ Defined at line {defn.position[0]} → {t}")
 
 	def visit_AnnAssign(self, node):

@@ -1,10 +1,9 @@
 import ast
+from dataclasses import dataclass
 
 from typify.inferencing.resolver import Resolver
 from typify.preprocessing.symbol_table import (
-	NameTable, 
 	DefinitionTable, 
-	ModuleTable,
 	CallFrameTable,
 	InstanceTable
 )
@@ -15,19 +14,14 @@ from typify.inferencing.typeutils import (
 from typify.inferencing.commons import (
 	Typing, 
 	Builtins,
-	Context
+	Context,
+	ParameterEntry,
+	ArgTuple
 )
-
-from dataclasses import dataclass
-
-@dataclass
-class ParameterEntry:
-	name: str
-	nametable: NameTable
-	is_vararg: bool = False
-	is_kwarg: bool = False
-	is_kwonly: bool = False
-	is_posonly: bool = False
+from typify.inferencing.call_stack import (
+    CallStack,
+    CallSignature,
+)
 
 class FunctionUtils:
 
@@ -45,9 +39,9 @@ class FunctionUtils:
 	@staticmethod
 	def run_function(
 		context: Context, 
-		arguments: dict[str, NameTable], 
+		arguments: dict[str, ArgTuple], 
 		function_table: DefinitionTable,
-		call_stack: list
+		call_stack: CallStack
 	) -> set[InstanceTable]:
 		
 		from typify.inferencing.executor import Executor
@@ -56,15 +50,20 @@ class FunctionUtils:
 		call_frame = CallFrameTable(f"frame@{function_table.parent.fqn}")
 		call_frame.parent = function_table.parent
 
-		for argname in arguments: 
+		for argname in arguments:
+			argtuple = arguments[argname]
+			points_to = argtuple.points_to
+			defkey = argtuple.defkey
+
 			namespace_name = call_frame.get_name(argname)
 			symbol_name = function_table.get_name(argname)
-			for argdef in arguments[argname].definitions.values():
-				ndef = DefinitionTable((argdef.module, argdef.position))
-				ndef.points_to.update(argdef.points_to)
-				namespace_name.new_def(ndef)
-				symbol_name.merge_def(ndef)
-		
+
+			ndef = DefinitionTable(defkey)
+			ndef.points_to.update(points_to)
+
+			namespace_name.new_def(ndef)
+			symbol_name.merge_def(ndef)
+
 		mod = call_frame.get_enclosing_module() 
 		context.symbol_map[function_table] = call_frame
 		context_meta = context.meta_map[mod]
@@ -78,8 +77,9 @@ class FunctionUtils:
 			tree=ast.Module(tree.body, type_ignores=[]), 
 			snapshot_log=[]
 		)
-
+		signature = CallSignature(function_table.key, arguments)
 		returns = executor.execute()
+
 		function_table.points_to.update(returns)
 		return returns
 	
@@ -88,9 +88,9 @@ class FunctionUtils:
 		call_node: ast.Call,
 		parameters: dict[str, ParameterEntry],
 		resolver: Resolver,
-	) -> dict[str, NameTable]:
+	) -> dict[str, ArgTuple]:
 
-		resolved_args: dict[str, NameTable] = {}
+		resolved_args: dict[str, ArgTuple] = {}
 		vararg_param = next((p for p in parameters.values() if p.is_vararg), None)
 
 		positional_param_entries = [
@@ -100,78 +100,62 @@ class FunctionUtils:
 		]
 
 		for i, arg_node in enumerate(call_node.args[:len(positional_param_entries)]):
-			param_entry = positional_param_entries[i]
-			module = param_entry.nametable.get_latest_definition().module
-			position = param_entry.nametable.get_latest_definition().position
-			defkey = (module, position)
-
-			new_namedef = DefinitionTable(defkey)
+			name = positional_param_entries[i].name
+			points_to = set()
+			defkey = positional_param_entries[i].defkey
 
 			for instance in resolver.resolve_value(arg_node):
-				new_namedef.points_to.add(instance)
+				points_to.add(instance)
 
-			name_copy = NameTable(param_entry.name)
-			name_copy.new_def(new_namedef)
-			resolved_args[param_entry.name] = name_copy
+			resolved_args[name] = ArgTuple(points_to, defkey)
 
 		extra_args = call_node.args[len(positional_param_entries):]
 
 		if vararg_param and extra_args:
+			name = vararg_param.name
+			points_to = set()
+			defkey = vararg_param.defkey
+
 			store = []
 			typeargs = []
-			module = vararg_param.nametable.get_latest_definition().module
-			position = vararg_param.nametable.get_latest_definition().position
-			defkey = (module, position)
+
 			for elt in extra_args:
 				resolved = resolver.resolve_value(elt)
-				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
 				store.append(resolved)
 
 			instance = TypeUtils.instantiate(Builtins.get_type("tuple"), typeargs)
 			instance.store = store
+			points_to.add(instance)
 
-			new_namedef = DefinitionTable(defkey)
-			new_namedef.points_to.add(instance)
-
-			name_copy = NameTable(vararg_param.name)
-			name_copy.new_def(new_namedef)
-			resolved_args[vararg_param.name] = name_copy
+			resolved_args[name] = ArgTuple(points_to, defkey)
 
 		# Keyword arguments
 		for kw in call_node.keywords:
 			if kw.arg is None:
 				continue
 			if kw.arg in parameters:
-				param_entry = parameters[kw.arg]
-				module = param_entry.nametable.get_latest_definition().module
-				position = param_entry.nametable.get_latest_definition().position
-				defkey = (module, position)
-				new_namedef = DefinitionTable(defkey)
-
+				kwentry = parameters[kw.arg]
+				name = kw.arg
+				points_to = set()
+				defkey = kwentry.defkey
+				
 				for instance in resolver.resolve_value(kw.value):
-					new_namedef.points_to.add(instance)
+					points_to.add(instance)
 
-				name_copy = NameTable(kw.arg)
-				name_copy.new_def(new_namedef)
-				resolved_args[kw.arg] = name_copy
+				resolved_args[name] = ArgTuple(points_to, defkey)
 
 		# Retain original param entries if not overridden
 		for pname, param_entry in parameters.items():
 			if pname not in resolved_args:
-				resolved_args[pname] = param_entry.nametable
+				resolved_args[pname] = ArgTuple(param_entry.points_to, param_entry.defkey)
 
 		return resolved_args
 
-
 	#TODO: add support *varargs and **kwargs
 	@staticmethod
-	def collect_parameters(
-		fdef: ast.FunctionDef,
-		module_table: ModuleTable,
-		resolver: Resolver
-	) -> dict[str, ParameterEntry]:
-
+	def collect_parameters(fdef: ast.FunctionDef, resolver: Resolver) -> dict[str, ParameterEntry]:
 		args_node = fdef.args
 		parameters: dict[str, ParameterEntry] = {}
 
@@ -183,18 +167,16 @@ class FunctionUtils:
 			is_kwonly=False
 		) -> ParameterEntry:
 			name = arg.arg
-			nametable = NameTable(name)
-			position = (arg.lineno, arg.col_offset)
-			defkey = (module_table, position)
-			namedef = nametable.new_def(DefinitionTable(defkey))
-
+			points_to = set()
+			defkey = (resolver.module_meta.table, (arg.lineno, arg.col_offset))
 			if default_value is not None:
 				for instance in resolver.resolve_value(default_value):
-					namedef.points_to.add(instance)
+					points_to.add(instance)
 
 			entry = ParameterEntry(
 				name=name,
-				nametable=nametable,
+				points_to=points_to,
+				defkey=defkey,
 				is_posonly=is_posonly,
 				is_kwonly=is_kwonly,
 			)
@@ -215,15 +197,14 @@ class FunctionUtils:
 		# *args
 		if args_node.vararg:
 			name = args_node.vararg.arg
-			nametable = NameTable(name)
-			position = (args_node.vararg.lineno, args_node.vararg.col_offset)
-			defkey = (module_table, position)
-			namedef = nametable.new_def(DefinitionTable(defkey))
-			tuple_instance = TypeUtils.instantiate(Builtins.get_type("tuple"))
-			namedef.points_to.add(tuple_instance)
+			points_to = set()
+			defkey = (resolver.module_meta.table, (args_node.vararg.lineno, args_node.vararg.col_offset))
+			
+			points_to.add(TypeUtils.instantiate(Builtins.get_type("tuple")))
 			parameters[name] = ParameterEntry(
 				name=name,
-				nametable=nametable,
+				points_to=points_to,
+				defkey=defkey,
 				is_vararg=True,
 			)
 
@@ -234,16 +215,17 @@ class FunctionUtils:
 		# **kwargs
 		if args_node.kwarg:
 			name = args_node.kwarg.arg
-			nametable = NameTable(name)
-			position = (args_node.kwarg.lineno, args_node.kwarg.col_offset)
-			defkey = (module_table, position)
-			namedef = nametable.new_def(DefinitionTable(defkey))
+			points_to = set()
+			defkey = (resolver.module_meta.table, (args_node.kwarg.lineno, args_node.kwarg.col_offset))
+
 			dict_expr = TypeExpr(Builtins.get_type("dict"), [TypeExpr(Builtins.get_type("str")), TypeExpr(Typing.get_type("Any"))])
 			dict_instance = TypeUtils.instantiate_from_type_expr(dict_expr)
-			namedef.points_to.update(dict_instance)
+			points_to.update(dict_instance)
+			
 			parameters[name] = ParameterEntry(
 				name=name,
-				nametable=nametable,
+				points_to=points_to,
+				defkey=defkey,
 				is_kwarg=True
 			)
 

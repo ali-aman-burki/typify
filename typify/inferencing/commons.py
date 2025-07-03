@@ -11,6 +11,22 @@ from typify.preprocessing.libs import RequiredLibs
 from dataclasses import dataclass
 
 @dataclass
+class ParameterEntry:
+	name: str
+	points_to: set[InstanceTable]
+	defkey: tuple[ModuleTable, tuple[int, int]]
+
+	is_vararg: bool = False
+	is_kwarg: bool = False
+	is_kwonly: bool = False
+	is_posonly: bool = False
+
+@dataclass
+class ArgTuple:
+	points_to: set[InstanceTable]
+	defkey: tuple[ModuleTable, tuple[int, int]]
+
+@dataclass
 class Context:
 	libs: dict[str, LibraryMeta]
 	sysmodules: dict[str, InstanceTable]

@@ -3,6 +3,7 @@ import ast
 
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.call_stack import CallStack
 from typify.inferencing.unpacking_utils import (
 	TargetEntry,
 	PackGroup
@@ -30,7 +31,7 @@ class Resolver:
 			module_meta: ModuleMeta,
 			symbol: Table, 
 			namespace: InstanceTable,
-			call_stack: list
+			call_stack: CallStack
 		):
 		self.context = context
 		self.module_meta = module_meta
@@ -123,9 +124,9 @@ class Resolver:
 			typeargs = []
 			for elt in node.elts:
 				resolved = self.resolve_value(elt)
-				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
-			instance = TypeUtils.instantiate(typeclass, [TypeUtils.unify(typeargs)])
+			instance = TypeUtils.instantiate(typeclass, [TypeUtils.unify_from_exprs(typeargs)])
 			return {instance}
 		
 		elif isinstance(node, ast.Set):
@@ -133,9 +134,9 @@ class Resolver:
 			typeargs = []
 			for elt in node.elts:
 				resolved = self.resolve_value(elt)
-				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
-			instance = TypeUtils.instantiate(typeclass, [TypeUtils.unify(typeargs)])
+			instance = TypeUtils.instantiate(typeclass, [TypeUtils.unify_from_exprs(typeargs)])
 			return {instance}
 		
 		elif isinstance(node, ast.Tuple):
@@ -144,7 +145,7 @@ class Resolver:
 			typeargs = []
 			for elt in node.elts:
 				resolved = self.resolve_value(elt)
-				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
 				store.append(resolved)
 			instance = TypeUtils.instantiate(typeclass, typeargs)
@@ -157,15 +158,15 @@ class Resolver:
 			valueargs = []
 			for elt in node.keys:
 				resolved = self.resolve_value(elt)
-				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				unified = TypeUtils.unify(resolved)
 				keyargs.append(unified)
 			for elt in node.values:
 				resolved = self.resolve_value(elt)
-				unified = TypeUtils.unify([r.type_expr for r in resolved])
+				unified = TypeUtils.unify(resolved)
 				valueargs.append(unified)
 			instance = TypeUtils.instantiate(
 				typeclass, 
-				[TypeUtils.unify(keyargs), TypeUtils.unify(valueargs)]
+				[TypeUtils.unify_from_exprs(keyargs), TypeUtils.unify_from_exprs(valueargs)]
 			)
 			return {instance}
 		

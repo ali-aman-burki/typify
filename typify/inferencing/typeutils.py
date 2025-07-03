@@ -41,7 +41,7 @@ class TypeUtils:
 		type_exprs = []
 		for instance in instances:
 			type_exprs.append(instance.type_expr)
-		return TypeUtils.unify(type_exprs)
+		return TypeUtils.unify_from_exprs(type_exprs)
 
 	@staticmethod
 	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> set[InstanceTable]:
@@ -54,7 +54,7 @@ class TypeUtils:
 		return result
 
 	@staticmethod
-	def unify(typeargs: list[TypeExpr] = None) -> TypeExpr:
+	def unify_from_exprs(typeargs: list[TypeExpr] = None) -> TypeExpr:
 		typeargs = typeargs or []
 		typeargs = [item for item in typeargs if item.typedef is not None]
 		union_def = Typing.get_type("Union")
@@ -80,6 +80,10 @@ class TypeUtils:
 			return unique[0]
 
 		return TypeExpr(union_def, unique)
+
+	@staticmethod
+	def unify(points_to: set[InstanceTable]):
+		return TypeUtils.unify_from_exprs([pt.type_expr for pt in points_to])
 
 	@staticmethod
 	def instantiate(
