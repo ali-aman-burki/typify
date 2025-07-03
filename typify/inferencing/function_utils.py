@@ -46,7 +46,8 @@ class FunctionUtils:
 	def run_function(
 		context: Context, 
 		arguments: dict[str, NameTable], 
-		function_table: DefinitionTable
+		function_table: DefinitionTable,
+		call_stack: list
 	) -> set[InstanceTable]:
 		
 		from typify.inferencing.executor import Executor
@@ -69,12 +70,13 @@ class FunctionUtils:
 		context_meta = context.meta_map[mod]
 
 		executor = Executor(
-			context,
-			context_meta,
-			function_table,
-			call_frame, 
-			ast.Module(tree.body, type_ignores=[]), 
-			[]
+			context=context,
+			module_meta=context_meta,
+			symbol=function_table,
+			namespace=call_frame, 
+			call_stack=call_stack,
+			tree=ast.Module(tree.body, type_ignores=[]), 
+			snapshot_log=[]
 		)
 
 		returns = executor.execute()

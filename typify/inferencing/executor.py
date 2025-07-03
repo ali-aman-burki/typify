@@ -21,8 +21,6 @@ from typify.preprocessing.symbol_table import (
 	InstanceTable,
 	DefinitionTable,
 	Table,
-	ClassTable,
-	FunctionTable,
 	CallFrameTable
 )
 
@@ -33,6 +31,7 @@ class Executor(ast.NodeVisitor):
 			module_meta: ModuleMeta,
 			symbol: Table,
 			namespace: InstanceTable, 
+			call_stack: list,
 			tree: ast.AST,
 			snapshot_log: list[set[InstanceTable]] = None
 		):
@@ -40,6 +39,7 @@ class Executor(ast.NodeVisitor):
 		self.module_meta = module_meta
 		self.symbol = symbol
 		self.namespace = namespace
+		self.call_stack = call_stack
 		self.tree = tree
 		self.snapshot_log = snapshot_log if snapshot_log else []
 		self.returns: set[InstanceTable] = set()
@@ -48,7 +48,8 @@ class Executor(ast.NodeVisitor):
 			self.context, 
 			self.module_meta, 
 			self.symbol, 
-			self.namespace
+			self.namespace,
+			self.call_stack
 		)
 
 	def execute(self): 
@@ -186,12 +187,13 @@ class Executor(ast.NodeVisitor):
 		self.context.symbol_map[entering_symbol] = entering_namespace
 
 		Executor(
-			self.context,
-			self.module_meta,
-			entering_symbol,
-			entering_namespace,
-			ast.Module(class_tree.body, type_ignores=[]),
-			self.snapshot_log
+			context=self.context,
+			module_meta=self.module_meta,
+			symbol=entering_symbol,
+			namespace=entering_namespace,
+			call_stack=self.call_stack,
+			tree=ast.Module(class_tree.body, type_ignores=[]),
+			snapshot_log=self.snapshot_log
 		).execute()
 
 		deftable = DefinitionTable(defkey)

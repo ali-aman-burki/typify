@@ -29,12 +29,14 @@ class Resolver:
 			context: Context,
 			module_meta: ModuleMeta,
 			symbol: Table, 
-			namespace: InstanceTable
+			namespace: InstanceTable,
+			call_stack: list
 		):
 		self.context = context
 		self.module_meta = module_meta
 		self.symbol = symbol
 		self.namespace = namespace
+		self.call_stack = call_stack
 
 	def LEGB_lookup(self, name: str) -> NameTable:
 		current_symbol = self.symbol
@@ -174,7 +176,12 @@ class Resolver:
 					function_table = candidate.origin
 					param_map = function_table.parameters
 					argmap = FunctionUtils.map_call_arguments(node, param_map, self)
-					return FunctionUtils.run_function(self.context, argmap, function_table)
+					return FunctionUtils.run_function(
+						self.context, 
+						argmap, 
+						function_table, 
+						self.call_stack
+					)
 				
 			return {TypeUtils.instantiate(Typing.get_type("Any"))}
 		

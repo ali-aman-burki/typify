@@ -18,6 +18,7 @@ class Inferencer:
 		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = bundle.cleaned_graph
 
 		context = Context(libs, sysmodules, {}, meta_map)
+		call_stack = []
 
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
 		processed: list[ModuleMeta] = []
@@ -49,6 +50,7 @@ class Inferencer:
 					module_meta=meta,
 					symbol=meta.table,
 					namespace=sysmodules[meta.table.fqn],
+					call_stack=call_stack,
 					tree=meta.tree,
 					snapshot_log=snapshot_log
 				)
