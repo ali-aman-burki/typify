@@ -58,6 +58,7 @@ class Executor(ast.NodeVisitor):
 		if isinstance(self.namespace, CallFrameTable):
 			if not TypeUtils.has_complete_return(self.tree.body):
 				self.returns.add(ConstantObjects.get("NoneType"))
+				self.symbol.points_to.add(ConstantObjects.get("NoneType"))
 		return self.returns
 
 	def snapshot(self): 
