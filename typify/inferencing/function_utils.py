@@ -1,5 +1,6 @@
 import ast
 
+from typify.logging import logger
 from typify.inferencing.resolver import Resolver
 from typify.preprocessing.symbol_table import (
 	DefinitionTable, 
@@ -21,7 +22,6 @@ from typify.inferencing.call_stack import (
     CallStack,
     CallSignature,
 )
-from typify.logging import logger
 
 class FunctionUtils:
 

@@ -5,7 +5,7 @@ from collections import defaultdict
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.function_utils import FunctionUtils
 from typify.preprocessing.dependency_utils import DependencyUtils
-from typify.logging import logger
+from typify.inferencing.mro import MROBuilder
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import (
     TypeUtils, 
@@ -176,6 +176,7 @@ class Executor(ast.NodeVisitor):
 				
 		self.generic_visit(node)
 
+	#TODO: add support for multiple possible candidates for a single base
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)
@@ -184,6 +185,23 @@ class Executor(ast.NodeVisitor):
 		class_table = self.symbol.get_class(name)
 		entering_symbol = class_table.merge_def(DefinitionTable(defkey))
 
+		builtins_module_object = self.context.symbol_map.get(Builtins.module())
+		entering_symbol.bases.clear()
+
+		if not class_tree.bases:
+			if builtins_module_object:
+				object_class = builtins_module_object.names.get("object")
+				if object_class:
+					instance = next(iter(object_class.get_latest_definition().points_to))
+					entering_symbol.bases.append(instance.origin)
+					self.add_to_snapshot({instance})
+
+		for base in class_tree.bases:
+			base_inst = next(iter(self.resolver.resolve_value(base))) 
+			base_def = base_inst.origin
+			entering_symbol.bases.append(base_def)
+			self.add_to_snapshot({base_inst})
+		
 		entering_namespace = TypeUtils.instantiate(
 			Builtins.get_type("type"), 
 			[TypeExpr(entering_symbol)]
@@ -205,6 +223,8 @@ class Executor(ast.NodeVisitor):
 		deftable.points_to.add(entering_namespace)
 		self.symbol.get_name(name).merge_def(deftable)
 		self.namespace.get_name(name).new_def(deftable)
+
+		entering_symbol.mro = MROBuilder.build_mro(entering_symbol)
 
 		self.add_to_snapshot(deftable.points_to)
 		

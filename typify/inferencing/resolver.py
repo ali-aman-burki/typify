@@ -54,6 +54,16 @@ class Resolver:
 
 		return Builtins.module().names.get(name, None)
 
+	def attribute_lookup(
+			self, 
+			instance: InstanceTable, 
+			attr: str
+		) -> set[NameTable]:
+		
+		if attr in instance.names: return {instance.names[attr]}
+		bases = instance.type_expr.typedef.bases
+		#....
+
 	def resolve_target(self, expr: ast.expr) -> PackGroup:
 		position = (expr.lineno, expr.col_offset)
 		defkey = (self.module_meta.table, position)

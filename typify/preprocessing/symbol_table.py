@@ -13,12 +13,12 @@ class Table:
 		self.functions: dict[str, Table] = {}
 		self.names: dict[str, Table] = {}
 		self.definitions: dict[str, DefinitionTable] = {}
-		self.instances: list[Table] = []
 		self.path_chain: list[Table] = []
 		self.fqn = ""
 		self.trust_annotations = False
 
-		self.bases: list = []
+		self.bases: list[DefinitionTable] = []
+		self.mro: list[DefinitionTable] = []
 		self.parameters = {}
 		self.globals: set[ast.AST] = set()
 		self.nonlocals: set[ast.AST] = set()
@@ -38,7 +38,8 @@ class Table:
 		if self.globals: data["globals"] = list(self.globals)
 		if self.packages: data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}
 		if self.modules: data["modules"] = {key: value.to_dict() for key, value in self.modules.items()}
-		if self.bases: data["bases"] = [base.key if isinstance(base, Table) else "$unresolved$" for base in self.bases]
+		if self.bases: data["bases"] = [base.parent.fqn for base in self.bases]
+		if self.mro: data["mro"] = [instance.parent.fqn for instance in self.mro]
 		if self.nonlocals: data["nonlocals"] = list(self.nonlocals)
 		if self.classes: data["classes"] = {key: value.to_dict() for key, value in self.classes.items()}
 		if self.functions: data["functions"] = {key: value.to_dict() for key, value in self.functions.items()}
