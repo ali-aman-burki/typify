@@ -193,21 +193,23 @@ class Executor(ast.NodeVisitor):
 				object_class = builtins_module_object.names.get("object")
 				if object_class:
 					instance = next(iter(object_class.get_latest_definition().points_to))
-					entering_symbol.bases.append(instance.origin)
+					entering_symbol.bases.append(instance)
 					self.add_to_snapshot({instance})
 
 		for base in class_tree.bases:
 			base_inst = next(iter(self.resolver.resolve_value(base))) 
-			base_def = base_inst.origin
-			entering_symbol.bases.append(base_def)
+			entering_symbol.bases.append(base_inst)
 			self.add_to_snapshot({base_inst})
-		
-		entering_namespace = TypeUtils.instantiate(
-			Builtins.get_type("type"), 
-			[TypeExpr(entering_symbol)]
+
+		entering_namespace = self.context.symbol_map.setdefault(
+			entering_symbol,
+			TypeUtils.instantiate(
+				Builtins.get_type("type"),
+				[TypeExpr(entering_symbol)]
+			)
 		)
+
 		entering_namespace.origin = entering_symbol
-		self.context.symbol_map[entering_symbol] = entering_namespace
 
 		Executor(
 			context=self.context,
@@ -224,7 +226,7 @@ class Executor(ast.NodeVisitor):
 		self.symbol.get_name(name).merge_def(deftable)
 		self.namespace.get_name(name).new_def(deftable)
 
-		entering_symbol.mro = MROBuilder.build_mro(entering_symbol)
+		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
 
 		self.add_to_snapshot(deftable.points_to)
 		
