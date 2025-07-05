@@ -60,8 +60,16 @@ class Resolver:
 			attr: str
 		) -> NameTable:
 		
-		if attr in instance.names: return {instance.names[attr]}
+		if attr in instance.names: return instance.names[attr]
 		
+		if instance.type_expr.typedef == Builtins.get_type("type"):
+			for m in instance.origin.mro:
+				if attr in m.names: return m.names[attr]
+		else:
+			for m in instance.type_expr.typedef.mro:
+				if attr in m.names: return m.names[attr]
+		
+		return None
 
 	def resolve_target(self, expr: ast.expr) -> PackGroup:
 		position = (expr.lineno, expr.col_offset)
@@ -98,7 +106,6 @@ class Resolver:
 						namespace_name=instance.names[expr.attr])
 					group.add(entry)
 				else:
-					
 					symbol_name = None
 					if instance.origin:
 						symbol_name = instance.origin.get_name(expr.attr)
@@ -204,8 +211,9 @@ class Resolver:
 			value_points_tos = self.resolve_value(node.value)
 			results = set()
 			for pt in value_points_tos:
-				if node.attr in pt.names:
-					namedef = pt.names[node.attr].get_latest_definition()
+				namet = self.attribute_lookup(pt, node.attr)
+				if namet:
+					namedef = namet.get_latest_definition()
 					results.update(namedef.points_to)
 			return results if results else {TypeUtils.instantiate(Typing.get_type("Any"))}
 		else:

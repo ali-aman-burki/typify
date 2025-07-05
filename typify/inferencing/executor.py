@@ -208,9 +208,9 @@ class Executor(ast.NodeVisitor):
 				[TypeExpr(entering_symbol)]
 			)
 		)
+		entering_namespace.type_expr = TypeExpr(Builtins.get_type("type"), [TypeExpr(entering_symbol)])
 
 		entering_namespace.origin = entering_symbol
-
 		Executor(
 			context=self.context,
 			module_meta=self.module_meta,
