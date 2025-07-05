@@ -123,7 +123,7 @@ class Resolver:
 	
 	#TODO: need support for literal types i.e Literal[...]
 	def resolve_value(self, node: ast.Expr) -> set[InstanceTable]:
-		from typify.inferencing.function_utils import FunctionUtils
+		from typify.inferencing.call_dispatcher import CallDispatcher
 		
 		if isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
@@ -187,20 +187,10 @@ class Resolver:
 			return {instance}
 		
 		elif isinstance(node, ast.Call):
-			candidates = self.resolve_value(node.func)
-			for candidate in candidates:
-				if candidate.type_expr.typedef == Builtins.get_type("function"):
-					function_table = candidate.origin
-					param_map = function_table.parameters
-					argmap = FunctionUtils.map_call_arguments(node, param_map, self)
-					return FunctionUtils.run_function(
-						self.context, 
-						argmap, 
-						function_table, 
-						self.call_stack
-					)
-				
-			return {TypeUtils.instantiate(Typing.get_type("Any"))}
+			dispatcher = CallDispatcher(self, node)
+			results = dispatcher.dispatch()
+			
+			return results if results else {TypeUtils.instantiate(Typing.get_type("Any"))}
 		
 		elif isinstance(node, ast.Name):
 			name = self.LEGB_lookup(node.id)

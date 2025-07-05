@@ -30,6 +30,8 @@ class Inferencer:
 			for tgt in targets:
 				reverse_deps[tgt].add(src)
 
+		logger.debug("", header=False)
+
 		for sequence in sequences:
 			is_single = len(sequence) == 1
 			has_self_loop = (
