@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from typify.preprocessing.symbol_table import DefinitionTable
+from typify.preprocessing.symbol_table import DefinitionTable, InstanceTable
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
@@ -8,6 +8,10 @@ from typify.inferencing.commons import ArgTuple
 class CallSignature:
 	function_table: DefinitionTable
 	arguments: dict[str, ArgTuple]
+	returns: set[InstanceTable] = field(default_factory=set)
+	snapshot: list[set[str]] = field(default_factory=list)
+	running: bool = False
+	stabilized: bool = False
 
 	def __eq__(self, other):
 		if not isinstance(other, CallSignature): return NotImplemented
@@ -30,6 +34,12 @@ class CallSignature:
 		)
 		return hash((self.function_table, param_fingerprint))
 
+	def __repr__(self):
+		args = []
+		for arg in self.arguments.values():
+			args.append(TypeUtils.unify(arg.points_to))
+		joined = ", ".join(repr(arg) for arg in args)
+		return self.function_table.parent.key + f"({joined})"
 
 class CallStack:
 	def __init__(self):
@@ -48,9 +58,14 @@ class CallStack:
 	def contains(self, sig: CallSignature) -> bool:
 		return sig in self.index_map
 
+	def get(self, sig: CallSignature) -> CallSignature | None:
+		index = self.index_map.get(sig)
+		if index is not None:
+			return self.stack[index]
+		return None
+
 	def trace(self, sig: CallSignature) -> list[CallSignature]:
 		index = self.index_map.get(sig)
 		if index is not None:
 			return self.stack[index:]
 		return []
-

@@ -5,6 +5,7 @@ from collections import defaultdict
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.function_utils import FunctionUtils
 from typify.preprocessing.dependency_utils import DependencyUtils
+from typify.logging import logger
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import (
     TypeUtils, 
@@ -76,9 +77,10 @@ class Executor(ast.NodeVisitor):
 
 	def visit_Return(self, node):
 		resolved = self.resolver.resolve_value(node.value)
+		self.add_to_snapshot(resolved)
+
 		self.symbol.points_to.update(resolved)
 		self.returns.update(resolved)
-		self.add_to_snapshot(resolved)
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
@@ -232,21 +234,16 @@ class Executor(ast.NodeVisitor):
 	def visit_Call(self, node):
 		self.add_to_snapshot(self.resolver.resolve_value(node))
 
-	def pretty_print_argmap(self, argmap: dict[str, NameTable]):
-		print("[Call Argument Map]")
-		for name, nametable in argmap.items():
-			print(f"  {name}:")
-			defn = nametable.get_latest_definition()
-			t = repr(TypeUtils.unify(defn.points_to))
-			print(f"    ↳ Defined at line {defn.position[0]} → {t}")
-
 	def visit_AnnAssign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
+		self.add_to_snapshot(resolved_value)
+
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
 
 	def visit_Assign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
+		self.add_to_snapshot(resolved_value)
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)

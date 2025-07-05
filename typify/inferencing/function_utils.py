@@ -21,6 +21,7 @@ from typify.inferencing.call_stack import (
     CallStack,
     CallSignature,
 )
+from typify.logging import logger
 
 class FunctionUtils:
 
@@ -36,13 +37,12 @@ class FunctionUtils:
 		return ""
 
 	@staticmethod
-	def run_function(
+	def construct_executor(
 		context: Context, 
 		arguments: dict[str, ArgTuple], 
 		function_table: DefinitionTable,
 		call_stack: CallStack
-	) -> set[InstanceTable]:
-		
+	):
 		from typify.inferencing.executor import Executor
 		
 		tree = function_table.tree
@@ -76,15 +76,83 @@ class FunctionUtils:
 			tree=ast.Module(tree.body, type_ignores=[]), 
 			snapshot_log=[]
 		)
-		signature = CallSignature(function_table, arguments)
+
+		return executor
+
+	@staticmethod
+	def run_function(
+		context: Context, 
+		arguments: dict[str, ArgTuple], 
+		function_table: DefinitionTable,
+		call_stack: CallStack
+	) -> set[InstanceTable]:
+
+		executor = FunctionUtils.construct_executor(
+			context, 
+			arguments, 
+			function_table, 
+			call_stack
+		)
+		sigkey = CallSignature(function_table, arguments)
+		signature = call_stack.get(sigkey) or sigkey
 
 		if not call_stack.contains(signature):
 			call_stack.push(signature)
+			logger.debug(f"🆕 Pushed: {repr(signature)}")
+
 			returns = executor.execute()
+			signature.snapshot = executor.snapshot()
+			signature.returns.update(returns)
+
 			call_stack.pop()
+			logger.debug(f"✅ Popped: {repr(signature)}")
 			return returns
 		else:
-			return {TypeUtils.instantiate(Typing.get_type("Any"))}
+			traced = call_stack.trace(signature)
+			logger.debug(f"⚠️  Recursive SCC detected: {[repr(t) for t in traced]}", 1)
+
+			if not any(sig.running for sig in traced):
+				for sig in traced:
+					sig.running = True
+
+				iteration = 0
+				while True:
+					logger.debug(f"🔄 Fixpoint Iteration {iteration}", 1)
+					changed = False
+
+					for sig in traced:
+						logger.debug(f"🚀 Running: {repr(sig)}", 1)
+						executor = FunctionUtils.construct_executor(
+							context,
+							sig.arguments,
+							sig.function_table,
+							call_stack
+						)
+
+						snapshot_before = sig.snapshot
+						returns = executor.execute()
+						snapshot_after = executor.snapshot()
+
+						sig.returns.update(returns)
+						sig.snapshot = snapshot_after
+
+						logger.debug(f"  ▸ Before snapshot: {snapshot_before}")
+						logger.debug(f"  ▸ After snapshot:  {snapshot_after}")
+
+						if snapshot_before != snapshot_after:
+							changed = True
+
+					if not changed:
+						logger.debug(f"✅ Fixpoint reached — snapshots stabilized.", 1)
+						break
+
+					iteration += 1
+
+				for sig in traced:
+					sig.running = False
+
+			logger.debug(f"📤 Returning from: {repr(signature)} with returns = {signature.returns}")
+			return signature.returns
 	
 	@staticmethod
 	def map_call_arguments(

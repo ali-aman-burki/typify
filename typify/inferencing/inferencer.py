@@ -1,5 +1,6 @@
 from collections import deque, defaultdict
 
+from typify.logging import logger
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.symbol_table import InstanceTable, ModuleTable
@@ -90,5 +91,5 @@ class Inferencer:
 			for meta in sequence:
 				pass_counts[meta.table.fqn] = passes[meta]
 
-		print("\nSequence Followed:")
-		print(" -> ".join(meta.table.fqn for meta in processed))
+		logger.debug("Sequence Followed:", trail=1)
+		logger.debug(" -> ".join(meta.table.fqn for meta in processed))
