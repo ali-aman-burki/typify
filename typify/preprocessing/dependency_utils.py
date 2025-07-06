@@ -74,7 +74,7 @@ class DependencyUtils:
 					Table.transfer_names(table.names, module_object)
 
 					attrdef = DefinitionTable(defkey)
-					attrdef.points_to.add(module_object)
+					attrdef.refset.add(module_object)
 					current_object.get_name(table.key).new_def(attrdef)
 
 					sysmodules[table.fqn] = module_object

@@ -10,30 +10,50 @@ class AnsiColor:
     DEBUG = "\033[38;5;108m"  # Soft green
     TRACE = "\033[38;5;179m"  # Muted yellow
 
+import sys
+
 class Logger:
-    def __init__(self, level=LogLevel.OFF):
+    def __init__(self, level=LogLevel.OFF, outputs: list = None):
         self.level = level
+        self.outputs = outputs or [sys.stdout]
 
     def set_level(self, level: LogLevel):
         self.level = level
 
+    def add_output(self, stream):
+        self.outputs.append(stream)
+
+    def _log(self, level_name: str, msg: str, color: str, min_level: int, trail: int, header: bool):
+        if self.level >= min_level:
+            prefix = f"[{level_name}] " if header else ""
+            color_msg = f"{color}{prefix}{msg}{AnsiColor.RESET}"
+            plain_msg = f"{prefix}{msg}"
+
+            for out in self.outputs:
+                if out == sys.stdout:
+                    print("\n" * trail, end="", file=out)
+                    print(color_msg, file=out)
+                else:
+                    out.write("\n" * trail + plain_msg + "\n")
+                    out.flush()
+
     def info(self, msg: str, trail: int = 0, header: bool = True):
-        if self.level >= LogLevel.INFO:
-            print("\n" * trail, end="")
-            print(f"{AnsiColor.INFO}{msg if not header else f'[INFO] {msg}'}{AnsiColor.RESET}")
+        self._log("INFO", msg, AnsiColor.INFO, LogLevel.INFO, trail, header)
 
     def debug(self, msg: str, trail: int = 0, header: bool = True):
-        if self.level >= LogLevel.DEBUG:
-            print("\n" * trail, end="")
-            print(f"{AnsiColor.DEBUG}{msg if not header else f'[DEBUG] {msg}'}{AnsiColor.RESET}")
+        self._log("DEBUG", msg, AnsiColor.DEBUG, LogLevel.DEBUG, trail, header)
 
     def trace(self, msg: str, trail: int = 0, header: bool = True):
-        if self.level >= LogLevel.TRACE:
-            print("\n" * trail, end="")
-            print(f"{AnsiColor.TRACE}{msg if not header else f'[TRACE] {msg}'}{AnsiColor.RESET}")
+        self._log("TRACE", msg, AnsiColor.TRACE, LogLevel.TRACE, trail, header)
 
     def newline(self, count: int = 1):
-        print("\n" * count, end="")
+        for out in self.outputs:
+            out.write("\n" * count)
+            out.flush()
 
-# Shared instance
-logger = Logger()
+    def close(self):
+        for out in self.outputs:
+            if out not in (sys.stdout, sys.stderr):
+                out.close()
+
+logger = Logger(level=LogLevel.DEBUG)

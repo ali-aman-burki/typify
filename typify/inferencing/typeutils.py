@@ -2,6 +2,7 @@ from __future__ import annotations
 import ast
 
 from typify.preprocessing.symbol_table import (
+	ReferenceSet,
 	InstanceTable, 
 	DefinitionTable
 )
@@ -37,15 +38,15 @@ class TypeExpr:
 class TypeUtils:
 
 	@staticmethod
-	def type_expr_from_instances(instances: set[InstanceTable]):
+	def type_expr_from_refset(refset: ReferenceSet):
 		type_exprs = []
-		for instance in instances:
-			type_exprs.append(instance.type_expr)
+		for ref in refset:
+			type_exprs.append(ref.type_expr)
 		return TypeUtils.unify_from_exprs(type_exprs)
 
 	@staticmethod
-	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> set[InstanceTable]:
-		result = set()
+	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> ReferenceSet:
+		result = ReferenceSet()
 		if unified_type_expr.typedef == Typing.get_type("Union"):
 			for typeexpr in unified_type_expr.typeargs:
 				result.add(TypeUtils.instantiate(typeexpr.typedef, typeexpr.typeargs))
@@ -82,8 +83,8 @@ class TypeUtils:
 		return TypeExpr(union_def, unique)
 
 	@staticmethod
-	def unify(points_to: set[InstanceTable]):
-		return TypeUtils.unify_from_exprs([pt.type_expr for pt in points_to])
+	def unify(refset: ReferenceSet):
+		return TypeUtils.unify_from_exprs([ref.type_expr for ref in refset])
 
 	@staticmethod
 	def instantiate(

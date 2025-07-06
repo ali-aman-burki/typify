@@ -69,3 +69,5 @@ bundle.libs["builtinlib"].export_to(Path(output_dir) / "builtinlib")
 bundle.libs["stdlib"].export_to(Path(output_dir) / "stdlib")
 
 logger.info("✅ Done.")
+
+logger.close()

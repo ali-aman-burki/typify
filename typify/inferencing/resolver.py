@@ -9,6 +9,7 @@ from typify.inferencing.unpacking_utils import (
 	PackGroup
 )
 from typify.preprocessing.symbol_table import (
+	ReferenceSet,
 	Table,
 	NameTable,
 	ClassTable,
@@ -122,18 +123,18 @@ class Resolver:
 
 	
 	#TODO: need support for literal types i.e Literal[...]
-	def resolve_value(self, node: ast.Expr) -> set[InstanceTable]:
+	def resolve_value(self, node: ast.Expr) -> ReferenceSet:
 		from typify.inferencing.call_dispatcher import CallDispatcher
 		
 		if isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			instance = ConstantObjects.get(type_name)
-			return {instance}
+			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.JoinedStr):
 			typeclass = Builtins.get_type("str")
 			instance = TypeUtils.instantiate(typeclass)
-			return {instance}
+			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.List):
 			typeclass = Builtins.get_type("list")
@@ -143,7 +144,7 @@ class Resolver:
 				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
 			instance = TypeUtils.instantiate(typeclass, [TypeUtils.unify_from_exprs(typeargs)])
-			return {instance}
+			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.Set):
 			typeclass = Builtins.get_type("set")
@@ -153,7 +154,7 @@ class Resolver:
 				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
 			instance = TypeUtils.instantiate(typeclass, [TypeUtils.unify_from_exprs(typeargs)])
-			return {instance}
+			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.Tuple):
 			typeclass = Builtins.get_type("tuple")
@@ -166,7 +167,7 @@ class Resolver:
 				store.append(resolved)
 			instance = TypeUtils.instantiate(typeclass, typeargs)
 			instance.store = store
-			return {instance}
+			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.Dict):
 			typeclass = Builtins.get_type("dict")
@@ -184,58 +185,56 @@ class Resolver:
 				typeclass, 
 				[TypeUtils.unify_from_exprs(keyargs), TypeUtils.unify_from_exprs(valueargs)]
 			)
-			return {instance}
+			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.Call):
 			dispatcher = CallDispatcher(self, node)
-			results = dispatcher.dispatch()
-			
-			return results if results else {TypeUtils.instantiate(Typing.get_type("Any"))}
-		
+			return dispatcher.dispatch()
+
 		elif isinstance(node, ast.Name):
 			name = self.LEGB_lookup(node.id)
-			if name: return name.get_latest_definition().points_to
-			return {TypeUtils.instantiate(Typing.get_type("Any"))}
+			if name: return name.get_latest_definition().refset
+			return ReferenceSet(TypeUtils.instantiate(Typing.get_type("Any")))
 		
 		elif isinstance(node, ast.Attribute):
-			value_points_tos = self.resolve_value(node.value)
-			results = set()
-			for pt in value_points_tos:
-				namet = self.attribute_lookup(pt, node.attr)
+			value_references = self.resolve_value(node.value)
+			result = ReferenceSet()
+			for ref in value_references:
+				namet = self.attribute_lookup(ref, node.attr)
 				if namet:
 					namedef = namet.get_latest_definition()
-					results.update(namedef.points_to)
-			return results if results else {TypeUtils.instantiate(Typing.get_type("Any"))}
+					result.update(namedef.refset)
+			return result if result else ReferenceSet(TypeUtils.instantiate(Typing.get_type("Any")))
 		else:
-			return {TypeUtils.instantiate(Typing.get_type("Any"))}
+			return ReferenceSet(TypeUtils.instantiate(Typing.get_type("Any")))
 	
 	#TODO: in the future, remove hardcoded logic for tuple and generalize it based on generics
 	#TODO: add support for starred unpacking
 	def process_assignment(
 			self, 
 			resolved_target: PackGroup, 
-			resolved_value: set[InstanceTable]
+			resolved_value: ReferenceSet
 		):
 		targets: set[TargetEntry] = set()
-		for pt in resolved_value:
+		for ref in resolved_value:
 			for i in range(len(resolved_target.groups)):
 				group = resolved_target.groups[i]
 				if isinstance(group, PackGroup):
-					next_instances = TypeUtils.instantiate_from_type_expr(pt.type_expr.typeargs[0])
-					if pt.type_expr.typedef == Builtins.get_type("tuple"):
-						if len(pt.store) > i:
-							next_instances = pt.store[i]
-						elif len(pt.type_expr.typeargs) > i:
-							next_instances = TypeUtils.instantiate_from_type_expr(pt.type_expr.typeargs[i])
+					next_instances = TypeUtils.instantiate_from_type_expr(ref.type_expr.typeargs[0])
+					if ref.type_expr.typedef == Builtins.get_type("tuple"):
+						if len(ref.store) > i:
+							next_instances = ref.store[i]
+						elif len(ref.type_expr.typeargs) > i:
+							next_instances = TypeUtils.instantiate_from_type_expr(ref.type_expr.typeargs[i])
 					self.process_assignment(group, next_instances)
 				else:
 					for target_entry in group:
-						target_entry.definition.points_to.add(pt)
+						target_entry.definition.refset.add(ref)
 						targets.add(target_entry)
 		
 		for target in targets:
 			target.namespace_name.new_def(target.definition)
 			if target.symbol_name:
 				ndef = DefinitionTable((target.definition.module, target.definition.position))
-				ndef.points_to.update(target.definition.points_to)
+				ndef.refset.update(target.definition.refset)
 				target.symbol_name.merge_def(ndef)	

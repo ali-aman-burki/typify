@@ -1,8 +1,45 @@
 from __future__ import annotations
+from pathlib import Path
 import json
 import ast
 
-from pathlib import Path
+from typify.logging import logger
+
+class ReferenceSet:
+
+	def __init__(self, *reference_list: InstanceTable):
+		self.references = set(reference_list)
+	
+	def __repr__(self) -> str:
+		return repr(self.as_type())
+	
+	def __len__(self) -> int:
+		return len(self.references)
+	
+	def __contains__(self, item: InstanceTable) -> bool:
+		return item in self.references
+
+	def __iter__(self):
+		return iter(self.references)
+	
+	def copy(self):
+		c = ReferenceSet()
+		c.update(self)
+		return c
+
+	def add(self, reference: InstanceTable):
+		self.references.add(reference)
+	
+	def update(self, other: ReferenceSet):
+		self.references.update(other.references)
+	
+	def ref(self) -> InstanceTable | None:
+		if len(self.references) != 1: logger.trace("Multiple references found where 1 was expected.")
+		return next(iter(self.references))
+	
+	def as_type(self):
+		from typify.inferencing.typeutils import TypeUtils
+		return TypeUtils.unify(self)
 
 class Table:
 	def __init__(self, key: str):
@@ -24,16 +61,16 @@ class Table:
 		self.nonlocals: set[ast.AST] = set()
 		self.parent: Table = None
 
-		self.kind: str = ""
-		self.points_to: set[InstanceTable] = set()
-		self.origin: DefinitionTable = None
-		self.tree: ast.FunctionDef = None		
+		self.refset: ReferenceSet = ReferenceSet()
 
+		self.origin: DefinitionTable = None
+		self.tree: ast.FunctionDef = None
+	
 	def to_dict(self):
 		from typify.inferencing.typeutils import TypeUtils
 
 		data = {}
-		if self.points_to: data["type"] = repr(TypeUtils.unify(self.points_to))
+		if self.refset: data["type"] = repr(self.refset)
 		if self.definitions: data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
 		if self.globals: data["globals"] = list(self.globals)
 		if self.packages: data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}
@@ -52,7 +89,7 @@ class Table:
 			newname = NameTable(name.key)
 			for old_def in name.definitions.values():
 				newdef = DefinitionTable((old_def.module, old_def.position))
-				newdef.points_to.update(old_def.points_to)
+				newdef.refset.update(old_def.refset)
 				newname.merge_def(newdef)
 			destination.names[name.key] = newname
 	
@@ -109,7 +146,7 @@ class Table:
 	
 	def merge_def(self, deftable: DefinitionTable):
 		if deftable.key in self.definitions: 
-			self.definitions[deftable.key].points_to.update(deftable.points_to)
+			self.definitions[deftable.key].refset.update(deftable.refset)
 			return self.definitions[deftable.key]
 		else: 
 			return self.new_def(deftable)
@@ -193,16 +230,16 @@ class InstanceTable(Table):
 		super().__init__("typify@instance")
 		from typify.inferencing.typeutils import TypeExpr
 		self.type_expr: TypeExpr = None
-		self.store: list[set[InstanceTable]] = []
+		self.store: list[ReferenceSet] = []
 	
+	def __repr__(self):
+		return self.label()
+
 	def label(self):
 		return f"instance@{repr(self.type_expr)}"
 	
 	def type_rep(self):
 		return repr(self.type_expr)
-	
-	def __repr__(self):
-		return self.label()
 	
 class DefinitionTable(Table):
 	def __init__(self, defkey: tuple[Table, tuple[int, int]]):

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from typify.preprocessing.symbol_table import DefinitionTable, InstanceTable
+from typify.preprocessing.symbol_table import DefinitionTable, ReferenceSet
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
@@ -8,7 +8,7 @@ from typify.inferencing.commons import ArgTuple
 class CallSignature:
 	function_table: DefinitionTable
 	arguments: dict[str, ArgTuple]
-	returns: set[InstanceTable] = field(default_factory=set)
+	returns: ReferenceSet = field(default_factory=ReferenceSet)
 	snapshot: list[set[str]] = field(default_factory=list)
 	running: bool = False
 	stabilized: bool = False
@@ -19,8 +19,8 @@ class CallSignature:
 		if self.arguments.keys() != other.arguments.keys(): return False
 
 		for key in self.arguments:
-			t1 = TypeUtils.unify(self.arguments[key].points_to)
-			t2 = TypeUtils.unify(other.arguments[key].points_to)
+			t1 = TypeUtils.unify(self.arguments[key].refset)
+			t2 = TypeUtils.unify(other.arguments[key].refset)
 			if t1 != t2: return False
 
 		return True
@@ -28,7 +28,7 @@ class CallSignature:
 	def __hash__(self):
 		param_fingerprint = tuple(
 			sorted(
-				(k, TypeUtils.unify(v.points_to))
+				(k, TypeUtils.unify(v.refset))
 				for k, v in self.arguments.items()
 			)
 		)
@@ -37,7 +37,7 @@ class CallSignature:
 	def __repr__(self):
 		args = []
 		for arg in self.arguments.values():
-			args.append(TypeUtils.unify(arg.points_to))
+			args.append(TypeUtils.unify(arg.refset))
 		joined = ", ".join(repr(arg) for arg in args)
 		return self.function_table.parent.key + f"({joined})"
 

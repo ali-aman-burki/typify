@@ -5,7 +5,7 @@ from typify.preprocessing.symbol_table import (
 )
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import ModuleTable
+from typify.preprocessing.symbol_table import ModuleTable, ReferenceSet
 from typify.preprocessing.libs import RequiredLibs
 
 from dataclasses import dataclass
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 @dataclass
 class ParameterEntry:
 	name: str
-	points_to: set[InstanceTable]
+	refset: ReferenceSet
 	defkey: tuple[ModuleTable, tuple[int, int]]
 
 	is_vararg: bool = False
@@ -23,7 +23,7 @@ class ParameterEntry:
 
 @dataclass
 class ArgTuple:
-	points_to: set[InstanceTable]
+	refset: ReferenceSet
 	defkey: tuple[ModuleTable, tuple[int, int]]
 
 @dataclass

@@ -3,6 +3,7 @@ import ast
 from typify.logging import logger
 from typify.inferencing.resolver import Resolver
 from typify.preprocessing.symbol_table import (
+	ReferenceSet,
 	DefinitionTable, 
 	CallFrameTable,
 	InstanceTable
@@ -26,17 +27,6 @@ from typify.inferencing.call_stack import (
 class FunctionUtils:
 
 	@staticmethod
-	def get_function_kind(fdef: ast.FunctionDef) -> str:
-		for decorator in fdef.decorator_list:
-			if isinstance(decorator, ast.Name):
-				if decorator.id == "classmethod": return "classmethod"
-				elif decorator.id == "staticmethod": return "staticmethod"
-			elif isinstance(decorator, ast.Attribute):
-				if decorator.attr == "classmethod": return "classmethod"
-				elif decorator.attr == "staticmethod": return "staticmethod"
-		return ""
-
-	@staticmethod
 	def construct_executor(
 		context: Context, 
 		arguments: dict[str, ArgTuple], 
@@ -51,14 +41,14 @@ class FunctionUtils:
 
 		for argname in arguments:
 			argtuple = arguments[argname]
-			points_to = argtuple.points_to
+			refset = argtuple.refset
 			defkey = argtuple.defkey
 
 			namespace_name = call_frame.get_name(argname)
 			symbol_name = function_table.get_name(argname)
 
 			ndef = DefinitionTable(defkey)
-			ndef.points_to.update(points_to)
+			ndef.refset.update(refset)
 
 			namespace_name.new_def(ndef)
 			symbol_name.merge_def(ndef)
@@ -80,12 +70,12 @@ class FunctionUtils:
 		return executor
 
 	@staticmethod
-	def run_function(
+	def exec_function(
 		context: Context, 
 		arguments: dict[str, ArgTuple], 
 		function_table: DefinitionTable,
 		call_stack: CallStack
-	) -> set[InstanceTable]:
+	) -> ReferenceSet:
 
 		executor = FunctionUtils.construct_executor(
 			context, 
@@ -172,19 +162,19 @@ class FunctionUtils:
 
 		for i, arg_node in enumerate(call_node.args[:len(positional_param_entries)]):
 			name = positional_param_entries[i].name
-			points_to = set()
+			refset = ReferenceSet()
 			defkey = positional_param_entries[i].defkey
 
 			for instance in resolver.resolve_value(arg_node):
-				points_to.add(instance)
+				refset.add(instance)
 
-			resolved_args[name] = ArgTuple(points_to, defkey)
+			resolved_args[name] = ArgTuple(refset, defkey)
 
 		extra_args = call_node.args[len(positional_param_entries):]
 
 		if vararg_param and extra_args:
 			name = vararg_param.name
-			points_to = set()
+			refset = ReferenceSet()
 			defkey = vararg_param.defkey
 
 			store = []
@@ -198,9 +188,9 @@ class FunctionUtils:
 
 			instance = TypeUtils.instantiate(Builtins.get_type("tuple"), typeargs)
 			instance.store = store
-			points_to.add(instance)
+			refset.add(instance)
 
-			resolved_args[name] = ArgTuple(points_to, defkey)
+			resolved_args[name] = ArgTuple(refset, defkey)
 
 		# Keyword arguments
 		for kw in call_node.keywords:
@@ -209,18 +199,18 @@ class FunctionUtils:
 			if kw.arg in parameters:
 				kwentry = parameters[kw.arg]
 				name = kw.arg
-				points_to = set()
+				refset = ReferenceSet()
 				defkey = kwentry.defkey
 				
 				for instance in resolver.resolve_value(kw.value):
-					points_to.add(instance)
+					refset.add(instance)
 
-				resolved_args[name] = ArgTuple(points_to, defkey)
+				resolved_args[name] = ArgTuple(refset, defkey)
 
 		# Retain original param entries if not overridden
 		for pname, param_entry in parameters.items():
 			if pname not in resolved_args:
-				resolved_args[pname] = ArgTuple(param_entry.points_to, param_entry.defkey)
+				resolved_args[pname] = ArgTuple(param_entry.refset, param_entry.defkey)
 
 		return resolved_args
 
@@ -238,15 +228,15 @@ class FunctionUtils:
 			is_kwonly=False
 		) -> ParameterEntry:
 			name = arg.arg
-			points_to = set()
+			refset = ReferenceSet()
 			defkey = (resolver.module_meta.table, (arg.lineno, arg.col_offset))
 			if default_value is not None:
 				for instance in resolver.resolve_value(default_value):
-					points_to.add(instance)
+					refset.add(instance)
 
 			entry = ParameterEntry(
 				name=name,
-				points_to=points_to,
+				refset=refset,
 				defkey=defkey,
 				is_posonly=is_posonly,
 				is_kwonly=is_kwonly,
@@ -268,13 +258,13 @@ class FunctionUtils:
 		# *args
 		if args_node.vararg:
 			name = args_node.vararg.arg
-			points_to = set()
+			refset = ReferenceSet()
 			defkey = (resolver.module_meta.table, (args_node.vararg.lineno, args_node.vararg.col_offset))
 			
-			points_to.add(TypeUtils.instantiate(Builtins.get_type("tuple")))
+			refset.add(TypeUtils.instantiate(Builtins.get_type("tuple")))
 			parameters[name] = ParameterEntry(
 				name=name,
-				points_to=points_to,
+				refset=refset,
 				defkey=defkey,
 				is_vararg=True,
 			)
@@ -286,16 +276,16 @@ class FunctionUtils:
 		# **kwargs
 		if args_node.kwarg:
 			name = args_node.kwarg.arg
-			points_to = set()
+			refset = ReferenceSet()
 			defkey = (resolver.module_meta.table, (args_node.kwarg.lineno, args_node.kwarg.col_offset))
 
 			dict_expr = TypeExpr(Builtins.get_type("dict"), [TypeExpr(Builtins.get_type("str")), TypeExpr(Typing.get_type("Any"))])
 			dict_instance = TypeUtils.instantiate_from_type_expr(dict_expr)
-			points_to.update(dict_instance)
+			refset.update(dict_instance)
 			
 			parameters[name] = ParameterEntry(
 				name=name,
-				points_to=points_to,
+				refset=refset,
 				defkey=defkey,
 				is_kwarg=True
 			)

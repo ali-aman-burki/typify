@@ -1,6 +1,7 @@
 import ast
 
 from typify.preprocessing.symbol_table import (
+	ReferenceSet,
 	InstanceTable,
 	DefinitionTable
 )
@@ -14,50 +15,86 @@ class CallDispatcher:
 		self.resolver = resolver
 		self.node = node
 	
-	def inject_first_and_run(
+	def exec(
 			self,
-			inject: InstanceTable, 
-			method: DefinitionTable
+			method: DefinitionTable,
+			inject: InstanceTable = None
 		):
 
+		if inject:
+			self.node.args.insert(0, ast.Constant(0))
+
 		param_map = method.parameters
-		self.node.args.insert(0, ast.Constant(0))
-
 		argmap = FunctionUtils.map_call_arguments(self.node, param_map, self.resolver)
-		first_param = next(iter(argmap.values()))
-		first_param.points_to = {inject}
+		
+		if inject:
+			first_param = next(iter(argmap.values()))
+			first_param.refset = ReferenceSet(inject)
 
-		FunctionUtils.run_function(
+		return FunctionUtils.exec_function(
 			self.resolver.context, 
 			argmap, 
 			method, 
 			self.resolver.call_stack
 		)
 
-	def dispatch(self) -> set[InstanceTable]:
-		candidates = self.resolver.resolve_value(self.node.func)
-		results = set()
-		for candidate in candidates:
-			if candidate.type_expr.typedef == Builtins.get_type("function"):
-				function_table = candidate.origin
-				param_map = function_table.parameters
-				argmap = FunctionUtils.map_call_arguments(self.node, param_map, self.resolver)
-				returns = FunctionUtils.run_function(
-					self.resolver.context, 
-					argmap, 
-					function_table, 
-					self.resolver.call_stack
-				)
-				results.update(returns)
-			elif candidate.type_expr.typedef == Builtins.get_type("type"):
-				class_table = candidate.origin
-				instance = TypeUtils.instantiate(class_table)
-				results.add(instance)
-				
-				init_attr = self.resolver.attribute_lookup(instance, "__init__")
-				init_def = init_attr.get_latest_definition()
-				init_method = next(iter(init_def.points_to)).origin
+	def dispatch(self) -> ReferenceSet:
+		result = ReferenceSet()
+		if isinstance(self.node.func, ast.Attribute):
+			callers_set = self.resolver.resolve_value(self.node.func.value)
+			for caller in callers_set:
+				method_attr = self.resolver.attribute_lookup(caller, self.node.func.attr)
+				if not method_attr: continue
 
-				self.inject_first_and_run(instance, init_method)
+				candidate_def = method_attr.get_latest_definition()
+				candidate = candidate_def.refset.ref()
 
-		return results
+				if candidate.type_expr.typedef == Builtins.get_type("function"):
+					shortcircuit = False
+					for decorator in candidate.origin.tree.decorator_list:
+						if isinstance(decorator, ast.Name):
+							if decorator.id == "classmethod":
+								class_instance = caller.type_expr.typedef.mro[0]
+								returns = self.exec(candidate.origin, class_instance)
+								result.update(returns)
+								shortcircuit = True
+								break
+							elif decorator.id == "staticmethod":
+								returns = self.exec(candidate.origin)
+								result.update(returns)
+								shortcircuit = True
+								break
+					
+					if not shortcircuit:
+						if caller.type_expr.typedef == Builtins.get_type("module"):
+							returns = self.exec(candidate.origin)
+						else:
+							returns = self.exec(candidate.origin, caller)
+						result.update(returns)
+
+				elif candidate.type_expr.typedef == Builtins.get_type("type"):
+					result.add(self.dispatch_instance(candidate))
+		else:
+			candidates = self.resolver.resolve_value(self.node.func)
+		
+			for candidate in candidates:
+				if candidate.type_expr.typedef == Builtins.get_type("function"):
+					function_table = candidate.origin
+					returns = self.exec(function_table)
+					result.update(returns)
+
+				elif candidate.type_expr.typedef == Builtins.get_type("type"):
+					result.add(self.dispatch_instance(candidate))
+		return result
+	
+	def dispatch_instance(self, candidate: InstanceTable) -> InstanceTable:
+		class_table = candidate.origin
+		instance = TypeUtils.instantiate(class_table)
+		
+		init_attr = self.resolver.attribute_lookup(instance, "__init__")
+		init_def = init_attr.get_latest_definition()
+		init_method = init_def.refset.ref().origin
+
+		self.exec(init_method, instance)
+		return instance
+

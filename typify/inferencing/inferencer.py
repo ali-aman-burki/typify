@@ -3,7 +3,7 @@ from collections import deque, defaultdict
 from typify.logging import logger
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import InstanceTable, ModuleTable
+from typify.preprocessing.symbol_table import ReferenceSet, InstanceTable, ModuleTable
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils, TypeExpr
 from typify.inferencing.executor import Context, Executor
@@ -43,7 +43,7 @@ class Inferencer:
 			passes: dict[ModuleMeta, int] = {meta: 0 for meta in sequence}
 
 			def run_pass(meta: ModuleMeta) -> list[set[str]]:
-				snapshot_log: list[set[InstanceTable]] = []
+				snapshot_log: list[ReferenceSet] = []
 				sysmodules.setdefault(
 					meta.table.fqn,
 					TypeUtils.instantiate(Builtins.get_type("module"))
