@@ -1,6 +1,6 @@
-from typify.preprocessing.module_meta import ModuleMeta
-
 from collections import defaultdict
+
+from typify.preprocessing.module_meta import ModuleMeta
 
 class Sequencer:
 	

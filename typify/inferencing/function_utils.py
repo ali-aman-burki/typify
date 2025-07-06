@@ -6,7 +6,6 @@ from typify.preprocessing.symbol_table import (
 	ReferenceSet,
 	DefinitionTable, 
 	CallFrameTable,
-	InstanceTable
 )
 from typify.inferencing.typeutils import (
 	TypeUtils,

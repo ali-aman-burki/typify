@@ -1,3 +1,6 @@
+from pathlib import Path
+from collections import defaultdict
+
 from typify.preprocessing.symbol_table import (
     Table,
 	LibraryTable,
@@ -6,9 +9,6 @@ from typify.preprocessing.symbol_table import (
 	InstanceTable
 )
 from typify.preprocessing.module_meta import ModuleMeta
-
-from pathlib import Path
-from collections import defaultdict
 
 class LibraryMeta:
 	def __init__(self, src: Path, key: str):

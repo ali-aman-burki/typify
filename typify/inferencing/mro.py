@@ -1,7 +1,4 @@
-from typify.preprocessing.symbol_table import (
-	InstanceTable, 
-	DefinitionTable
-)
+from typify.preprocessing.symbol_table import InstanceTable
 
 class MROBuilder:
 

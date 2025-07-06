@@ -3,11 +3,15 @@ from collections import deque, defaultdict
 from typify.logging import logger
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import ReferenceSet, InstanceTable, ModuleTable
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils, TypeExpr
 from typify.inferencing.executor import Context, Executor
 from typify.inferencing.call_stack import CallStack
+from typify.preprocessing.symbol_table import (
+    ReferenceSet, 
+    InstanceTable, 
+    ModuleTable
+)
 
 class Inferencer:
 
