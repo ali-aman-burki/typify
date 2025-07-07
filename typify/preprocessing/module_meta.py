@@ -14,7 +14,7 @@ class ModuleMeta:
 		self.trust_annotations = trust_annotations
 
 		self.vslots: dict[tuple[int, int], tuple[ast.Expr, TypeExpr]] = {}
-		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | dict[str, TypeExpr] | TypeExpr]] = {}
+		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | ast.AsyncFunctionDef | dict[str, TypeExpr] | TypeExpr]] = {}
 
 	def load_tree(self):
 		if not self.tree:

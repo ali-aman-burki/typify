@@ -100,6 +100,9 @@ class Executor(ast.NodeVisitor):
 
 	def visit_Return(self, node):
 		resolved = self.resolver.resolve_value(node.value)
+		if not node.value:
+			resolved = ReferenceSet(ConstantObjects.get("NoneType"))
+
 		self.add_to_snapshot(resolved)
 
 		self.symbol.refset.update(resolved)
@@ -261,7 +264,7 @@ class Executor(ast.NodeVisitor):
 
 		self.add_to_snapshot(deftable.refset)
 		
-	def visit_FunctionDef(self, func_tree: ast.FunctionDef):
+	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
 		position = (func_tree.lineno, func_tree.col_offset)
 		defkey = (self.module_meta.table, position)
 		name = func_tree.name
@@ -295,6 +298,9 @@ class Executor(ast.NodeVisitor):
 
 		self.add_to_snapshot(deftable.refset)
 	
+	def visit_AsyncFunctionDef(self, node):
+		self.visit_FunctionDef(node)
+
 	def visit_Call(self, node):
 		self.add_to_snapshot(self.resolver.resolve_value(node))
 

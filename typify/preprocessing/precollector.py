@@ -9,7 +9,12 @@ class PreCollector(ast.NodeVisitor):
 	
 	@staticmethod
 
-	def build_function_signature(fdef: ast.FunctionDef, parameters: dict[str, str], return_annotation: str) -> str:
+	def build_function_signature(
+		fdef: ast.FunctionDef | ast.AsyncFunctionDef, 
+		parameters: dict[str, str], 
+		return_annotation: str
+	) -> str:
+		
 		args_node = fdef.args
 		parts = []
 
@@ -62,7 +67,7 @@ class PreCollector(ast.NodeVisitor):
 
 	
 	@staticmethod
-	def collect_parameter_slots(fdef: ast.FunctionDef) -> dict[str, str]:
+	def collect_parameter_slots(fdef: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, str]:
 		args_node = fdef.args
 		parameters: dict[str, str] = {}
 

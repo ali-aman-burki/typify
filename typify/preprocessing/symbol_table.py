@@ -66,7 +66,7 @@ class Table:
 		self.refset: ReferenceSet = ReferenceSet()
 
 		self.origin: DefinitionTable = None
-		self.tree: ast.FunctionDef = None
+		self.tree: ast.FunctionDef | ast.AsyncFunctionDef = None
 	
 	def to_dict(self):
 		from typify.inferencing.typeutils import TypeUtils

@@ -202,7 +202,11 @@ class FunctionUtils:
 
 	#TODO: add support *varargs and **kwargs
 	@staticmethod
-	def collect_parameters(fdef: ast.FunctionDef, resolver: Resolver) -> dict[str, ParameterEntry]:
+	def collect_parameters(
+		fdef: ast.FunctionDef | ast.AsyncFunctionDef, 
+		resolver: Resolver
+	) -> dict[str, ParameterEntry]:
+		
 		args_node = fdef.args
 		parameters: dict[str, ParameterEntry] = {}
 

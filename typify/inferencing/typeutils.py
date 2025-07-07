@@ -133,5 +133,5 @@ class TypeUtils:
 				if TypeUtils.has_complete_return(stmt.body): return True
 			elif isinstance(stmt, ast.Match):
 				if all(TypeUtils.has_complete_return(case.body) for case in stmt.cases): return True
-			elif isinstance(stmt, (ast.FunctionDef, ast.ClassDef)): continue
+			elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)): continue
 		return False
