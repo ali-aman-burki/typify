@@ -1,12 +1,13 @@
 from __future__ import annotations
 import ast
 
+from typify.inferencing.commons import Typing
+from typify.preprocessing.precollector import PreCollector
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
 	InstanceTable, 
 	DefinitionTable
 )
-from typify.inferencing.commons import Typing
 
 class TypeExpr:
 
@@ -28,7 +29,7 @@ class TypeExpr:
 		return hash((self.typedef, tuple(self.typeargs)))
 
 	def __repr__(self):
-		fqn = self.typedef.parent.key if self.typedef else "$Unresolved$"
+		fqn = self.typedef.parent.key if self.typedef else PreCollector.UNVISITED
 		strs = []
 		for typeexpr in self.typevars.values():
 			strs.append(repr(typeexpr))

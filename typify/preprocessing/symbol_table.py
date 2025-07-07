@@ -29,6 +29,7 @@ class ReferenceSet:
 		return c
 
 	def add(self, reference: InstanceTable):
+		if isinstance(reference, int): print("shit")
 		self.references.add(reference)
 	
 	def update(self, other: ReferenceSet):

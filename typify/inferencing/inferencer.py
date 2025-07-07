@@ -58,6 +58,7 @@ class Inferencer:
 					module_meta=meta,
 					symbol=meta.table,
 					namespace=sysmodules[meta.table.fqn],
+					arguments={},
 					call_stack=call_stack,
 					tree=meta.tree,
 					snapshot_log=snapshot_log

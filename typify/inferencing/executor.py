@@ -15,7 +15,8 @@ from typify.inferencing.commons import (
 	Context,
 	Builtins,
 	Typing,
-	ConstantObjects
+	ConstantObjects,
+	ArgTuple
 )
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
@@ -32,6 +33,7 @@ class Executor(ast.NodeVisitor):
 			module_meta: ModuleMeta,
 			symbol: Table,
 			namespace: InstanceTable, 
+			arguments: dict[str, ArgTuple],
 			call_stack: list,
 			tree: ast.AST,
 			snapshot_log: list[ReferenceSet] = None
@@ -53,12 +55,32 @@ class Executor(ast.NodeVisitor):
 			self.call_stack
 		)
 
+		for argname in arguments:
+			argtuple = arguments[argname]
+			refset = argtuple.refset
+			defkey = argtuple.defkey
+
+			namespace_name = self.namespace.get_name(argname)
+			symbol_name = self.symbol.get_name(argname)
+
+			ndef = DefinitionTable(defkey)
+			ndef.refset.update(refset)
+
+			namespace_name.new_def(ndef)
+			merged = symbol_name.merge_def(ndef)
+
+			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+			self.module_meta.fslots[position][1][argname] = merged.refset.as_type()
+
 	def execute(self) -> ReferenceSet: 
 		self.visit(self.tree)
 		if isinstance(self.namespace, CallFrameTable):
 			if not TypeUtils.has_complete_return(self.tree.body):
 				self.returns.add(ConstantObjects.get("NoneType"))
 				self.symbol.refset.add(ConstantObjects.get("NoneType"))
+
+				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+				self.module_meta.fslots[position][2] = self.symbol.refset
 		return self.returns
 
 	def snapshot(self): 
@@ -82,6 +104,9 @@ class Executor(ast.NodeVisitor):
 
 		self.symbol.refset.update(resolved)
 		self.returns.update(resolved)
+
+		position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+		self.module_meta.fslots[position][2] = self.symbol.refset
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
@@ -210,7 +235,10 @@ class Executor(ast.NodeVisitor):
 				[TypeExpr(entering_symbol)]
 			)
 		)
-		entering_namespace.type_expr = TypeExpr(Builtins.get_type("type"), [TypeExpr(entering_symbol)])
+		entering_namespace.type_expr = TypeExpr(
+			Builtins.get_type("type"), 
+			[TypeExpr(entering_symbol)]
+		)
 
 		entering_namespace.origin = entering_symbol
 		Executor(
@@ -218,6 +246,7 @@ class Executor(ast.NodeVisitor):
 			module_meta=self.module_meta,
 			symbol=entering_symbol,
 			namespace=entering_namespace,
+			arguments={},
 			call_stack=self.call_stack,
 			tree=ast.Module(class_tree.body, type_ignores=[]),
 			snapshot_log=self.snapshot_log
@@ -245,6 +274,12 @@ class Executor(ast.NodeVisitor):
 		function_def = function_table.merge_def(DefinitionTable(defkey))
 		function_def.tree = func_tree
 		function_def.parameters = FunctionUtils.collect_parameters(func_tree, self.resolver)
+
+		for k, v in function_def.parameters.items():
+			ndef = DefinitionTable(v.defkey)
+			ndef.refset = v.refset
+			mdef = function_def.get_name(k).merge_def(ndef)
+			self.module_meta.fslots[position][1][k] = mdef.refset.as_type()
 
 		func_obj = self.context.symbol_map.setdefault(
 			function_def,
@@ -278,6 +313,9 @@ class Executor(ast.NodeVisitor):
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
 			self.module_meta.vslots[(target.lineno, target.col_offset)][1] = resolved_value.as_type()
+		
+		if len(resolved_value) == 1 and next(iter(resolved_value)).type_expr.typedef == Typing.get_type("Any"):
+			self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(

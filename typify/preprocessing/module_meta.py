@@ -39,24 +39,59 @@ class ModuleMeta:
 
 	def export_typeslots(self, working_directory: Path, export_path: Path):
 		from typify.preprocessing.precollector import PreCollector
+		from typify.inferencing.commons import Typing
+		from typify.inferencing.typeutils import TypeExpr
 
 		output_path = self.mirror_export_path(working_directory, export_path, suffix="types")
 		output_path.parent.mkdir(parents=True, exist_ok=True)
 
 		data = {
-			"variables": {},
-			"functions": {}
+			"variables": {
+				"meta": {
+					"total": 0,
+					"typed": 0
+				}
+			},
+			"functions": {
+				"meta": {
+					"total": 0,
+					"typed": 0
+				}
+			}
 		}
 
 		for key, value in self.vslots.items():
 			k = f"{key[0]}:{key[1]}"
 			v = f"{ast.unparse(value[0])}: {value[1]}"
 			data["variables"][k] = v
+			data["variables"]["meta"]["total"] += 1
+
+			is_any = isinstance(value[1], TypeExpr) and value[1].typedef == Typing.get_type("Any")
+			is_unvisited = value[1] == PreCollector.UNVISITED
+
+			if not is_any and not is_unvisited:
+				data["variables"]["meta"]["typed"] += 1
 
 		for key, value in self.fslots.items():
 			k = f"{key[0]}:{key[1]}"
 			v = PreCollector.build_function_signature(value[0], value[1], value[2])
 			data["functions"][k] = v
+			data["functions"]["meta"]["total"] += 1
+
+			return_is_any = isinstance(value[2], TypeExpr) and value[2].typedef == Typing.get_type("Any")
+			return_is_unvisited = value[2] == PreCollector.UNVISITED
+			
+			if not return_is_any and not return_is_unvisited:
+				data["functions"]["meta"]["typed"] += 1
+			
+			for t in value[1].values():
+				data["functions"]["meta"]["total"] += 1
+
+				is_any = isinstance(t, TypeExpr) and t.typedef == Typing.get_type("Any")
+				is_unvisited = t == PreCollector.UNVISITED
+				
+				if not is_any and not is_unvisited:
+					data["functions"]["meta"]["typed"] += 1
 
 		with output_path.open("w", encoding="utf-8") as f:
 			json.dump(data, f, indent=4)

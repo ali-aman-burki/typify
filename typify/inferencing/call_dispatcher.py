@@ -1,4 +1,5 @@
 import ast
+import copy
 
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
@@ -9,6 +10,7 @@ from typify.inferencing.resolver import Resolver
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.function_utils import FunctionUtils
+from typify.logging import logger
 
 class CallDispatcher:
 	def __init__(self, resolver: Resolver, node: ast.Call):
@@ -21,16 +23,18 @@ class CallDispatcher:
 			inject: InstanceTable = None
 		):
 
+		modified_node = copy.deepcopy(self.node)
+
 		if inject:
-			self.node.args.insert(0, ast.Constant(0))
+			modified_node.args.insert(0, ast.Constant(0))
 
 		param_map = method.parameters
-		argmap = FunctionUtils.map_call_arguments(self.node, param_map, self.resolver)
+		argmap = FunctionUtils.map_call_arguments(modified_node, param_map, self.resolver)
 		
 		if inject:
 			first_param = next(iter(argmap.values()))
 			first_param.refset = ReferenceSet(inject)
-
+		
 		return FunctionUtils.exec_function(
 			self.resolver.context, 
 			argmap, 

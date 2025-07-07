@@ -38,20 +38,6 @@ class FunctionUtils:
 		call_frame = CallFrameTable(f"frame@{function_table.parent.fqn}")
 		call_frame.parent = function_table.parent
 
-		for argname in arguments:
-			argtuple = arguments[argname]
-			refset = argtuple.refset
-			defkey = argtuple.defkey
-
-			namespace_name = call_frame.get_name(argname)
-			symbol_name = function_table.get_name(argname)
-
-			ndef = DefinitionTable(defkey)
-			ndef.refset.update(refset)
-
-			namespace_name.new_def(ndef)
-			symbol_name.merge_def(ndef)
-
 		mod = call_frame.get_enclosing_module() 
 		context.symbol_map[function_table] = call_frame
 		context_meta = context.meta_map[mod]
@@ -61,6 +47,7 @@ class FunctionUtils:
 			module_meta=context_meta,
 			symbol=function_table,
 			namespace=call_frame, 
+			arguments=arguments,
 			call_stack=call_stack,
 			tree=ast.Module(tree.body, type_ignores=[]), 
 			snapshot_log=[]
@@ -85,12 +72,6 @@ class FunctionUtils:
 		sigkey = CallSignature(function_table, arguments)
 		signature = call_stack.get(sigkey) or sigkey
 
-		meta = context.meta_map[signature.function_table.get_enclosing_module()]
-		position = (signature.function_table.tree.lineno, signature.function_table.tree.col_offset)
-		
-		for p in meta.fslots[position][1]:
-			meta.fslots[position][1][p] = arguments[p].refset.as_type()
-
 		if not call_stack.contains(signature):
 			call_stack.push(signature)
 			logger.debug(f"🆕 Pushed: {repr(signature)}")
@@ -101,8 +82,6 @@ class FunctionUtils:
 
 			call_stack.pop()
 			logger.debug(f"✅ Popped: {repr(signature)}")
-
-			meta.fslots[position][2] = returns.as_type()
 			return returns
 		else:
 			traced = call_stack.trace(signature)
@@ -149,7 +128,6 @@ class FunctionUtils:
 					sig.running = False
 
 			logger.debug(f"📤 Returning from: {repr(signature)} with returns = {signature.returns}")
-			meta.fslots[position][2] = signature.returns.as_type()
 			return signature.returns
 	
 	@staticmethod
