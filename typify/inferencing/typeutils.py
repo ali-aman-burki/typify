@@ -14,6 +14,7 @@ class TypeExpr:
 		self.typedef = typedef
 		self.typeargs = typeargs or []
 		self.typevars: dict[InstanceTable, TypeExpr] = {} #TODO: later, init based on typedef
+		
 		TypeUtils.update_typevars(self.typevars, self.typeargs)
 
 	def __eq__(self, other: TypeExpr):

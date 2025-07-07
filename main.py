@@ -62,11 +62,23 @@ for meta, deps in bundle.cleaned_graph.items():
 
 Inferencer.infer(bundle)
 
-logger.info("💾 Exporting symbol tables...", 1)
+logger.info("💾 Exporting...", 1)
 
-next(iter(bundle.libs.values())).export_to(Path(output_dir))
-bundle.libs["builtinlib"].export_to(Path(output_dir) / "builtinlib")
-bundle.libs["stdlib"].export_to(Path(output_dir) / "stdlib")
+next(iter(bundle.libs.values())).export(
+    path=Path(output_dir), 
+    symbols=False, 
+    typeslots=True
+)
+
+# bundle.libs["builtinlib"].export(
+#     path=Path(output_dir) / "builtinlib", 
+#     symbols=True, 
+#     typeslots=False
+# )
+# bundle.libs["stdlib"].export(
+#     path=Path(output_dir) / "stdlib",
+#     symbols=True,
+#     typeslots=False)
 
 logger.info("✅ Done.")
 

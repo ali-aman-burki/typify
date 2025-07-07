@@ -9,6 +9,7 @@ from typify.preprocessing.symbol_table import (
 	InstanceTable
 )
 from typify.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.precollector import PreCollector
 
 class LibraryMeta:
 	def __init__(self, src: Path, key: str):
@@ -62,6 +63,7 @@ class LibraryMeta:
 					meta = ModuleMeta(init_path, package_table.trust_annotations)
 					package_table.set_module(meta.table, self.fqn_map)
 					self.meta_map[meta.table] = meta
+					PreCollector(meta).visit(meta.tree)
 					break  # Prefer .pyi over .py
 
 		# Second pass: collect .py and .pyi candidates (excluding __init__)
@@ -83,10 +85,9 @@ class LibraryMeta:
 			meta = ModuleMeta(chosen_path, True if chosen_path.suffix == ".pyi" else table.trust_annotations)
 			table.set_module(meta.table, self.fqn_map)
 			self.meta_map[meta.table] = meta
+			PreCollector(meta).visit(meta.tree)
 
-
-
-	def export_to(self, path: Path):
+	def export(self, path: Path, symbols=True, typeslots=True):
 		for meta in self.meta_map.values():
-			meta.export_symbols(self.src, path)
-			meta.export_typeslots(self.src, path)
+			if symbols: meta.export_symbols(self.src, path)
+			if typeslots: meta.export_typeslots(self.src, path)

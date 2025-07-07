@@ -85,6 +85,12 @@ class FunctionUtils:
 		sigkey = CallSignature(function_table, arguments)
 		signature = call_stack.get(sigkey) or sigkey
 
+		meta = context.meta_map[signature.function_table.get_enclosing_module()]
+		position = (signature.function_table.tree.lineno, signature.function_table.tree.col_offset)
+		
+		for p in meta.fslots[position][1]:
+			meta.fslots[position][1][p] = arguments[p].refset.as_type()
+
 		if not call_stack.contains(signature):
 			call_stack.push(signature)
 			logger.debug(f"🆕 Pushed: {repr(signature)}")
@@ -95,6 +101,8 @@ class FunctionUtils:
 
 			call_stack.pop()
 			logger.debug(f"✅ Popped: {repr(signature)}")
+
+			meta.fslots[position][2] = returns.as_type()
 			return returns
 		else:
 			traced = call_stack.trace(signature)
@@ -141,6 +149,7 @@ class FunctionUtils:
 					sig.running = False
 
 			logger.debug(f"📤 Returning from: {repr(signature)} with returns = {signature.returns}")
+			meta.fslots[position][2] = signature.returns.as_type()
 			return signature.returns
 	
 	@staticmethod
