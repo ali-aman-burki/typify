@@ -77,6 +77,23 @@ class PreCollector(ast.NodeVisitor):
 
 		return parameters
 
+	@staticmethod
+	def collect_targets(expr: ast.expr) -> dict[ast.expr, tuple[int, int]]:
+		targets: dict[ast.expr, tuple[int, int]] = {}
+
+		def visit(node: ast.expr):
+			if isinstance(node, (ast.Name, ast.Attribute)):
+				targets[node] = (node.lineno, node.col_offset)
+			elif isinstance(node, (ast.Tuple, ast.List)):
+				for elt in node.elts:
+					visit(elt)
+			elif isinstance(node, ast.Starred):
+				visit(node.value)
+
+		visit(expr)
+		return targets
+
+
 	def __init__(self, module_meta: ModuleMeta):
 		self.module_meta = module_meta
 		self.module_meta.load_tree()
@@ -88,7 +105,9 @@ class PreCollector(ast.NodeVisitor):
 	def visit_Assign(self, node):
 		for target in node.targets:
 			position = (target.lineno, target.col_offset)
-			self.module_meta.vslots[position] = [target, PreCollector.UNVISITED]
+			packs = PreCollector.collect_targets(target)
+			for k, v in packs.items():
+				self.module_meta.vslots[v] = [k, PreCollector.UNVISITED]
 
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(

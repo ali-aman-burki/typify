@@ -304,7 +304,9 @@ class Executor(ast.NodeVisitor):
 
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
-		self.module_meta.vslots[(node.target.lineno, node.target.col_offset)][1] = resolved_value.as_type()
+		
+		if len(resolved_value) == 1 and resolved_value.ref().type_expr.typedef == Typing.get_type("Any"):
+			self.generic_visit(node)
 
 	def visit_Assign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
@@ -312,9 +314,8 @@ class Executor(ast.NodeVisitor):
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
-			self.module_meta.vslots[(target.lineno, target.col_offset)][1] = resolved_value.as_type()
 		
-		if len(resolved_value) == 1 and next(iter(resolved_value)).type_expr.typedef == Typing.get_type("Any"):
+		if len(resolved_value) == 1 and resolved_value.ref().type_expr.typedef == Typing.get_type("Any"):
 			self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):

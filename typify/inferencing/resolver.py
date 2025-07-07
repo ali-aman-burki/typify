@@ -122,6 +122,7 @@ class Resolver:
 			return PackGroup(groups=[], starred=False)
 
 	
+	#TODO: need support for comprehensions, generators 
 	#TODO: need support for literal types i.e Literal[...]
 	def resolve_value(self, node: ast.Expr) -> ReferenceSet:
 		from typify.inferencing.call_dispatcher import CallDispatcher
@@ -232,9 +233,13 @@ class Resolver:
 						target_entry.definition.refset.add(ref)
 						targets.add(target_entry)
 		
+		r_as_type = resolved_value.as_type()
 		for target in targets:
+			position = (target.definition.position[0], target.definition.position[1])
 			target.namespace_name.new_def(target.definition)
 			if target.symbol_name:
 				ndef = DefinitionTable((target.definition.module, target.definition.position))
 				ndef.refset.update(target.definition.refset)
 				target.symbol_name.merge_def(ndef)	
+			
+			self.module_meta.vslots[position][1] = r_as_type
