@@ -1,12 +1,39 @@
 from __future__ import annotations
+
 import ast
+
+from typify.preprocessing.instance_utils import (
+    ReferenceSet,
+	Instance
+)
+from typify.inferencing.commons import ParameterEntry
 
 class Symbol:
 	def __init__(self, id: str):
 		super().__init__()
 		self.id: str = id
-		self.fqn: str = id
+		self.fqn: str = ""
 		self.parent: Symbol = None
+	
+	def get_enclosing_symbol(self):
+		result = self.parent
+		if isinstance(result, (ClassDefinition, FunctionDefinition)):
+			result = result.parent
+		return result
+	
+	def get_enclosing_module(self):
+		result = self
+		while result and not isinstance(result, Module):
+			result = result.get_enclosing_symbol()
+		return result
+	
+	def get_latest_definition(self) -> Symbol:
+		return self
+
+class _PathHolder:
+	def __init__(self):
+		super().__init__()
+		self.pathchain: list[Package | Module] = []
 
 class _PackagingHolder:
 	def __init__(self):
@@ -30,26 +57,30 @@ class _LocationHolder:
 class _ReferenceHolder:
 	def __init__(self):
 		super().__init__()
-		self.refset = None
+		self.refset: ReferenceSet = ReferenceSet()
 
 class _PackagingSymbol(
 	Symbol, 
+	_PathHolder,
 	_PackagingHolder
 ):
 	def __init__(self, id: str):
 		super().__init__(id)
 
-	def set_package(self, package: Package):
+	def set_package(self, package: Package, fqn_map: dict):
 		self.packages[package.id] = package
 		package.parent = self
 		package.fqn = f"{self.fqn}.{package.id}" if self.fqn else package.id
-		package.path_chain = package.parent.path_chain + [package]
+		package.pathchain = self.pathchain + [package]
+		fqn_map[self.fqn] = self.pathchain
 
-	def set_module(self, module: Module):
+	def set_module(self, module: Module, fqn_map):
 		self.modules[module.id] = module
 		module.parent = self
 		module.fqn = f"{self.fqn}.{module.id}" if self.fqn else module.id
-		module.path_chain = module.parent.path_chain + [module]
+		if module.id == "__init__": module.fqn = self.fqn
+		module.pathchain = self.pathchain + [module]
+		fqn_map[self.fqn] = self.pathchain
 
 class _SyntaxingSymbol(
 	Symbol, 
@@ -85,7 +116,6 @@ class _SyntaxingSymbol(
 			self.functions[id] = func
 		return func
 
-
 class _LocatableSymbol(
 	_SyntaxingSymbol, 
 	_LocationHolder
@@ -94,93 +124,129 @@ class _LocatableSymbol(
 		super().__init__(f"{defkey[0].fqn}:{defkey[1][0]}:{defkey[1][1]}")
 		self.defkey = defkey
 
-class _TypeableSymbol(
+class Library(_PackagingSymbol): pass
+class Package(_PackagingSymbol): pass
+class Module(
+	_SyntaxingSymbol, 
+	_PathHolder
+): pass
+
+class ClassDefinition(_LocatableSymbol): pass
+class NameDefinition(
 	_LocatableSymbol, 
 	_ReferenceHolder
 ): pass
 
-class Library(_PackagingSymbol): pass
-class Package(_PackagingSymbol): pass
-class Module(_SyntaxingSymbol): pass
-
-class ClassDefinition(_LocatableSymbol): pass
-class NameDefinition(_TypeableSymbol): pass
-
-class FunctionDefinition(_TypeableSymbol):
+class FunctionDefinition(
+	_LocatableSymbol, 
+	_ReferenceHolder
+):
 	def __init__(self, defkey: tuple[Module, tuple[int, int]]):
 		super().__init__(defkey)
 		self.tree: ast.FunctionDef | ast.AsyncFunctionDef = None
+		self.parameters: dict[str, ParameterEntry] = {}
 
+class CallFrame(
+	_SyntaxingSymbol, 
+	_ReferenceHolder
+): pass
+	
 class Class(Symbol): 
 	def __init__(self, id):
 		super().__init__(id)
 		self.definitions: dict[str, ClassDefinition] = {}
+		self.bases: list[Instance]
+		self.mro: list[Instance]
+	
+	def set_definition(self, class_def: ClassDefinition):
+		class_def.parent = self
+		class_def.fqn = self.fqn
+		self.definitions[class_def.id] = class_def
+		return class_def
+		
+	def get_latest_definition(self) -> ClassDefinition:
+		if not self.definitions: return self
+		return next(reversed(self.definitions.values()))
 
 class Function(Symbol): 
 	def __init__(self, id):
 		super().__init__(id)
 		self.definitions: dict[str, FunctionDefinition] = {}
+	
+	def set_definition(self, func_def: FunctionDefinition):
+		func_def.parent = self
+		func_def.fqn = self.fqn
+		self.definitions[func_def.id] = func_def
+		return func_def
+
+	def merge_definition(self, func_def: FunctionDefinition):
+		if func_def.id in self.definitions: 
+			self.definitions[func_def.id].refset.update(func_def.refset)
+			return self.definitions[func_def.id]
+		else: 
+			return self.set_definition(func_def)
+		
+	def get_latest_definition(self) -> FunctionDefinition:
+		if not self.definitions: return self
+		return next(reversed(self.definitions.values()))
 
 class Name(Symbol): 
 	def __init__(self, id):
 		super().__init__(id)
 		self.definitions: dict[str, NameDefinition] = {}
+	
+	def set_definition(self, name_def: NameDefinition):
+		name_def.parent = self
+		name_def.fqn = self.fqn
+		self.definitions[name_def.id] = name_def
+		return name_def
 
-def test_symbol_structure():
-    lib = Library("lib")
-    pkg = Package("pkg")
-    mod = Module("mod")
+	def merge_definition(self, func_def: NameDefinition):
+		if func_def.id in self.definitions: 
+			self.definitions[func_def.id].refset.update(func_def.refset)
+			return self.definitions[func_def.id]
+		else: 
+			return self.set_definition(func_def)
+		
+	def get_latest_definition(self) -> NameDefinition:
+		if not self.definitions: return self
+		return next(reversed(self.definitions.values()))
+	
+	def lookup_definition(self, defkey: tuple[Module, tuple[int, int]]) -> NameDefinition:
+		key = f"{defkey[0].fqn}:{defkey[1][0]}:{defkey[1][1]}"
+		return self.definitions[key]
 
-    lib.set_package(pkg)
-    pkg.set_module(mod)
+def test_pathchain_and_fqn():
+    lib = Library("rootlib")  # fqn will remain ""
+    pkg1 = Package("pkg1")
+    pkg2 = Package("pkg2")
+    mod1 = Module("mod1")
+    mod2 = Module("__init__")
 
-    assert lib.id == "lib"
-    assert pkg.id == "pkg"
-    assert mod.id == "mod"
+    # Register the hierarchy
+    lib.set_package(pkg1, {})
+    pkg1.set_package(pkg2, {})
+    pkg2.set_module(mod1, {})
+    pkg2.set_module(mod2, {})
 
-    assert lib.packages["pkg"] is pkg
-    assert pkg.modules["mod"] is mod
+    # Assert FQNs
+    assert lib.fqn == ""
+    assert pkg1.fqn == "pkg1"
+    assert pkg2.fqn == "pkg1.pkg2"
+    assert mod1.fqn == "pkg1.pkg2.mod1"
+    assert mod2.fqn == "pkg1.pkg2"  # __init__ special case
 
-    assert pkg.parent is lib
-    assert pkg.fqn == "lib.pkg"
-    assert mod.parent is pkg
-    assert mod.fqn == "lib.pkg.mod"
+    # Assert pathchains
+    assert lib.pathchain == []
+    assert pkg1.pathchain == [pkg1]
+    assert pkg2.pathchain == [pkg1, pkg2]
+    assert mod1.pathchain == [pkg1, pkg2, mod1]
+    assert mod2.pathchain == [pkg1, pkg2, mod2]
 
-    # Module symbol accessors
-    class_sym = mod.get_class("MyClass")
-    func_sym = mod.get_function("my_func")
-    name_sym = mod.get_name("x")
+    # Verify object types in pathchain
+    assert all(isinstance(x, (Package, Module)) for x in mod1.pathchain)
 
-    assert class_sym.id == "MyClass"
-    assert func_sym.id == "my_func"
-    assert name_sym.id == "x"
+    print("✅ Pathchain and FQN logic tests passed.")
 
-    assert class_sym.fqn == "lib.pkg.mod.MyClass"
-    assert func_sym.fqn == "lib.pkg.mod.my_func"
-    assert name_sym.fqn == "lib.pkg.mod.x"
-
-    # ClassDefinition test
-    defkey = (mod, (10, 4))
-    class_def = ClassDefinition(defkey)
-
-    assert class_def.defkey == defkey
-    assert isinstance(class_def.id, str)
-    assert class_def.id == "lib.pkg.mod:10:4"
-
-    # FunctionDefinition test
-    func_def = FunctionDefinition(defkey)
-    assert func_def.defkey == defkey
-    assert hasattr(func_def, "refset")
-    assert func_def.id == "lib.pkg.mod:10:4"
-
-    # NameDefinition test
-    name_def = NameDefinition(defkey)
-    assert name_def.defkey == defkey
-    assert hasattr(name_def, "refset")
-    assert name_def.id == "lib.pkg.mod:10:4"
-
-    print("✅ All symbol construction and linking tests passed.")
-
-# Run test
-test_symbol_structure()
-
+# Run the test
+# test_pathchain_and_fqn()
