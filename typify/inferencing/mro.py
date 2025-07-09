@@ -1,4 +1,4 @@
-from typify.preprocessing.symbol_table import Instance
+from typify.preprocessing.instance_utils import Instance
 
 class MROBuilder:
 

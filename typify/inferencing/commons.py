@@ -1,14 +1,18 @@
-from typify.preprocessing.symbol_table import (
-    DefinitionTable, 
-    Instance, 
-    Symbol
-)
+from dataclasses import dataclass
+
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import Module, ReferenceSet
 from typify.preprocessing.libs import RequiredLibs
 
-from dataclasses import dataclass
+from typify.preprocessing.instance_utils import (
+	Instance,
+	ReferenceSet
+) 
+from typify.preprocessing.symbol_table import (
+    ClassDefinition, 
+	FunctionDefinition,
+    Module
+)
 
 @dataclass
 class ParameterEntry:
@@ -30,7 +34,7 @@ class ArgTuple:
 class Context:
 	libs: dict[str, LibraryMeta]
 	sysmodules: dict[str, Instance]
-	symbol_map: dict[Symbol, Instance]
+	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance]
 	meta_map: dict[Module, ModuleMeta]
 
 class ConstantObjects:
@@ -67,7 +71,7 @@ class Builtins:
 			return None
 	
 	@staticmethod
-	def get_type(type_name: str) -> DefinitionTable | None:
+	def get_type(type_name: str) -> ClassDefinition | None:
 		try: 
 			result = Builtins.module().classes[type_name].get_latest_definition()
 			return result
@@ -86,7 +90,7 @@ class Typing:
 			return None
 	
 	@staticmethod
-	def get_type(type_name: str) -> DefinitionTable | None:
+	def get_type(type_name: str) -> ClassDefinition | None:
 		try: 
 			result = Typing.module().classes[type_name].get_latest_definition()
 			return result

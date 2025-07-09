@@ -2,9 +2,9 @@ import ast
 
 from typify.logging import logger
 from typify.inferencing.resolver import Resolver
+from typify.preprocessing.instance_utils import ReferenceSet
 from typify.preprocessing.symbol_table import (
-	ReferenceSet,
-	DefinitionTable, 
+	FunctionDefinition, 
 	CallFrame,
 )
 from typify.inferencing.typeutils import (
@@ -29,7 +29,7 @@ class FunctionUtils:
 	def construct_executor(
 		context: Context, 
 		arguments: dict[str, ArgTuple], 
-		function_table: DefinitionTable,
+		function_table: FunctionDefinition,
 		call_stack: CallStack
 	):
 		from typify.inferencing.executor import Executor
@@ -59,7 +59,7 @@ class FunctionUtils:
 	def exec_function(
 		context: Context, 
 		arguments: dict[str, ArgTuple], 
-		function_table: DefinitionTable,
+		function_table: FunctionDefinition,
 		call_stack: CallStack
 	) -> ReferenceSet:
 

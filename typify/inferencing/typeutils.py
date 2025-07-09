@@ -3,15 +3,17 @@ import ast
 
 from typify.inferencing.commons import Typing
 from typify.preprocessing.precollector import PreCollector
-from typify.preprocessing.symbol_table import (
+from typify.preprocessing.instance_utils import (
 	ReferenceSet,
-	Instance, 
-	DefinitionTable
+	Instance
+)
+from typify.preprocessing.symbol_table import (
+	ClassDefinition
 )
 
 class TypeExpr:
 
-	def __init__(self, typedef: DefinitionTable, typeargs: list[TypeExpr] = None):
+	def __init__(self, typedef: ClassDefinition, typeargs: list[TypeExpr] = None):
 		self.typedef = typedef
 		self.typeargs = typeargs or []
 		self.typevars: dict[Instance, TypeExpr] = {} #TODO: later, init based on typedef
@@ -29,7 +31,7 @@ class TypeExpr:
 		return hash((self.typedef, tuple(self.typeargs)))
 
 	def __repr__(self):
-		fqn = self.typedef.parent.key if self.typedef else PreCollector.UNVISITED
+		fqn = self.typedef.parent.id if self.typedef else PreCollector.UNVISITED
 		strs = []
 		for typeexpr in self.typevars.values():
 			strs.append(repr(typeexpr))
@@ -90,7 +92,7 @@ class TypeUtils:
 
 	@staticmethod
 	def instantiate(
-		typedef: DefinitionTable, 
+		typedef: ClassDefinition, 
 		typeargs: list[Instance] | None = None
 		) -> Instance:
 

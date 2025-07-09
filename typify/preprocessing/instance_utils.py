@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from typify.logging import logger
+from typify.preprocessing.symbol_table import (
+	Name, 
+	ClassDefinition, 
+	FunctionDefinition
+)
 
 class ReferenceSet:
 
@@ -35,11 +40,6 @@ class ReferenceSet:
 class Instance:
 	def __init__(self):
 		from typify.inferencing.typeutils import TypeExpr
-		from typify.preprocessing.newsymbols import (
-			Name, 
-			ClassDefinition, 
-			FunctionDefinition
-		)
 
 		self.names: dict[str, Name] = {}
 		self.store: list[ReferenceSet] = []
@@ -48,6 +48,13 @@ class Instance:
 	
 	def __repr__(self) -> str:
 		return self.label()
-
+	
+	def get_name(self, id: str) -> Name:
+		name = self.names.get(id)
+		if not name:
+			name = Name(id)
+			self.names[id] = name
+		return name
+	
 	def label(self) -> str:
 		return f"instance@{repr(self.type_expr)}"

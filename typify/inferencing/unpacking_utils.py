@@ -3,12 +3,12 @@ from dataclasses import dataclass
 
 from typify.preprocessing.symbol_table import (
 	Name,
-	DefinitionTable,
+	NameDefinition,
 )
 
 @dataclass(frozen=True)
 class TargetEntry:
-	definition: DefinitionTable
+	definition: NameDefinition
 	namespace_name: Name
 	symbol_name: Name = None
 

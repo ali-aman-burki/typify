@@ -6,15 +6,15 @@ from typify.preprocessing.symbol_table import (
 	Library,
     Package,
     Module,
-	Instance
 )
+from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.precollector import PreCollector
 
 class LibraryMeta:
-	def __init__(self, src: Path, key: str):
+	def __init__(self, src: Path, id: str):
 		self.src = Path(src).resolve()
-		self.key = key
+		self.id = id
 		self.library_table = Library(self.src.name)
 		self.sysmodules: dict[str, Instance] = {}
 		self.meta_map: dict[Module, ModuleMeta] = {}

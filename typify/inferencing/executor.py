@@ -19,11 +19,16 @@ from typify.inferencing.commons import (
 	ArgTuple
 )
 from typify.preprocessing.symbol_table import (
-	ReferenceSet,
-	Instance,
-	DefinitionTable,
-	Symbol,
+	Module,
+	ClassDefinition,
+	FunctionDefinition,
+	NameDefinition,
 	CallFrame
+)
+
+from typify.preprocessing.instance_utils import (
+	Instance,
+	ReferenceSet
 )
 
 class Executor(ast.NodeVisitor):
@@ -31,7 +36,7 @@ class Executor(ast.NodeVisitor):
 			self, 
 			context: Context,
 			module_meta: ModuleMeta,
-			symbol: Symbol,
+			symbol: Module | ClassDefinition | FunctionDefinition,
 			namespace: Instance, 
 			arguments: dict[str, ArgTuple],
 			call_stack: list,
@@ -63,11 +68,11 @@ class Executor(ast.NodeVisitor):
 			namespace_name = self.namespace.get_name(argname)
 			symbol_name = self.symbol.get_name(argname)
 
-			ndef = DefinitionTable(defkey)
+			ndef = NameDefinition(defkey)
 			ndef.refset.update(refset)
 
-			namespace_name.new_def(ndef)
-			merged = symbol_name.merge_def(ndef)
+			namespace_name.set_definition(ndef)
+			merged = symbol_name.merge_definition(ndef)
 
 			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
 			self.module_meta.fslots[position][1][argname] = merged.refset.as_type()
@@ -116,8 +121,8 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.module_meta.table, position)
 		for alias in node.names:
 			name = alias.asname if alias.asname else alias.name.split(".")[0]
-			self.symbol.get_name(name).merge_def(DefinitionTable(defkey))
-			self.namespace.get_name(name).new_def(DefinitionTable(defkey))
+			self.symbol.get_name(name).merge_definition(NameDefinition(defkey))
+			self.namespace.get_name(name).set_definition(NameDefinition(defkey))
 
 			object_chain = DependencyUtils.resolve_module_objects(
 				defkey, 
@@ -126,16 +131,16 @@ class Executor(ast.NodeVisitor):
 				alias.name
 			)
 			if not object_chain:
-				deftable = DefinitionTable(defkey)
+				deftable = NameDefinition(defkey)
 				deftable.refset.add(TypeUtils.instantiate(Typing.get_type("Any")))
-				self.symbol.get_name(name).merge_def(deftable)
-				self.namespace.get_name(name).merge_def(deftable)
+				self.symbol.get_name(name).merge_definition(deftable)
+				self.namespace.get_name(name).merge_definition(deftable)
 				continue
 			
-			deftable = DefinitionTable(defkey)
+			deftable = NameDefinition(defkey)
 			deftable.refset.add(object_chain[-1] if alias.asname else object_chain[0])
-			self.symbol.get_name(name).merge_def(deftable)
-			self.namespace.get_name(name).merge_def(deftable)
+			self.symbol.get_name(name).merge_definition(deftable)
+			self.namespace.get_name(name).merge_definition(deftable)
 
 			reference = self.namespace.get_name(name).lookup_definition(defkey).refset
 			self.add_to_snapshot(reference)
@@ -156,29 +161,29 @@ class Executor(ast.NodeVisitor):
 			if not object_chain: return
 			for name in object_chain[-1].names.values():
 				lat_def = name.get_latest_definition()
-				self.namespace.get_name(name.key).new_def(lat_def)
+				self.namespace.get_name(name.key).set_definition(lat_def)
 				self.add_to_snapshot(lat_def.refset)
 		else:
 			for alias in node.names:
 				name = alias.asname if alias.asname else alias.name
-				self.symbol.get_name(name).merge_def(DefinitionTable(defkey))
-				self.namespace.get_name(name).new_def(DefinitionTable(defkey))
+				self.symbol.get_name(name).merge_definition(NameDefinition(defkey))
+				self.namespace.get_name(name).set_definition(NameDefinition(defkey))
 				
 				if not object_chain: 
-					deftable = DefinitionTable(defkey)
+					deftable = NameDefinition(defkey)
 					deftable.refset.add(TypeUtils.instantiate(Typing.get_type("Any")))
-					self.symbol.get_name(name).merge_def(deftable)
-					self.namespace.get_name(name).merge_def(deftable)
+					self.symbol.get_name(name).merge_definition(deftable)
+					self.namespace.get_name(name).merge_definition(deftable)
 					return
 				
 				if alias.name in object_chain[-1].names:
 					mname = object_chain[-1].names[alias.name]
 					lat_def = mname.get_latest_definition()
 
-					deftable = DefinitionTable(defkey)
+					deftable = NameDefinition(defkey)
 					deftable.refset.update(lat_def.refset)
-					self.symbol.get_name(name).merge_def(deftable)
-					self.namespace.get_name(name).merge_def(deftable)
+					self.symbol.get_name(name).merge_definition(deftable)
+					self.namespace.get_name(name).merge_definition(deftable)
 				else:
 					fqn = DependencyUtils.to_absolute_name(
 						self.module_meta.table, 
@@ -194,10 +199,10 @@ class Executor(ast.NodeVisitor):
 					)
 					if not new_object_chain: return
 
-					deftable = DefinitionTable(defkey)
+					deftable = NameDefinition(defkey)
 					deftable.refset.add(new_object_chain[-1])
-					self.symbol.get_name(name).merge_def(deftable)
-					self.namespace.get_name(name).merge_def(deftable)
+					self.symbol.get_name(name).merge_definition(deftable)
+					self.namespace.get_name(name).merge_definition(deftable)
 				
 				reference = self.namespace.get_name(name).lookup_definition(defkey).refset
 				self.add_to_snapshot(reference)
@@ -211,7 +216,7 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.module_meta.table, position)
 
 		class_table = self.symbol.get_class(name)
-		entering_symbol = class_table.merge_def(DefinitionTable(defkey))
+		entering_symbol = class_table.get_definition(ClassDefinition(defkey))
 
 		builtins_module_object = self.context.symbol_map.get(Builtins.module())
 		entering_symbol.bases.clear()
@@ -255,10 +260,10 @@ class Executor(ast.NodeVisitor):
 			snapshot_log=self.snapshot_log
 		).execute()
 
-		deftable = DefinitionTable(defkey)
+		deftable = NameDefinition(defkey)
 		deftable.refset.add(entering_namespace)
-		self.symbol.get_name(name).merge_def(deftable)
-		self.namespace.get_name(name).new_def(deftable)
+		self.symbol.get_name(name).merge_definition(deftable)
+		self.namespace.get_name(name).set_definition(deftable)
 
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
 
@@ -269,19 +274,19 @@ class Executor(ast.NodeVisitor):
 		defkey = (self.module_meta.table, position)
 		name = func_tree.name
 
-		deftable = DefinitionTable(defkey)
-		self.symbol.get_name(name).merge_def(deftable)
-		self.namespace.get_name(name).new_def(deftable)
+		deftable = NameDefinition(defkey)
+		self.symbol.get_name(name).merge_definition(deftable)
+		self.namespace.get_name(name).set_definition(deftable)
 
 		function_table = self.symbol.get_function(name)
-		function_def = function_table.merge_def(DefinitionTable(defkey))
+		function_def = function_table.merge_definition(FunctionDefinition(defkey))
 		function_def.tree = func_tree
 		function_def.parameters = FunctionUtils.collect_parameters(func_tree, self.resolver)
 
 		for k, v in function_def.parameters.items():
-			ndef = DefinitionTable(v.defkey)
+			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset
-			mdef = function_def.get_name(k).merge_def(ndef)
+			mdef = function_def.get_name(k).merge_definition(ndef)
 			self.module_meta.fslots[position][1][k] = mdef.refset.as_type()
 
 		func_obj = self.context.symbol_map.setdefault(
@@ -291,10 +296,10 @@ class Executor(ast.NodeVisitor):
 		func_obj.type_expr.typedef = Builtins.get_type("function")
 		func_obj.origin = function_def
 
-		deftable = DefinitionTable(defkey)
+		deftable = NameDefinition(defkey)
 		deftable.refset.add(func_obj)
-		self.symbol.get_name(name).merge_def(deftable)
-		self.namespace.get_name(name).merge_def(deftable)
+		self.symbol.get_name(name).merge_definition(deftable)
+		self.namespace.get_name(name).merge_definition(deftable)
 
 		self.add_to_snapshot(deftable.refset)
 	

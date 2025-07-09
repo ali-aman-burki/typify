@@ -1,11 +1,11 @@
 import ast
 import copy
 
-from typify.preprocessing.symbol_table import (
+from typify.preprocessing.instance_utils import (
 	ReferenceSet,
 	Instance,
-	DefinitionTable
 )
+from typify.preprocessing.symbol_table import FunctionDefinition
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
@@ -19,7 +19,7 @@ class CallDispatcher:
 	
 	def exec(
 			self,
-			method: DefinitionTable,
+			method: FunctionDefinition,
 			inject: Instance = None
 		):
 

@@ -29,7 +29,7 @@ class ModuleMeta:
 		file_path = self.src
 		rel_path = file_path.relative_to(working_directory)
 		dash = f"-{suffix}" if suffix else ""
-		return export_path / rel_path.parent / f"{self.table.key}{dash}.json"
+		return export_path / rel_path.parent / f"{self.table.id}{dash}.json"
 	
 	def export_symbols(self, working_directory: Path, export_path: Path):
 		output_path = self.mirror_export_path(working_directory, export_path, suffix="symbols")

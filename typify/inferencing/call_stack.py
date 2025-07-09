@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
 
-from typify.preprocessing.symbol_table import DefinitionTable, ReferenceSet
+from typify.preprocessing.instance_utils import ReferenceSet
+from typify.preprocessing.symbol_table import FunctionDefinition
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
 @dataclass(eq=False)
 class CallSignature:
-	function_table: DefinitionTable
+	function_table: FunctionDefinition
 	arguments: dict[str, ArgTuple]
 	returns: ReferenceSet = field(default_factory=ReferenceSet)
 	snapshot: list[set[str]] = field(default_factory=list)
@@ -39,7 +40,7 @@ class CallSignature:
 		for arg in self.arguments.values():
 			args.append(TypeUtils.unify(arg.refset))
 		joined = ", ".join(repr(arg) for arg in args)
-		return self.function_table.parent.key + f"({joined})"
+		return self.function_table.parent.id + f"({joined})"
 
 class CallStack:
 	def __init__(self):

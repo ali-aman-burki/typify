@@ -7,11 +7,11 @@ from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils, TypeExpr
 from typify.inferencing.executor import Context, Executor
 from typify.inferencing.call_stack import CallStack
-from typify.preprocessing.symbol_table import (
-    ReferenceSet, 
-    Instance, 
-    Module
+from typify.preprocessing.instance_utils import (
+    ReferenceSet,
+	Instance
 )
+from typify.preprocessing.symbol_table import Module
 
 class Inferencer:
 

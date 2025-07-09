@@ -1,12 +1,11 @@
 import ast
 
+from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.symbol_table import (
     Symbol,
-	Name,
     Module, 
     Package, 
-    Instance,
-	DefinitionTable
+	NameDefinition
 )
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.library_meta import LibraryMeta
@@ -73,9 +72,9 @@ class DependencyUtils:
 					module_object = TypeUtils.instantiate(Builtins.get_type("module"))
 					Symbol.transfer_names(table.names, module_object)
 
-					attrdef = DefinitionTable(defkey)
+					attrdef = NameDefinition(defkey)
 					attrdef.refset.add(module_object)
-					current_object.get_name(table.key).new_def(attrdef)
+					current_object.get_name(table.id).set_definition(attrdef)
 
 					sysmodules[table.fqn] = module_object
 					current_object = module_object
@@ -141,17 +140,17 @@ class DependencyTracker(ast.NodeVisitor):
 		self.dependency_graph[module_meta] = set()
 		self.in_function = 0
 	
-	def as_module_metas(self, modules: list[Symbol]) -> set[ModuleMeta]:
+	def as_module_metas(self, modules: list[Module]) -> set[ModuleMeta]:
 		return {self.meta_map[table] for table in modules if table in self.meta_map}
 
-	def filter_chain(self, chain: list[Package | Module]):
+	def filter_chain(self, chain: list[Module | Package]):
 		result = []
 		for table in chain:
 			if isinstance(table, Package): result.append(table.modules["__init__"])
 			else: result.append(table)
 		return result
 
-	def resolve_fqn_chain(self, name: str | None, level: int = 0) -> list[Symbol]:
+	def resolve_fqn_chain(self, name: str | None, level: int = 0) -> list[Module | Package]:
 		base_fqn = DependencyUtils.to_absolute_name(self.module_table, name, level)
 
 		for lib in self.libs.values():
@@ -178,8 +177,11 @@ class DependencyTracker(ast.NodeVisitor):
 			if chain:
 				endpoint = chain[-1]
 				for name in names:
-					if name in endpoint.packages:  self.resolve_fqn_chain(endpoint.packages[name].fqn)
-					elif name in endpoint.modules:  self.resolve_fqn_chain(endpoint.modules[name].fqn)
+					if isinstance(endpoint, Package):
+						if name in endpoint.packages: 
+							self.resolve_fqn_chain(endpoint.packages[name].fqn)
+						elif name in endpoint.modules: 
+							self.resolve_fqn_chain(endpoint.modules[name].fqn)
 				
 		self.generic_visit(node)
 	
