@@ -1,9 +1,9 @@
-from typify.preprocessing.symbol_table import InstanceTable
+from typify.preprocessing.symbol_table import Instance
 
 class MROBuilder:
 
 	@staticmethod
-	def build_mro(cls: InstanceTable) -> list[InstanceTable]:
+	def build_mro(cls: Instance) -> list[Instance]:
 		if cls in cls.origin.bases: return [cls]
 
 		bases_mros = [base.origin.mro[:] for base in cls.origin.bases]
@@ -12,7 +12,7 @@ class MROBuilder:
 		return [cls] + MROBuilder.c3_merge(bases_mros) 
 	
 	@staticmethod
-	def c3_merge(seqs: list[list[InstanceTable]]) -> list[InstanceTable]:
+	def c3_merge(seqs: list[list[Instance]]) -> list[Instance]:
 		result = []
 		while True:
 			seqs = [s for s in seqs if s]

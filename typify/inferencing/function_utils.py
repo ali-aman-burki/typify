@@ -5,7 +5,7 @@ from typify.inferencing.resolver import Resolver
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
 	DefinitionTable, 
-	CallFrameTable,
+	CallFrame,
 )
 from typify.inferencing.typeutils import (
 	TypeUtils,
@@ -35,7 +35,7 @@ class FunctionUtils:
 		from typify.inferencing.executor import Executor
 		
 		tree = function_table.tree
-		call_frame = CallFrameTable(f"frame@{function_table.parent.fqn}")
+		call_frame = CallFrame(f"frame@{function_table.parent.fqn}")
 		call_frame.parent = function_table.parent
 
 		mod = call_frame.get_enclosing_module() 

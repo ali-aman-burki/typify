@@ -8,28 +8,6 @@ from typify.preprocessing.instance_utils import (
 )
 from typify.inferencing.commons import ParameterEntry
 
-class Symbol:
-	def __init__(self, id: str):
-		super().__init__()
-		self.id: str = id
-		self.fqn: str = ""
-		self.parent: Symbol = None
-	
-	def get_enclosing_symbol(self):
-		result = self.parent
-		if isinstance(result, (ClassDefinition, FunctionDefinition)):
-			result = result.parent
-		return result
-	
-	def get_enclosing_module(self):
-		result = self
-		while result and not isinstance(result, Module):
-			result = result.get_enclosing_symbol()
-		return result
-	
-	def get_latest_definition(self) -> Symbol:
-		return self
-
 class _PathHolder:
 	def __init__(self):
 		super().__init__()
@@ -59,6 +37,34 @@ class _ReferenceHolder:
 		super().__init__()
 		self.refset: ReferenceSet = ReferenceSet()
 
+class Symbol:
+	def __init__(self, id: str):
+		super().__init__()
+		self.id: str = id
+		self.fqn: str = ""
+		self.parent: Symbol = None
+	
+	def __repr__(self): return self.fqn if self.fqn else self.id
+	def __str__(self): return self.fqn if self.fqn else self.id
+
+	def to_dict(self):
+		return {}
+	
+	def get_enclosing_symbol(self):
+		result = self.parent
+		if isinstance(result, (ClassDefinition, FunctionDefinition)):
+			result = result.parent
+		return result
+	
+	def get_enclosing_module(self):
+		result = self
+		while result and not isinstance(result, Module):
+			result = result.get_enclosing_symbol()
+		return result
+	
+	def get_latest_definition(self) -> Symbol:
+		return self
+
 class _PackagingSymbol(
 	Symbol, 
 	_PathHolder,
@@ -66,6 +72,12 @@ class _PackagingSymbol(
 ):
 	def __init__(self, id: str):
 		super().__init__(id)
+
+	def to_dict(self):
+		data = super().to_dict()
+		data["packages"] = {key: value.to_dict() for key, value in self.packages.items()}
+		data["modules"] = {key: value.to_dict() for key, value in self.modules.items()}
+		return data
 
 	def set_package(self, package: Package, fqn_map: dict):
 		self.packages[package.id] = package
@@ -88,6 +100,13 @@ class _SyntaxingSymbol(
 ):
 	def __init__(self, id: str):
 		super().__init__(id)
+
+	def to_dict(self):
+		data = super().to_dict()
+		data["classes"] = {key: value.to_dict() for key, value in self.classes.items()}
+		data["functions"] = {key: value.to_dict() for key, value in self.functions.items()}
+		data["names"] = {key: value.to_dict() for key, value in self.names.items()}
+		return data
 
 	def get_name(self, id: str) -> Name:
 		name = self.names.get(id)
@@ -131,11 +150,17 @@ class Module(
 	_PathHolder
 ): pass
 
-class ClassDefinition(_LocatableSymbol): pass
-class NameDefinition(
-	_LocatableSymbol, 
-	_ReferenceHolder
-): pass
+class ClassDefinition(_LocatableSymbol): 
+	def __init__(self, defkey: tuple[Module, tuple[int, int]]):
+		super().__init__(defkey)
+		self.bases: list[Instance]
+		self.mro: list[Instance]
+	
+	def to_dict(self):
+		data = super().to_dict()
+		data["bases"] = [base.origin.fqn for base in self.bases]
+		data["mro"] = [base.origin.fqn for base in self.mro]
+		return data
 
 class FunctionDefinition(
 	_LocatableSymbol, 
@@ -145,6 +170,20 @@ class FunctionDefinition(
 		super().__init__(defkey)
 		self.tree: ast.FunctionDef | ast.AsyncFunctionDef = None
 		self.parameters: dict[str, ParameterEntry] = {}
+	
+	def to_dict(self):
+		data = super().to_dict()
+		data["return_type"] = repr(self.refset.as_type())
+		return data
+
+class NameDefinition(
+	_LocatableSymbol, 
+	_ReferenceHolder
+):
+	def to_dict(self):
+		data = super().to_dict()
+		data["type"] = repr(self.refset.as_type())
+		return data
 
 class CallFrame(
 	_SyntaxingSymbol, 
@@ -155,9 +194,12 @@ class Class(Symbol):
 	def __init__(self, id):
 		super().__init__(id)
 		self.definitions: dict[str, ClassDefinition] = {}
-		self.bases: list[Instance]
-		self.mro: list[Instance]
 	
+	def to_dict(self):
+		data = super().to_dict()
+		data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
+		return data
+
 	def set_definition(self, class_def: ClassDefinition):
 		class_def.parent = self
 		class_def.fqn = self.fqn
@@ -172,6 +214,11 @@ class Function(Symbol):
 	def __init__(self, id):
 		super().__init__(id)
 		self.definitions: dict[str, FunctionDefinition] = {}
+	
+	def to_dict(self):
+		data = super().to_dict()
+		data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
+		return data
 	
 	def set_definition(self, func_def: FunctionDefinition):
 		func_def.parent = self
@@ -194,6 +241,11 @@ class Name(Symbol):
 	def __init__(self, id):
 		super().__init__(id)
 		self.definitions: dict[str, NameDefinition] = {}
+	
+	def to_dict(self):
+		data = super().to_dict()
+		data["definitions"] = {key: value.to_dict() for key, value in self.definitions.items()}
+		return data
 	
 	def set_definition(self, name_def: NameDefinition):
 		name_def.parent = self

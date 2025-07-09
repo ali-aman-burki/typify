@@ -9,17 +9,17 @@ from typify.inferencing.executor import Context, Executor
 from typify.inferencing.call_stack import CallStack
 from typify.preprocessing.symbol_table import (
     ReferenceSet, 
-    InstanceTable, 
-    ModuleTable
+    Instance, 
+    Module
 )
 
 class Inferencer:
 
 	@staticmethod
 	def infer(bundle: DependencyBundle) -> None:
-		meta_map: dict[ModuleTable, ModuleMeta] = bundle.meta_map
+		meta_map: dict[Module, ModuleMeta] = bundle.meta_map
 		sequences: list[list[ModuleMeta]] = bundle.sequences
-		sysmodules: dict[str, InstanceTable] = bundle.sysmodules
+		sysmodules: dict[str, Instance] = bundle.sysmodules
 		libs = bundle.libs
 		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = bundle.cleaned_graph
 

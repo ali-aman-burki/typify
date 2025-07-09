@@ -66,7 +66,7 @@ logger.info("💾 Exporting...", 1)
 
 next(iter(bundle.libs.values())).export(
     path=Path(output_dir), 
-    symbols=False, 
+    symbols=True, 
     typeslots=True
 )
 

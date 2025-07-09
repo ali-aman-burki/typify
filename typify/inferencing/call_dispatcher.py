@@ -3,7 +3,7 @@ import copy
 
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
-	InstanceTable,
+	Instance,
 	DefinitionTable
 )
 from typify.inferencing.resolver import Resolver
@@ -20,7 +20,7 @@ class CallDispatcher:
 	def exec(
 			self,
 			method: DefinitionTable,
-			inject: InstanceTable = None
+			inject: Instance = None
 		):
 
 		modified_node = copy.deepcopy(self.node)
@@ -91,7 +91,7 @@ class CallDispatcher:
 					result.add(self.dispatch_instance(candidate))
 		return result
 	
-	def dispatch_instance(self, candidate: InstanceTable) -> InstanceTable:
+	def dispatch_instance(self, candidate: Instance) -> Instance:
 		class_table = candidate.origin
 		instance = TypeUtils.instantiate(class_table)
 		

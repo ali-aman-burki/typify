@@ -1,11 +1,11 @@
 import ast
 
 from typify.preprocessing.symbol_table import (
-    Table,
-	NameTable,
-    ModuleTable, 
-    PackageTable, 
-    InstanceTable,
+    Symbol,
+	Name,
+    Module, 
+    Package, 
+    Instance,
 	DefinitionTable
 )
 from typify.preprocessing.module_meta import ModuleMeta
@@ -19,8 +19,8 @@ from dataclasses import dataclass
 @dataclass
 class DependencyBundle:
 	libs: dict[str, LibraryMeta]
-	meta_map: dict[ModuleTable, ModuleMeta]
-	sysmodules: dict[str, InstanceTable]
+	meta_map: dict[Module, ModuleMeta]
+	sysmodules: dict[str, Instance]
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
 	cleaned_graph: dict[ModuleMeta, set[ModuleMeta]]
 	sequences: list[list[ModuleMeta]]
@@ -28,7 +28,7 @@ class DependencyBundle:
 class DependencyUtils:
 
 	@staticmethod
-	def to_absolute_name(module_table: ModuleTable, name: str | None, level: int = 0) -> str:
+	def to_absolute_name(module_table: Module, name: str | None, level: int = 0) -> str:
 		if level == 0:
 			base_fqn = name or ""
 		else:
@@ -43,12 +43,12 @@ class DependencyUtils:
 
 	@staticmethod
 	def resolve_module_objects(
-		defkey: tuple[ModuleTable, tuple[int, int]], 
+		defkey: tuple[Module, tuple[int, int]], 
 		libs: dict[str, LibraryMeta], 
-		sysmodules: dict[str, InstanceTable],
+		sysmodules: dict[str, Instance],
 		name: str | None, 
 		level: int = 0
-	) -> list[InstanceTable]:
+	) -> list[Instance]:
 		fqn = DependencyUtils.to_absolute_name(defkey[0], name, level)
 		for lib in libs.values():
 			if fqn in lib.fqn_map:
@@ -71,7 +71,7 @@ class DependencyUtils:
 						continue
 					
 					module_object = TypeUtils.instantiate(Builtins.get_type("module"))
-					Table.transfer_names(table.names, module_object)
+					Symbol.transfer_names(table.names, module_object)
 
 					attrdef = DefinitionTable(defkey)
 					attrdef.refset.add(module_object)
@@ -88,8 +88,8 @@ class DependencyUtils:
 class GraphBuilder:
 	@staticmethod
 	def build_graph(libs: dict[str, LibraryMeta]) -> DependencyBundle:
-		meta_map: dict[ModuleTable, ModuleMeta] = {}
-		sysmodules: dict[PackageTable | ModuleTable, InstanceTable] = {}
+		meta_map: dict[Module, ModuleMeta] = {}
+		sysmodules: dict[Package | Module, Instance] = {}
 		dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]] = {}
 
 		for lib in libs.values():
@@ -129,7 +129,7 @@ class DependencyTracker(ast.NodeVisitor):
 	def __init__(
 		self,
 		libs: dict[str, LibraryMeta],
-		meta_map: dict[ModuleTable, ModuleMeta],
+		meta_map: dict[Module, ModuleMeta],
 		dependency_graph: dict[ModuleMeta, set[tuple[ModuleMeta, str]]],
 		module_meta: ModuleMeta
 	):
@@ -141,17 +141,17 @@ class DependencyTracker(ast.NodeVisitor):
 		self.dependency_graph[module_meta] = set()
 		self.in_function = 0
 	
-	def as_module_metas(self, modules: list[Table]) -> set[ModuleMeta]:
+	def as_module_metas(self, modules: list[Symbol]) -> set[ModuleMeta]:
 		return {self.meta_map[table] for table in modules if table in self.meta_map}
 
-	def filter_chain(self, chain: list[PackageTable | ModuleTable]):
+	def filter_chain(self, chain: list[Package | Module]):
 		result = []
 		for table in chain:
-			if isinstance(table, PackageTable): result.append(table.modules["__init__"])
+			if isinstance(table, Package): result.append(table.modules["__init__"])
 			else: result.append(table)
 		return result
 
-	def resolve_fqn_chain(self, name: str | None, level: int = 0) -> list[Table]:
+	def resolve_fqn_chain(self, name: str | None, level: int = 0) -> list[Symbol]:
 		base_fqn = DependencyUtils.to_absolute_name(self.module_table, name, level)
 
 		for lib in self.libs.values():

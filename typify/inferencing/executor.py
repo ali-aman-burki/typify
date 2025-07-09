@@ -20,10 +20,10 @@ from typify.inferencing.commons import (
 )
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
-	InstanceTable,
+	Instance,
 	DefinitionTable,
-	Table,
-	CallFrameTable
+	Symbol,
+	CallFrame
 )
 
 class Executor(ast.NodeVisitor):
@@ -31,8 +31,8 @@ class Executor(ast.NodeVisitor):
 			self, 
 			context: Context,
 			module_meta: ModuleMeta,
-			symbol: Table,
-			namespace: InstanceTable, 
+			symbol: Symbol,
+			namespace: Instance, 
 			arguments: dict[str, ArgTuple],
 			call_stack: list,
 			tree: ast.AST,
@@ -74,7 +74,7 @@ class Executor(ast.NodeVisitor):
 
 	def execute(self) -> ReferenceSet: 
 		self.visit(self.tree)
-		if isinstance(self.namespace, CallFrameTable):
+		if isinstance(self.namespace, CallFrame):
 			if not TypeUtils.has_complete_return(self.tree.body):
 				self.returns.add(ConstantObjects.get("NoneType"))
 				self.symbol.refset.add(ConstantObjects.get("NoneType"))

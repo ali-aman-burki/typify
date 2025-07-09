@@ -2,11 +2,11 @@ from pathlib import Path
 from collections import defaultdict
 
 from typify.preprocessing.symbol_table import (
-    Table,
-	LibraryTable,
-    PackageTable,
-    ModuleTable,
-	InstanceTable
+    Symbol,
+	Library,
+    Package,
+    Module,
+	Instance
 )
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.precollector import PreCollector
@@ -15,11 +15,11 @@ class LibraryMeta:
 	def __init__(self, src: Path, key: str):
 		self.src = Path(src).resolve()
 		self.key = key
-		self.library_table = LibraryTable(self.src.name)
-		self.sysmodules: dict[str, InstanceTable] = {}
-		self.meta_map: dict[ModuleTable, ModuleMeta] = {}
+		self.library_table = Library(self.src.name)
+		self.sysmodules: dict[str, Instance] = {}
+		self.meta_map: dict[Module, ModuleMeta] = {}
 		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
-		self.fqn_map: dict[str, list[Table]] = {}
+		self.fqn_map: dict[str, list[Symbol]] = {}
 
 		self._build()
 
@@ -27,7 +27,7 @@ class LibraryMeta:
 		working_is_package = (self.src / "__init__.py").is_file() or (self.src / "__init__.pyi").is_file()
 
 		if working_is_package:
-			root_package_table = PackageTable(self.src.name)
+			root_package_table = Package(self.src.name)
 			root_package_table.trust_annotations = False
 			self.library_table.set_package(root_package_table, self.fqn_map)
 			package_map = {self.src: root_package_table}
@@ -44,7 +44,7 @@ class LibraryMeta:
 				has_init = (path / "__init__.py").is_file() or (path / "__init__.pyi").is_file()
 				if has_init:
 					parent_table = package_map.get(path.parent, self.library_table)
-					package_table = PackageTable(path.name)
+					package_table = Package(path.name)
 					package_table.trust_annotations = parent_table.trust_annotations
 					package_map[path] = package_table
 					parent_table.set_package(package_table, self.fqn_map)

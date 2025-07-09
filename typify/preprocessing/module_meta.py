@@ -1,7 +1,7 @@
 from pathlib import Path
 import ast, json
 
-from typify.preprocessing.symbol_table import ModuleTable
+from typify.preprocessing.symbol_table import Module
 
 class ModuleMeta:
 
@@ -10,7 +10,7 @@ class ModuleMeta:
 
 		self.src = src
 		self.tree: ast.AST = None
-		self.table = ModuleTable(src.stem)
+		self.table = Module(src.stem)
 		self.trust_annotations = trust_annotations
 
 		self.vslots: dict[tuple[int, int], tuple[ast.Expr, TypeExpr]] = {}

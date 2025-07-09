@@ -5,7 +5,7 @@ from typify.inferencing.commons import Typing
 from typify.preprocessing.precollector import PreCollector
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
-	InstanceTable, 
+	Instance, 
 	DefinitionTable
 )
 
@@ -14,7 +14,7 @@ class TypeExpr:
 	def __init__(self, typedef: DefinitionTable, typeargs: list[TypeExpr] = None):
 		self.typedef = typedef
 		self.typeargs = typeargs or []
-		self.typevars: dict[InstanceTable, TypeExpr] = {} #TODO: later, init based on typedef
+		self.typevars: dict[Instance, TypeExpr] = {} #TODO: later, init based on typedef
 		
 		TypeUtils.update_typevars(self.typevars, self.typeargs)
 
@@ -91,17 +91,17 @@ class TypeUtils:
 	@staticmethod
 	def instantiate(
 		typedef: DefinitionTable, 
-		typeargs: list[InstanceTable] | None = None
-		) -> InstanceTable:
+		typeargs: list[Instance] | None = None
+		) -> Instance:
 
-		instance = InstanceTable()
+		instance = Instance()
 		instance.type_expr = TypeExpr(typedef, typeargs)
 		return instance
 
 	@staticmethod
 	def update_typevars(
-		typevars: dict[InstanceTable, InstanceTable], 
-		typeargs: list[InstanceTable]
+		typevars: dict[Instance, Instance], 
+		typeargs: list[Instance]
 	) -> None:
 		existing_keys = list(typevars.keys())
 		

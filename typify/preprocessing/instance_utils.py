@@ -41,7 +41,7 @@ class Instance:
 			FunctionDefinition
 		)
 
-		self.attributes: dict[str, Name] = {}
+		self.names: dict[str, Name] = {}
 		self.store: list[ReferenceSet] = []
 		self.type_expr: TypeExpr = None
 		self.origin: ClassDefinition | FunctionDefinition = None

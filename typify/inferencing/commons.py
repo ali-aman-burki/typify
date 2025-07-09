@@ -1,11 +1,11 @@
 from typify.preprocessing.symbol_table import (
     DefinitionTable, 
-    InstanceTable, 
-    Table
+    Instance, 
+    Symbol
 )
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.symbol_table import ModuleTable, ReferenceSet
+from typify.preprocessing.symbol_table import Module, ReferenceSet
 from typify.preprocessing.libs import RequiredLibs
 
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 class ParameterEntry:
 	name: str
 	refset: ReferenceSet
-	defkey: tuple[ModuleTable, tuple[int, int]]
+	defkey: tuple[Module, tuple[int, int]]
 
 	is_vararg: bool = False
 	is_kwarg: bool = False
@@ -24,14 +24,14 @@ class ParameterEntry:
 @dataclass
 class ArgTuple:
 	refset: ReferenceSet
-	defkey: tuple[ModuleTable, tuple[int, int]]
+	defkey: tuple[Module, tuple[int, int]]
 
 @dataclass
 class Context:
 	libs: dict[str, LibraryMeta]
-	sysmodules: dict[str, InstanceTable]
-	symbol_map: dict[Table, InstanceTable]
-	meta_map: dict[ModuleTable, ModuleMeta]
+	sysmodules: dict[str, Instance]
+	symbol_map: dict[Symbol, Instance]
+	meta_map: dict[Module, ModuleMeta]
 
 class ConstantObjects:
 	
@@ -59,7 +59,7 @@ class ConstantObjects:
 class Builtins:
 
 	@staticmethod
-	def module() -> ModuleTable:
+	def module() -> Module:
 		try:
 			result = RequiredLibs.preloaded["builtinlib"].library_table.modules["builtins"]
 			return result
@@ -78,7 +78,7 @@ class Builtins:
 class Typing:
 	
 	@staticmethod
-	def module() -> ModuleTable:
+	def module() -> Module:
 		try:
 			result = RequiredLibs.preloaded["stdlib"].library_table.modules["typing"]
 			return result

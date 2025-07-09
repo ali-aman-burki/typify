@@ -10,12 +10,12 @@ from typify.inferencing.unpacking_utils import (
 )
 from typify.preprocessing.symbol_table import (
 	ReferenceSet,
-	Table,
-	NameTable,
-	ClassTable,
-	PackageTable,
-	LibraryTable,
-	InstanceTable,
+	Symbol,
+	Name,
+	Class,
+	Package,
+	Library,
+	Instance,
 	DefinitionTable,
 )
 from typify.inferencing.commons import (
@@ -30,8 +30,8 @@ class Resolver:
 			self, 
 			context: Context,
 			module_meta: ModuleMeta,
-			symbol: Table, 
-			namespace: InstanceTable,
+			symbol: Symbol, 
+			namespace: Instance,
 			call_stack: CallStack
 		):
 		self.context = context
@@ -40,11 +40,11 @@ class Resolver:
 		self.namespace = namespace
 		self.call_stack = call_stack
 
-	def LEGB_lookup(self, name: str) -> NameTable:
+	def LEGB_lookup(self, name: str) -> Name:
 		current_symbol = self.symbol
 
-		while not isinstance(current_symbol, (LibraryTable, PackageTable)):
-			if isinstance(current_symbol, ClassTable):
+		while not isinstance(current_symbol, (Library, Package)):
+			if isinstance(current_symbol, Class):
 				current_symbol = current_symbol.get_enclosing_table()
 				continue
 			
@@ -57,9 +57,9 @@ class Resolver:
 
 	def attribute_lookup(
 			self, 
-			instance: InstanceTable, 
+			instance: Instance, 
 			attr: str
-		) -> NameTable:
+		) -> Name:
 		
 		if attr in instance.names: return instance.names[attr]
 		
