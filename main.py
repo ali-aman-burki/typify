@@ -70,15 +70,15 @@ next(iter(bundle.libs.values())).export(
     typeslots=True
 )
 
-bundle.libs["builtinlib"].export(
-    path=Path(output_dir) / "builtinlib", 
-    symbols=True, 
-    typeslots=False
-)
-bundle.libs["stdlib"].export(
-    path=Path(output_dir) / "stdlib",
-    symbols=True,
-    typeslots=False)
+# bundle.libs["builtinlib"].export(
+#     path=Path(output_dir) / "builtinlib", 
+#     symbols=True, 
+#     typeslots=False
+# )
+# bundle.libs["stdlib"].export(
+#     path=Path(output_dir) / "stdlib",
+#     symbols=True,
+#     typeslots=False)
 
 logger.info("✅ Done.")
 
