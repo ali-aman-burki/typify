@@ -8,9 +8,9 @@ class PreCollector(ast.NodeVisitor):
 	UNVISITED = "Any"
 	
 	@staticmethod
-
 	def build_function_signature(
 		fdef: ast.FunctionDef | ast.AsyncFunctionDef, 
+		fqn: str,
 		parameters: dict[str, str], 
 		return_annotation: str
 	) -> str:
@@ -63,7 +63,7 @@ class PreCollector(ast.NodeVisitor):
 			ann = parameters.get(name, PreCollector.UNVISITED)
 			parts.append(f"**{name}: {ann}")
 
-		return f"{fdef.name}({', '.join(parts)}) -> {return_annotation}"
+		return f"{fqn}({', '.join(parts)}) -> {return_annotation}"
 
 	
 	@staticmethod
@@ -98,21 +98,20 @@ class PreCollector(ast.NodeVisitor):
 		visit(expr)
 		return targets
 
-
 	def __init__(self, module_meta: ModuleMeta):
 		self.module_meta = module_meta
 		self.module_meta.load_tree()
+		self.scope_stack: list[str] = []
 
 	def visit_AnnAssign(self, node):
 		position = (node.target.lineno, node.target.col_offset)
-		self.module_meta.vslots[position] = [node.target, PreCollector.UNVISITED]
+		self.module_meta.vslots[position] = [ast.unparse(node.target), PreCollector.UNVISITED]
 
 	def visit_Assign(self, node):
 		for target in node.targets:
-			position = (target.lineno, target.col_offset)
 			packs = PreCollector.collect_targets(target)
 			for k, v in packs.items():
-				self.module_meta.vslots[v] = [k, PreCollector.UNVISITED]
+				self.module_meta.vslots[v] = [ast.unparse(target), PreCollector.UNVISITED]
 
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(
@@ -128,10 +127,25 @@ class PreCollector(ast.NodeVisitor):
 		toAssign = ast.fix_missing_locations(toAssign)
 		self.visit_Assign(toAssign)
 
+	def visit_ClassDef(self, node):
+		self.scope_stack.append(node.name)
+		self.generic_visit(node)
+		self.scope_stack.pop()
+
 	def visit_FunctionDef(self, node):
+		fqn = self._get_local_fqn(node.name)
 		position = (node.lineno, node.col_offset)
 		param_slots = PreCollector.collect_parameter_slots(node)
-		self.module_meta.fslots[position] = [node, param_slots, PreCollector.UNVISITED]
+		self.module_meta.fslots[position] = [node, fqn, param_slots, PreCollector.UNVISITED]
+
+		self.scope_stack.append(node.name)
 		self.generic_visit(node)
-		
+		self.scope_stack.pop()
 	
+	def visit_AsyncFunctionDef(self, node):
+		self.visit_FunctionDef(node)  
+
+	def _get_local_fqn(self, name: str) -> str:
+		if self.scope_stack:
+			return ".".join(self.scope_stack + [name])
+		return name

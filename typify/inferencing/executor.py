@@ -75,7 +75,7 @@ class Executor(ast.NodeVisitor):
 			merged = symbol_name.merge_definition(ndef)
 
 			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-			self.module_meta.fslots[position][1][argname] = merged.refset.as_type()
+			self.module_meta.fslots[position][2][argname] = merged.refset.as_type()
 
 	def execute(self) -> ReferenceSet: 
 		self.visit(self.tree)
@@ -85,7 +85,7 @@ class Executor(ast.NodeVisitor):
 				self.symbol.refset.add(ConstantObjects.get("NoneType"))
 
 				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-				self.module_meta.fslots[position][2] = self.symbol.refset
+				self.module_meta.fslots[position][3] = self.symbol.refset
 		return self.returns
 
 	def snapshot(self): 
@@ -114,7 +114,7 @@ class Executor(ast.NodeVisitor):
 		self.returns.update(resolved)
 
 		position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-		self.module_meta.fslots[position][2] = self.symbol.refset
+		self.module_meta.fslots[position][3] = self.symbol.refset
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
@@ -287,7 +287,7 @@ class Executor(ast.NodeVisitor):
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset
 			mdef = function_def.get_name(k).merge_definition(ndef)
-			self.module_meta.fslots[position][1][k] = mdef.refset.as_type()
+			self.module_meta.fslots[position][2][k] = mdef.refset.as_type()
 
 		func_obj = self.context.symbol_map.setdefault(
 			function_def,

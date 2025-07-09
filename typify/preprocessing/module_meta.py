@@ -13,8 +13,8 @@ class ModuleMeta:
 		self.table = Module(src.stem)
 		self.trust_annotations = trust_annotations
 
-		self.vslots: dict[tuple[int, int], tuple[ast.Expr, TypeExpr]] = {}
-		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | ast.AsyncFunctionDef | dict[str, TypeExpr] | TypeExpr]] = {}
+		self.vslots: dict[tuple[int, int], tuple[str, TypeExpr]] = {}
+		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | ast.AsyncFunctionDef | str | dict[str, TypeExpr] | TypeExpr]] = {}
 
 	def load_tree(self):
 		if not self.tree:
@@ -62,7 +62,7 @@ class ModuleMeta:
 
 		for key, value in self.vslots.items():
 			k = f"{key[0]}:{key[1]}"
-			v = f"{ast.unparse(value[0])}: {value[1]}"
+			v = f"{value[0]}: {value[1]}"
 			data["variables"][k] = v
 			data["variables"]["meta"]["total"] += 1
 
@@ -74,17 +74,17 @@ class ModuleMeta:
 
 		for key, value in self.fslots.items():
 			k = f"{key[0]}:{key[1]}"
-			v = PreCollector.build_function_signature(value[0], value[1], value[2])
+			v = PreCollector.build_function_signature(value[0], value[1], value[2], value[3])
 			data["functions"][k] = v
 			data["functions"]["meta"]["total"] += 1
 
-			return_is_any = isinstance(value[2], TypeExpr) and value[2].typedef == Typing.get_type("Any")
-			return_is_unvisited = value[2] == PreCollector.UNVISITED
+			return_is_any = isinstance(value[3], TypeExpr) and value[3].typedef == Typing.get_type("Any")
+			return_is_unvisited = value[3] == PreCollector.UNVISITED
 			
 			if not return_is_any and not return_is_unvisited:
 				data["functions"]["meta"]["typed"] += 1
 			
-			for t in value[1].values():
+			for t in value[2].values():
 				data["functions"]["meta"]["total"] += 1
 
 				is_any = isinstance(t, TypeExpr) and t.typedef == Typing.get_type("Any")
