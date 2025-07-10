@@ -18,7 +18,7 @@ class Logger:
 		self.level = level
 		self.outputs = outputs or [sys.stdout]
 
-	def set_level(self, level: LogLevel):
+	def set_level(self, level: int):
 		self.level = level
 
 	def add_output(self, stream):

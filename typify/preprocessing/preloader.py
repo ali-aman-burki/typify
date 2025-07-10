@@ -59,7 +59,7 @@ print(json.dumps(info))
 		project_dir = Path(config["project_dir"]).resolve()
 
 		def resolve_paths(raw: str) -> dict[str, Path]:
-			result = {}
+			result: dict[str, Path] = {}
 			for p in re.split(r"\s*,\s*", raw):
 				if not p:
 					continue
@@ -86,7 +86,7 @@ print(json.dumps(info))
 		return TypifyPaths(preload_paths, ondemand_paths)
 
 	@staticmethod
-	def load(config) -> DependencyBundle:
+	def load(config: dict[str, Union[str, dict[str, str]]]) -> DependencyBundle:
 		paths = Preloader._get_paths(config)
 		RequiredLibs.preloaded = {
 			key: LibraryMeta(preload_path, key) for key, preload_path in paths.preload.items()
