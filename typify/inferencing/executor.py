@@ -232,7 +232,7 @@ class Executor(ast.NodeVisitor):
 
 		for base in class_tree.bases:
 			base_inst = self.resolver.resolve_value(base).ref()
-			if base_inst.type_expr.typedef != Typing.get_type("Any"):
+			if base_inst.type_expr.base != Typing.get_type("Any"):
 				entering_symbol.bases.append(base_inst)
 				self.add_to_snapshot({base_inst})
 
@@ -293,7 +293,7 @@ class Executor(ast.NodeVisitor):
 			function_def,
 			TypeUtils.instantiate(Builtins.get_type("function"))
 		)
-		func_obj.type_expr.typedef = Builtins.get_type("function")
+		func_obj.type_expr.base = Builtins.get_type("function")
 		func_obj.origin = function_def
 
 		deftable = NameDefinition(defkey)
@@ -316,7 +316,7 @@ class Executor(ast.NodeVisitor):
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
 		
-		if len(resolved_value) == 1 and resolved_value.ref().type_expr.typedef == Typing.get_type("Any"):
+		if len(resolved_value) == 1 and resolved_value.ref().type_expr.base == Typing.get_type("Any"):
 			self.generic_visit(node)
 
 	def visit_Assign(self, node):
@@ -326,7 +326,7 @@ class Executor(ast.NodeVisitor):
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
 		
-		if len(resolved_value) == 1 and resolved_value.ref().type_expr.typedef == Typing.get_type("Any"):
+		if len(resolved_value) == 1 and resolved_value.ref().type_expr.base == Typing.get_type("Any"):
 			self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):

@@ -67,11 +67,11 @@ class Resolver:
 		
 		if attr in instance.names: return instance.names[attr]
 		
-		if instance.type_expr.typedef == Builtins.get_type("type"):
+		if instance.type_expr.base == Builtins.get_type("type"):
 			for m in instance.origin.mro:
 				if attr in m.names: return m.names[attr]
 		else:
-			for m in instance.type_expr.typedef.mro:
+			for m in instance.type_expr.base.mro:
 				if attr in m.names: return m.names[attr]
 		
 		return None
@@ -230,7 +230,7 @@ class Resolver:
 				group = resolved_target.groups[i]
 				if isinstance(group, PackGroup):
 					next_instances = TypeUtils.instantiate_from_type_expr(ref.type_expr.typeargs[0])
-					if ref.type_expr.typedef == Builtins.get_type("tuple"):
+					if ref.type_expr.base == Builtins.get_type("tuple"):
 						if len(ref.store) > i:
 							next_instances = ref.store[i]
 						elif len(ref.type_expr.typeargs) > i:

@@ -53,12 +53,12 @@ class CallDispatcher:
 				candidate_def = method_attr.get_latest_definition()
 				candidate = candidate_def.refset.ref()
 
-				if candidate.type_expr.typedef == Builtins.get_type("function"):
+				if candidate.type_expr.base == Builtins.get_type("function"):
 					shortcircuit = False
 					for decorator in candidate.origin.tree.decorator_list:
 						if isinstance(decorator, ast.Name):
 							if decorator.id == "classmethod":
-								class_instance = caller.type_expr.typedef.mro[0]
+								class_instance = caller.type_expr.base.mro[0]
 								returns = self.exec(candidate.origin, class_instance)
 								result.update(returns)
 								shortcircuit = True
@@ -70,24 +70,24 @@ class CallDispatcher:
 								break
 					
 					if not shortcircuit:
-						if caller.type_expr.typedef == Builtins.get_type("module"):
+						if caller.type_expr.base == Builtins.get_type("module"):
 							returns = self.exec(candidate.origin)
 						else:
 							returns = self.exec(candidate.origin, caller)
 						result.update(returns)
 
-				elif candidate.type_expr.typedef == Builtins.get_type("type"):
+				elif candidate.type_expr.base == Builtins.get_type("type"):
 					result.add(self.dispatch_instance(candidate))
 		else:
 			candidates = self.resolver.resolve_value(self.node.func)
 		
 			for candidate in candidates:
-				if candidate.type_expr.typedef == Builtins.get_type("function"):
+				if candidate.type_expr.base == Builtins.get_type("function"):
 					function_table = candidate.origin
 					returns = self.exec(function_table)
 					result.update(returns)
 
-				elif candidate.type_expr.typedef == Builtins.get_type("type"):
+				elif candidate.type_expr.base == Builtins.get_type("type"):
 					result.add(self.dispatch_instance(candidate))
 		return result
 	

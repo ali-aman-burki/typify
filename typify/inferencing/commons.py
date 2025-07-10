@@ -50,7 +50,6 @@ class ConstantObjects:
 		"ellipsis": None
 	}
 
-
 	@staticmethod
 	def get(type_name: str):
 		from typify.inferencing.typeutils import TypeUtils
@@ -77,8 +76,6 @@ class Builtins:
 			return result
 		except Exception: 
 			return None
-	
-
 class Typing:
 	
 	@staticmethod
@@ -95,4 +92,4 @@ class Typing:
 			result = Typing.module().classes[type_name].get_latest_definition()
 			return result
 		except Exception: 
-			return None
+			return None 

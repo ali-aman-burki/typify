@@ -11,29 +11,50 @@ from typify.preprocessing.symbol_table import (
 	ClassDefinition
 )
 
+class TypeVarRegistry:
+
+	def __init__(self):
+		self.typevars: dict[Instance, TypeExpr] = {}
+		
+	def update(self, typevar: Instance, typeexpr: TypeExpr):
+		existing = [self.typevars[typevar]] if typevar in self.typevars else []
+		self.typevars[typevar] = TypeUtils.unify_from_exprs(existing + [typeexpr])
+		return self.typevars[typevar]
+	
+	def get(self, typevar: Instance):
+		return self.typevars.get(typevar)
+
+global_registry: TypeVarRegistry = TypeVarRegistry()
+
 class TypeExpr:
 
-	def __init__(self, typedef: ClassDefinition, typeargs: list[TypeExpr] = None):
-		self.typedef = typedef
+	@staticmethod
+	def from_ast(node: ast.Expr) -> TypeExpr:
+
+		return None
+
+	def __init__(
+			self, 
+			base: ClassDefinition, 
+			typeargs: list[TypeExpr] = None
+		):
+		self.base = base
 		self.typeargs = typeargs or []
-		self.typevars: dict[Instance, TypeExpr] = {} #TODO: later, init based on typedef
-		
-		TypeUtils.update_typevars(self.typevars, self.typeargs)
 
 	def __eq__(self, other: TypeExpr):
 		if not isinstance(other, TypeExpr):
 			return NotImplemented
-		if self.typedef != other.typedef or len(self.typeargs) != len(other.typeargs):
+		if self.base != other.base or len(self.typeargs) != len(other.typeargs):
 			return False
 		return all(a == b for a, b in zip(self.typeargs, other.typeargs))
 
 	def __hash__(self):
-		return hash((self.typedef, tuple(self.typeargs)))
+		return hash((self.base, tuple(self.typeargs)))
 
 	def __repr__(self):
-		fqn = self.typedef.parent.id if self.typedef else PreCollector.UNVISITED
+		fqn = self.base.parent.id if self.base else PreCollector.UNVISITED
 		strs = []
-		for typeexpr in self.typevars.values():
+		for typeexpr in self.typeargs:
 			strs.append(repr(typeexpr))
 		joined = ", ".join(strs)
 		joined = f"[{joined}]" if joined else joined
@@ -51,17 +72,17 @@ class TypeUtils:
 	@staticmethod
 	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> ReferenceSet:
 		result = ReferenceSet()
-		if unified_type_expr.typedef == Typing.get_type("Union"):
+		if unified_type_expr.base == Typing.get_type("Union"):
 			for typeexpr in unified_type_expr.typeargs:
-				result.add(TypeUtils.instantiate(typeexpr.typedef, typeexpr.typeargs))
+				result.add(TypeUtils.instantiate(typeexpr.base, typeexpr.typeargs))
 		else:
-			result.add(TypeUtils.instantiate(unified_type_expr.typedef, unified_type_expr.typeargs))
+			result.add(TypeUtils.instantiate(unified_type_expr.base, unified_type_expr.typeargs))
 		return result
 
 	@staticmethod
 	def unify_from_exprs(typeargs: list[TypeExpr] = None) -> TypeExpr:
 		typeargs = typeargs or []
-		typeargs = [item for item in typeargs if item.typedef is not None]
+		typeargs = [item for item in typeargs if item.base is not None]
 		union_def = Typing.get_type("Union")
 
 		def flatten_recursive(
@@ -69,7 +90,7 @@ class TypeUtils:
 				seen: dict[TypeExpr, None]
 			) -> None:
 			for t in types:
-				if t.typedef == union_def:
+				if t.base == union_def:
 					flatten_recursive(t.typeargs, seen)
 				else:
 					seen[t] = None
@@ -98,13 +119,15 @@ class TypeUtils:
 
 		instance = Instance()
 		instance.type_expr = TypeExpr(typedef, typeargs)
+		TypeUtils.update_registry(instance.registry, instance.type_expr.typeargs)
 		return instance
 
 	@staticmethod
-	def update_typevars(
-		typevars: dict[Instance, Instance], 
-		typeargs: list[Instance]
+	def update_registry(
+		registry: TypeVarRegistry, 
+		typeargs: list[TypeExpr]
 	) -> None:
+		typevars = registry.typevars
 		existing_keys = list(typevars.keys())
 		
 		for i in range(len(typeargs)):
