@@ -39,15 +39,14 @@ class ReferenceSet:
 
 class Instance:
 	def __init__(self):
-		from typify.inferencing.typeutils import (
-			TypeExpr, 
-			TypeVarRegistry
-		)
+		from typify.inferencing.typeutils import TypeVarRegistry
+		from typify.inferencing.expression import TypeExpr, PackedExpr
 
 		self.names: dict[str, Name] = {}
 		self.store: list[ReferenceSet] = []
 		self.registry: TypeVarRegistry = TypeVarRegistry()
 		self.type_expr: TypeExpr = None
+		self.packed_expr: PackedExpr = None
 		self.origin: ClassDefinition | FunctionDefinition = None
 	
 	def __repr__(self) -> str:

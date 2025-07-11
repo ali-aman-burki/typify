@@ -1,8 +1,8 @@
 
 import ast
 
+from typify.logging import logger
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.call_stack import CallStack
 from typify.inferencing.unpacking_utils import (
 	TargetEntry,
@@ -129,13 +129,22 @@ class Resolver:
 		else:
 			return PackGroup(groups=[], starred=False)
 
-	
 	#TODO: need support for comprehensions, generators 
 	#TODO: need support for literal types i.e Literal[...]
 	def resolve_value(self, node: ast.Expr) -> ReferenceSet:
 		from typify.inferencing.call_dispatcher import CallDispatcher
-		
-		if isinstance(node, ast.Constant):
+		from typify.inferencing.typeutils import TypeUtils
+		from typify.inferencing.expression import AliasParser
+
+		if isinstance(node, ast.Subscript):
+			base_set = self.resolve_value(node.value)
+			if not base_set: return ReferenceSet(TypeUtils.instantiate(Typing.get_type("Any")))
+
+			result = AliasParser.resolve_if_generic_alias(self, base_set, node)
+			if result: return result
+			
+			return ReferenceSet(TypeUtils.instantiate(Typing.get_type("Any")))
+		elif isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			instance = ConstantObjects.get(type_name)
 			return ReferenceSet(instance)
@@ -224,6 +233,8 @@ class Resolver:
 			resolved_target: PackGroup, 
 			resolved_value: ReferenceSet
 		):
+		from typify.inferencing.typeutils import TypeUtils
+
 		targets: set[TargetEntry] = set()
 		for ref in resolved_value:
 			for i in range(len(resolved_target.groups)):

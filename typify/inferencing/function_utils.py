@@ -7,10 +7,8 @@ from typify.preprocessing.symbol_table import (
 	FunctionDefinition, 
 	CallFrame,
 )
-from typify.inferencing.typeutils import (
-	TypeUtils,
-	TypeExpr
-)
+from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.expression import TypeExpr
 from typify.inferencing.commons import (
 	Typing, 
 	Builtins,

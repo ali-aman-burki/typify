@@ -4,7 +4,8 @@ from typify.logging import logger
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.commons import Builtins
-from typify.inferencing.typeutils import TypeUtils, TypeExpr
+from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.expression import TypeExpr
 from typify.inferencing.executor import Context, Executor
 from typify.inferencing.call_stack import CallStack
 from typify.preprocessing.instance_utils import (

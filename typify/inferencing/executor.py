@@ -7,10 +7,8 @@ from typify.inferencing.function_utils import FunctionUtils
 from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.mro import MROBuilder
 from typify.inferencing.resolver import Resolver
-from typify.inferencing.typeutils import (
-    TypeUtils, 
-    TypeExpr
-)
+from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.expression import TypeExpr
 from typify.inferencing.commons import (
 	Context,
 	Builtins,
@@ -161,7 +159,7 @@ class Executor(ast.NodeVisitor):
 			if not object_chain: return
 			for name in object_chain[-1].names.values():
 				lat_def = name.get_latest_definition()
-				self.namespace.get_name(name.key).set_definition(lat_def)
+				self.namespace.get_name(name.id).set_definition(lat_def)
 				self.add_to_snapshot(lat_def.refset)
 		else:
 			for alias in node.names:
@@ -197,7 +195,7 @@ class Executor(ast.NodeVisitor):
 						self.context.sysmodules,
 						fqn
 					)
-					if not new_object_chain: return
+					if not new_object_chain: continue
 
 					deftable = NameDefinition(defkey)
 					deftable.refset.add(new_object_chain[-1])

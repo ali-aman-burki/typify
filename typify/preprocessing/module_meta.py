@@ -6,7 +6,7 @@ from typify.preprocessing.symbol_table import Module
 class ModuleMeta:
 
 	def __init__(self, src: Path, trust_annotations: bool):
-		from typify.inferencing.typeutils import TypeExpr
+		from typify.inferencing.expression import TypeExpr
 
 		self.src = src
 		self.tree: ast.AST = None
@@ -40,7 +40,7 @@ class ModuleMeta:
 	def export_typeslots(self, working_directory: Path, export_path: Path):
 		from typify.preprocessing.precollector import PreCollector
 		from typify.inferencing.commons import Typing
-		from typify.inferencing.typeutils import TypeExpr
+		from typify.inferencing.expression import TypeExpr
 
 		output_path = self.mirror_export_path(working_directory, export_path, suffix="types")
 		output_path.parent.mkdir(parents=True, exist_ok=True)

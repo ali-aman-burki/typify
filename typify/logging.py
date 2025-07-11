@@ -10,6 +10,7 @@ class AnsiColor:
 	DEBUG = "\033[38;5;108m"
 	TRACE = "\033[38;5;179m"
 	ERROR = "\033[38;5;160m"  # Bright red
+	WARN = "\033[38;5;179m"
 
 import sys
 
@@ -50,6 +51,19 @@ class Logger:
 	def error(self, msg: str, trail: int = 0, header: bool = True):
 		prefix = "[ERROR] " if header else ""
 		color_msg = f"{AnsiColor.ERROR}{prefix}{msg}{AnsiColor.RESET}"
+		plain_msg = f"{prefix}{msg}"
+
+		for out in self.outputs:
+			if out == sys.stdout or out == sys.stderr:
+				print("\n" * trail, end="", file=out)
+				print(color_msg, file=out)
+			else:
+				out.write("\n" * trail + plain_msg + "\n")
+				out.flush()
+	
+	def warn(self, msg: str, trail: int = 0, header: bool = True):
+		prefix = "[WARN] " if header else ""
+		color_msg = f"{AnsiColor.WARN}{prefix}{msg}{AnsiColor.RESET}"
 		plain_msg = f"{prefix}{msg}"
 
 		for out in self.outputs:

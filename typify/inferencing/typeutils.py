@@ -2,7 +2,7 @@ from __future__ import annotations
 import ast
 
 from typify.inferencing.commons import Typing
-from typify.preprocessing.precollector import PreCollector
+from typify.inferencing.expression import TypeExpr
 from typify.preprocessing.instance_utils import (
 	ReferenceSet,
 	Instance
@@ -25,40 +25,6 @@ class TypeVarRegistry:
 		return self.typevars.get(typevar)
 
 global_registry: TypeVarRegistry = TypeVarRegistry()
-
-class TypeExpr:
-
-	@staticmethod
-	def from_ast(node: ast.Expr) -> TypeExpr:
-
-		return None
-
-	def __init__(
-			self, 
-			base: ClassDefinition, 
-			typeargs: list[TypeExpr] = None
-		):
-		self.base = base
-		self.typeargs = typeargs or []
-
-	def __eq__(self, other: TypeExpr):
-		if not isinstance(other, TypeExpr):
-			return NotImplemented
-		if self.base != other.base or len(self.typeargs) != len(other.typeargs):
-			return False
-		return all(a == b for a, b in zip(self.typeargs, other.typeargs))
-
-	def __hash__(self):
-		return hash((self.base, tuple(self.typeargs)))
-
-	def __repr__(self):
-		fqn = self.base.parent.id if self.base else PreCollector.UNVISITED
-		strs = []
-		for typeexpr in self.typeargs:
-			strs.append(repr(typeexpr))
-		joined = ", ".join(strs)
-		joined = f"[{joined}]" if joined else joined
-		return fqn + f"{joined}"
 		
 class TypeUtils:
 
@@ -119,6 +85,7 @@ class TypeUtils:
 
 		instance = Instance()
 		instance.type_expr = TypeExpr(typedef, typeargs)
+		instance.origin = typedef
 		TypeUtils.update_registry(instance.registry, instance.type_expr.typeargs)
 		return instance
 
