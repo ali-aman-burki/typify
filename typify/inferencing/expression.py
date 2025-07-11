@@ -65,7 +65,6 @@ class AliasParser:
 		node: ast.Subscript
 	) -> ReferenceSet | None:
 		from typify.inferencing.typeutils import TypeUtils
-		from typify.inferencing.expression import PackedExpr
 		from typify.inferencing.resolver import Resolver
 
 		resolver: Resolver = resolver
