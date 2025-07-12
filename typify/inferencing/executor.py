@@ -231,6 +231,8 @@ class Executor(ast.NodeVisitor):
 		for base in class_tree.bases:
 			base_inst = self.resolver.resolve_value(base).ref()
 			if base_inst.type_expr.base != Typing.get_type("Any"):
+				if base_inst.origin == Typing.get_type("_GenericAlias"):
+					base_inst = base_inst.packed_expr.base
 				entering_symbol.bases.append(base_inst)
 				self.add_to_snapshot({base_inst})
 
