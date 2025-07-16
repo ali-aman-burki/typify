@@ -64,6 +64,7 @@ class TypeUtils:
 		return TypeUtils.unify_from_exprs([ref.type_expr for ref in refset])
 
 	T_count = -162
+	TVT_count = 1
 
 	@staticmethod
 	def instantiate(
@@ -78,6 +79,9 @@ class TypeUtils:
 		if instance.origin and instance.origin == Typing.get_type("TypeVar"):		
 			instance.tid = f"T{TypeUtils.T_count}"
 			TypeUtils.T_count += 1
+		elif instance.origin and instance.origin == Typing.get_type("TypeVarTuple"):	
+			instance.tid = f"Ts{TypeUtils.TVT_count}"
+			TypeUtils.TVT_count += 1
 
 		GenericUtils.update_registry(instance.registry, instance.type_expr.typeargs)
 		return instance
