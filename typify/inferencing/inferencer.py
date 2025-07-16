@@ -24,7 +24,7 @@ class Inferencer:
 		libs = bundle.libs
 		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = bundle.cleaned_graph
 
-		context = Context(libs, sysmodules, {}, meta_map)
+		context = Context(libs, sysmodules, {}, {}, meta_map)
 		call_stack = CallStack()
 
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)

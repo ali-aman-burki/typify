@@ -7,7 +7,7 @@ from typify.preprocessing.instance_utils import (
 )
 from typify.preprocessing.symbol_table import FunctionDefinition
 from typify.inferencing.resolver import Resolver
-from typify.inferencing.commons import Builtins
+from typify.inferencing.commons import Builtins, Typing
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.function_utils import FunctionUtils
 from typify.logging import logger
@@ -22,6 +22,8 @@ class CallDispatcher:
 			method: FunctionDefinition,
 			inject: Instance = None
 		):
+
+		if not method: return ReferenceSet(TypeUtils.instantiate(Typing.get_type("Any")))
 
 		modified_node = copy.deepcopy(self.node)
 

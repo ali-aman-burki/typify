@@ -166,10 +166,13 @@ class Module(
 class ClassDefinition(_LocatableSymbol): 
 	def __init__(self, defkey: tuple[Module, tuple[int, int]]):
 		from typify.preprocessing.instance_utils import Instance
+		from typify.inferencing.generic_utils import GenericTree
 
 		super().__init__(defkey)
 		self.bases: list[Instance] = []
+		self.genbases: list[Instance] = []
 		self.mro: list[Instance] = []
+		self.genmap: dict[ClassDefinition, GenericTree] = {}
 	
 	def to_dict(self):
 		base_data = super().to_dict()

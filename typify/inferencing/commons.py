@@ -35,6 +35,7 @@ class Context:
 	libs: dict[str, LibraryMeta]
 	sysmodules: dict[str, Instance]
 	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance]
+	function_object_map: dict[FunctionDefinition, Instance]
 	meta_map: dict[Module, ModuleMeta]
 
 class ConstantObjects:

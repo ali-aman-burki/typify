@@ -209,6 +209,8 @@ class Executor(ast.NodeVisitor):
 
 	#TODO: add support for multiple possible candidates for a single base
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
+		from typify.inferencing.generic_utils import GenericUtils
+
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)
 		defkey = (self.module_meta.table, position)
@@ -218,6 +220,7 @@ class Executor(ast.NodeVisitor):
 
 		builtins_module_object = self.context.symbol_map.get(Builtins.module())
 		entering_symbol.bases.clear()
+		entering_symbol.genbases.clear()
 
 		if not class_tree.bases:
 			if builtins_module_object:
@@ -226,16 +229,17 @@ class Executor(ast.NodeVisitor):
 					object_def = object_class.get_latest_definition()
 					instance = object_def.refset.ref()
 					entering_symbol.bases.append(instance)
-					self.add_to_snapshot({instance})
+					self.add_to_snapshot(ReferenceSet(instance))
 
 		for base in class_tree.bases:
 			base_inst = self.resolver.resolve_value(base).ref()
 			if base_inst.type_expr.base != Typing.get_type("Any"):
 				if base_inst.origin == Typing.get_type("_GenericAlias"):
+					entering_symbol.genbases.append(base_inst)
 					base_inst = base_inst.packed_expr.base
 				entering_symbol.bases.append(base_inst)
-				self.add_to_snapshot({base_inst})
-
+				self.add_to_snapshot(ReferenceSet(base_inst))
+		
 		entering_namespace = self.context.symbol_map.setdefault(
 			entering_symbol,
 			TypeUtils.instantiate(
@@ -266,6 +270,9 @@ class Executor(ast.NodeVisitor):
 		self.namespace.get_name(name).set_definition(deftable)
 
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
+		entering_symbol.genmap = { entering_symbol: GenericUtils.build_genmap(entering_symbol) }
+
+		GenericUtils.pretty_print_genmap(entering_symbol.genmap)
 
 		self.add_to_snapshot(deftable.refset)
 		
@@ -289,7 +296,7 @@ class Executor(ast.NodeVisitor):
 			mdef = function_def.get_name(k).merge_definition(ndef)
 			self.module_meta.fslots[position][2][k] = mdef.refset.as_type()
 
-		func_obj = self.context.symbol_map.setdefault(
+		func_obj = self.context.function_object_map.setdefault(
 			function_def,
 			TypeUtils.instantiate(Builtins.get_type("function"))
 		)

@@ -11,21 +11,6 @@ from typify.preprocessing.instance_utils import (
 from typify.preprocessing.symbol_table import (
 	ClassDefinition
 )
-
-class TypeVarRegistry:
-
-	def __init__(self):
-		self.typevars: dict[Instance, TypeExpr] = {}
-		
-	def update(self, typevar: Instance, typeexpr: TypeExpr):
-		existing = [self.typevars[typevar]] if typevar in self.typevars else []
-		self.typevars[typevar] = TypeUtils.unify_from_exprs(existing + [typeexpr])
-		return self.typevars[typevar]
-	
-	def get(self, typevar: Instance):
-		return self.typevars.get(typevar)
-
-global_registry: TypeVarRegistry = TypeVarRegistry()
 		
 class TypeUtils:
 
@@ -78,33 +63,24 @@ class TypeUtils:
 	def unify(refset: ReferenceSet):
 		return TypeUtils.unify_from_exprs([ref.type_expr for ref in refset])
 
+	T_count = -162
+
 	@staticmethod
 	def instantiate(
 		typedef: ClassDefinition, 
 		typeargs: list[Instance] | None = None
 		) -> Instance:
+		from typify.inferencing.generic_utils import GenericUtils
 
 		instance = Instance()
 		instance.type_expr = TypeExpr(typedef, typeargs)
 		instance.origin = typedef
-		TypeUtils.update_registry(instance.registry, instance.type_expr.typeargs)
-		return instance
+		if instance.origin and instance.origin == Typing.get_type("TypeVar"):		
+			instance.tid = f"T{TypeUtils.T_count}"
+			TypeUtils.T_count += 1
 
-	@staticmethod
-	def update_registry(
-		registry: TypeVarRegistry, 
-		typeargs: list[TypeExpr]
-	) -> None:
-		typevars = registry.typevars
-		existing_keys = list(typevars.keys())
-		
-		for i in range(len(typeargs)):
-			key = TypeUtils.get_safe(
-				existing_keys, 
-				i, 
-				TypeUtils.instantiate(Typing.get_type("TypeVar"))
-			)
-			typevars[key] = typeargs[i]
+		GenericUtils.update_registry(instance.registry, instance.type_expr.typeargs)
+		return instance
 
 	@staticmethod
 	def get_safe(lst, index, default=None):
