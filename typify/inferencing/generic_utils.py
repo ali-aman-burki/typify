@@ -9,8 +9,19 @@ from typify.preprocessing.symbol_table import ClassDefinition
 
 @dataclass
 class GenericTree:
-	subs: dict[Instance, Instance | list[Instance]]
-	genmap: dict[ClassDefinition, GenericTree]
+    subs: dict[Placeholder, Placeholder | list[Placeholder]]
+    genmap: dict[ClassDefinition, 'GenericTree']
+
+@dataclass(frozen=True)
+class Placeholder:
+    owner_class: 'ClassDefinition'
+    typevar: 'Instance'
+
+    def __str__(self):
+        return f"{self.owner_class.parent.id}.{self.typevar.tid}"
+
+    def __repr__(self):
+        return str(self)
 
 class GenericRegistry:
 
@@ -50,7 +61,11 @@ global_registry: GenericRegistry = GenericRegistry()
 class GenericUtils:
 
 	@staticmethod
-	def pretty_print_genmap(tree: dict[ClassDefinition, GenericTree], indent: int = 0):
+	def pretty_print_genmap(
+		tree: dict[ClassDefinition, GenericTree], 
+		indent: int = 0
+	):
+		
 		def indent_str(level):
 			return '  ' * level
 
@@ -59,15 +74,15 @@ class GenericUtils:
 				continue
 
 			print(f"{indent_str(indent)}Class: {clsdef.parent.id}")
-			
+
 			if gentree.subs:
 				print(f"{indent_str(indent + 1)}Subs:")
 				for inst_from, inst_to in gentree.subs.items():
 					if isinstance(inst_to, list):
-						targets = ', '.join(t.tid for t in inst_to)
-						print(f"{indent_str(indent + 2)}{inst_from.tid} -> [{targets}]")
+						targets = ', '.join(repr(t) for t in inst_to)
+						print(f"{indent_str(indent + 2)}{repr(inst_from)} -> [{targets}]")
 					else:
-						print(f"{indent_str(indent + 2)}{inst_from.tid} -> {inst_to.tid}")
+						print(f"{indent_str(indent + 2)}{repr(inst_from)} -> {repr(inst_to)}")
 
 			if gentree.genmap:
 				print(f"{indent_str(indent + 1)}GenMap:")
@@ -75,18 +90,19 @@ class GenericUtils:
 
 	@staticmethod
 	def match_placeholders(
-		placeholders: list[Instance],
-		actual_args: list[Instance]
-	) -> dict[Instance, Instance | list[Instance]]:
+		placeholders: list[Placeholder],
+		actual_args: list[Placeholder]
+	) -> dict[Placeholder, Placeholder | list[Placeholder]]:
+		
 		result = {}
 		i = 0
-
-		tvts = [p for p in placeholders if p.origin == Typing.get_type("TypeVarTuple")]
+		tvts = [p for p in placeholders if p.typevar.origin == Typing.get_type("TypeVarTuple")]
+		
 		if len(tvts) > 1:
 			raise Exception("Multiple TypeVarTuples not supported.")
 
 		for j, ph in enumerate(placeholders):
-			if ph.origin == Typing.get_type("TypeVarTuple"):
+			if ph.typevar.origin == Typing.get_type("TypeVarTuple"):
 				fixed_after = len(placeholders) - (j + 1)
 				tvt_len = len(actual_args) - i - fixed_after
 				if tvt_len < 0:
@@ -95,23 +111,28 @@ class GenericUtils:
 
 				sliced = actual_args[i:i + tvt_len]
 
-				if len(sliced) == 1 and sliced[0].origin == Typing.get_type("TypeVarTuple"):
+				if len(sliced) == 1 and sliced[0].typevar.origin == Typing.get_type("TypeVarTuple"):
 					result[ph] = sliced[0]
 				else:
 					result[ph] = sliced
 
 				i += tvt_len
 			else:
-				if i < len(actual_args): result[ph] = actual_args[i]
-				else: result[ph] = ph
+				if i < len(actual_args):
+					result[ph] = actual_args[i]
+				else:
+					result[ph] = ph
 				i += 1
 
 		return result
 
-
 	@staticmethod
-	def build_genmap(classdef: ClassDefinition, prev: list[Instance] = None):
-		placeholders = GenericUtils.init_placeholders(classdef.genbases)
+	def build_genmap(
+		classdef: ClassDefinition, 
+		prev: list[Placeholder] = None
+	) -> GenericTree:
+	
+		placeholders = GenericUtils.init_placeholders(classdef, classdef.genbases)
 
 		if prev is None:
 			subs = {ph: ph for ph in placeholders}
@@ -124,9 +145,10 @@ class GenericUtils:
 			if base.packed_expr.base.origin == Typing.get_type("Generic"):
 				continue
 
-			base_placeholders = GenericUtils.init_placeholders([base])
-			base_args = []
+			base_classdef = base.packed_expr.base.origin
+			base_placeholders = GenericUtils.init_placeholders(classdef, [base])
 
+			base_args = []
 			for bp in base_placeholders:
 				mapped = subs.get(bp, bp)
 				if isinstance(mapped, list):
@@ -134,35 +156,41 @@ class GenericUtils:
 				else:
 					base_args.append(mapped)
 
-			base_classdef = base.packed_expr.base.origin
 			result.genmap[base_classdef] = GenericUtils.build_genmap(base_classdef, base_args)
 
 		return result
 
-
 	@staticmethod
-	def collect_placeholders(packed_expr: PackedExpr) -> list[Instance]:
+	def collect_typevars(packed_expr: PackedExpr) -> list[Instance]:
 		result = []
 		if packed_expr.base.origin in (Typing.get_type("TypeVar"), Typing.get_type("TypeVarTuple")):
 			result.append(packed_expr.base)
 		
 		for arg in packed_expr.args:
-			result += GenericUtils.collect_placeholders(arg)
+			result += GenericUtils.collect_typevars(arg)
 		
 		return result
 	
 	@staticmethod
-	def init_placeholders(generic_bases: list[Instance]):
+	def init_placeholders(
+		owner: ClassDefinition, 
+		generic_bases: list[Instance]
+	) -> list[Placeholder]:
+
 		for base in generic_bases:
 			if base.packed_expr.base.origin == Typing.get_type("Generic"):
-				return GenericUtils.collect_placeholders(base.packed_expr)
+				placeholders = GenericUtils.collect_typevars(base.packed_expr)
+				return [Placeholder(owner, ph) for ph in placeholders]
 
 		g_placeholders = []
 		for base in generic_bases:
-			placeholders = GenericUtils.collect_placeholders(base.packed_expr)
-			g_placeholders.extend(placeholders)
+			placeholders = GenericUtils.collect_typevars(base.packed_expr)
+			# Wrap each placeholder with its owning class
+			g_placeholders.extend([Placeholder(owner, ph) for ph in placeholders])
 
-		return list(OrderedDict.fromkeys(g_placeholders))
+		# Remove duplicates preserving order
+		unique = list(OrderedDict.fromkeys(g_placeholders))
+		return unique
 
 	@staticmethod
 	def update_registry(
