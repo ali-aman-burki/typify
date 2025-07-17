@@ -271,8 +271,10 @@ class Executor(ast.NodeVisitor):
 
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
 		entering_symbol.genmap = { entering_symbol: GenericUtils.build_genmap(entering_symbol) }
+		flattened = GenericUtils.flatten_genmap(entering_symbol.genmap)
 
-		GenericUtils.pretty_print_genmap(entering_symbol.genmap)
+		GenericUtils.pretty_print_genconstruct(flattened)
+		print("______________________________")
 
 		self.add_to_snapshot(deftable.refset)
 		

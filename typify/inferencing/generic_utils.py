@@ -12,6 +12,11 @@ class GenericTree:
     subs: dict[Placeholder, Placeholder | list[Placeholder]]
     genmap: dict[ClassDefinition, GenericTree]
 
+@dataclass
+class GenericConstruct:
+	subs: dict[Placeholder, Placeholder | list[Placeholder]]
+	concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]]
+
 @dataclass(frozen=True)
 class Placeholder:
     owner_class: ClassDefinition
@@ -87,6 +92,56 @@ class GenericUtils:
 			if gentree.genmap:
 				print(f"{indent_str(indent + 1)}GenMap:")
 				GenericUtils.pretty_print_genmap(gentree.genmap, indent + 2)
+	
+	@staticmethod
+	def pretty_print_genconstruct(
+		flat: dict[ClassDefinition, GenericConstruct], 
+		indent: int = 0
+	):
+		
+		def indent_str(level: int) -> str:
+			return "  " * level
+
+		for clsdef, construct in flat.items():
+			# Skip entirely if both subs and concsubs are empty
+			if not construct.subs and not construct.concsubs:
+				continue
+
+			print(f"{indent_str(indent)}Class: {clsdef.parent.id}")
+			
+			if construct.subs:
+				print(f"{indent_str(indent + 1)}Subs:")
+				for k, v in construct.subs.items():
+					if isinstance(v, list):
+						vals = ", ".join(repr(x) for x in v)
+						print(f"{indent_str(indent + 2)}{repr(k)} -> [{vals}]")
+					else:
+						print(f"{indent_str(indent + 2)}{repr(k)} -> {repr(v)}")
+
+			if construct.concsubs:
+				print(f"{indent_str(indent + 1)}Concrete Subs:")
+				for k, v in construct.concsubs.items():
+					if isinstance(v, list):
+						vals = ", ".join(str(x) if x is not None else "None" for x in v)
+						print(f"{indent_str(indent + 2)}{repr(k)} -> [{vals}]")
+					else:
+						val_str = str(v) if v is not None else "None"
+						print(f"{indent_str(indent + 2)}{repr(k)} -> {val_str}")
+
+	@staticmethod
+	def flatten_genmap(genmap: dict[ClassDefinition, GenericTree]) -> dict[ClassDefinition, GenericConstruct]:
+		flat: dict[ClassDefinition, GenericConstruct] = {}
+
+		for clsdef, gentree in genmap.items():
+			flat[clsdef] = GenericConstruct(
+				subs=gentree.subs,
+				concsubs={ph: None for ph in gentree.subs}
+			)
+
+			nested = GenericUtils.flatten_genmap(gentree.genmap)
+			flat.update(nested)
+
+		return flat
 
 	@staticmethod
 	def match_placeholders(
