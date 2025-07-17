@@ -185,10 +185,8 @@ class GenericUtils:
 		g_placeholders = []
 		for base in generic_bases:
 			placeholders = GenericUtils.collect_typevars(base.packed_expr)
-			# Wrap each placeholder with its owning class
 			g_placeholders.extend([Placeholder(owner, ph) for ph in placeholders])
 
-		# Remove duplicates preserving order
 		unique = list(OrderedDict.fromkeys(g_placeholders))
 		return unique
 
