@@ -10,12 +10,12 @@ from typify.preprocessing.symbol_table import ClassDefinition
 @dataclass
 class GenericTree:
     subs: dict[Placeholder, Placeholder | list[Placeholder]]
-    genmap: dict[ClassDefinition, 'GenericTree']
+    genmap: dict[ClassDefinition, GenericTree]
 
 @dataclass(frozen=True)
 class Placeholder:
-    owner_class: 'ClassDefinition'
-    typevar: 'Instance'
+    owner_class: ClassDefinition
+    typevar: Instance
 
     def __str__(self):
         return f"{self.owner_class.parent.id}.{self.typevar.tid}"
@@ -67,7 +67,7 @@ class GenericUtils:
 	):
 		
 		def indent_str(level):
-			return '  ' * level
+			return "  " * level
 
 		for clsdef, gentree in tree.items():
 			if not gentree.subs and not gentree.genmap:
@@ -79,7 +79,7 @@ class GenericUtils:
 				print(f"{indent_str(indent + 1)}Subs:")
 				for inst_from, inst_to in gentree.subs.items():
 					if isinstance(inst_to, list):
-						targets = ', '.join(repr(t) for t in inst_to)
+						targets = ", ".join(repr(t) for t in inst_to)
 						print(f"{indent_str(indent + 2)}{repr(inst_from)} -> [{targets}]")
 					else:
 						print(f"{indent_str(indent + 2)}{repr(inst_from)} -> {repr(inst_to)}")
