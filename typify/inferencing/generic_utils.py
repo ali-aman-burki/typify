@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from collections import OrderedDict
+from collections import deque
 
 from typify.inferencing.expression import TypeExpr, PackedExpr
 from typify.preprocessing.instance_utils import Instance
@@ -10,12 +11,25 @@ from typify.preprocessing.symbol_table import ClassDefinition
 @dataclass
 class GenericTree:
     subs: dict[Placeholder, Placeholder | list[Placeholder]]
-    genmap: dict[ClassDefinition, GenericTree]
+    gentree: dict[ClassDefinition, GenericTree]
 
 @dataclass
 class GenericConstruct:
 	subs: dict[Placeholder, Placeholder | list[Placeholder]]
 	concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]]
+
+	def copy(self):
+		subs_copy = self.subs.copy()
+		for k, v in subs_copy.items():
+			if isinstance(v, list): 
+				subs_copy[k] = v.copy()
+		
+		concsubs_copy = self.concsubs.copy()
+		for k, v in concsubs_copy.items():
+			if isinstance(v, list): 
+				concsubs_copy[k] = v.copy()
+		
+		return GenericConstruct(subs_copy, concsubs_copy)
 
 @dataclass(frozen=True)
 class Placeholder:
@@ -66,7 +80,40 @@ global_registry: GenericRegistry = GenericRegistry()
 class GenericUtils:
 
 	@staticmethod
-	def pretty_print_genmap(
+	def apply_substitution(
+		source: Placeholder,
+		value: TypeExpr | list[TypeExpr],
+		flattened: dict[ClassDefinition, GenericConstruct]
+	):
+		alias_graph: dict[Placeholder, set[Placeholder]] = {}
+
+		for classdef, construct in flattened.items():
+			for key, val in construct.subs.items():
+				if isinstance(val, list):
+					for v in val:
+						alias_graph.setdefault(v, set()).add(key)
+						alias_graph.setdefault(key, set()).add(v)
+				else:
+					alias_graph.setdefault(val, set()).add(key)
+					alias_graph.setdefault(key, set()).add(val)
+
+		queue = deque([source])
+		visited = set([source])
+
+		while queue:
+			current = queue.popleft()
+			for neighbor in alias_graph.get(current, []):
+				if neighbor not in visited:
+					visited.add(neighbor)
+					queue.append(neighbor)
+
+		for ph in visited:
+			classdef = ph.owner_class
+			if classdef in flattened:
+				flattened[classdef].concsubs[ph] = value
+
+	@staticmethod
+	def pretty_print_gentree(
 		tree: dict[ClassDefinition, GenericTree], 
 		indent: int = 0
 	):
@@ -75,7 +122,7 @@ class GenericUtils:
 			return "  " * level
 
 		for clsdef, gentree in tree.items():
-			if not gentree.subs and not gentree.genmap:
+			if not gentree.subs and not gentree.gentree:
 				continue
 
 			print(f"{indent_str(indent)}Class: {clsdef.parent.id}")
@@ -89,9 +136,9 @@ class GenericUtils:
 					else:
 						print(f"{indent_str(indent + 2)}{repr(inst_from)} -> {repr(inst_to)}")
 
-			if gentree.genmap:
-				print(f"{indent_str(indent + 1)}GenMap:")
-				GenericUtils.pretty_print_genmap(gentree.genmap, indent + 2)
+			if gentree.gentree:
+				print(f"{indent_str(indent + 1)}gentree:")
+				GenericUtils.pretty_print_gentree(gentree.gentree, indent + 2)
 	
 	@staticmethod
 	def pretty_print_genconstruct(
@@ -103,7 +150,6 @@ class GenericUtils:
 			return "  " * level
 
 		for clsdef, construct in flat.items():
-			# Skip entirely if both subs and concsubs are empty
 			if not construct.subs and not construct.concsubs:
 				continue
 
@@ -129,16 +175,16 @@ class GenericUtils:
 						print(f"{indent_str(indent + 2)}{repr(k)} -> {val_str}")
 
 	@staticmethod
-	def flatten_genmap(genmap: dict[ClassDefinition, GenericTree]) -> dict[ClassDefinition, GenericConstruct]:
+	def flatten_gentree(gentree: dict[ClassDefinition, GenericTree]) -> dict[ClassDefinition, GenericConstruct]:
 		flat: dict[ClassDefinition, GenericConstruct] = {}
 
-		for clsdef, gentree in genmap.items():
+		for clsdef, gentree in gentree.items():
 			flat[clsdef] = GenericConstruct(
 				subs=gentree.subs,
 				concsubs={ph: None for ph in gentree.subs}
 			)
 
-			nested = GenericUtils.flatten_genmap(gentree.genmap)
+			nested = GenericUtils.flatten_gentree(gentree.gentree)
 			flat.update(nested)
 
 		return flat
@@ -182,7 +228,7 @@ class GenericUtils:
 		return result
 
 	@staticmethod
-	def build_genmap(
+	def build_gentree(
 		classdef: ClassDefinition, 
 		prev: list[Placeholder] = None
 	) -> GenericTree:
@@ -211,7 +257,7 @@ class GenericUtils:
 				else:
 					base_args.append(mapped)
 
-			result.genmap[base_classdef] = GenericUtils.build_genmap(base_classdef, base_args)
+			result.gentree[base_classdef] = GenericUtils.build_gentree(base_classdef, base_args)
 
 		return result
 

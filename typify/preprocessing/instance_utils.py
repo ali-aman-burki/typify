@@ -39,7 +39,7 @@ class ReferenceSet:
 
 class Instance:
 	def __init__(self):
-		from typify.inferencing.generic_utils import GenericRegistry
+		from typify.inferencing.generic_utils import GenericRegistry, GenericConstruct
 		from typify.inferencing.expression import TypeExpr, PackedExpr
 
 		self.names: dict[str, Name] = {}
@@ -50,7 +50,23 @@ class Instance:
 		self.origin: ClassDefinition | FunctionDefinition = None
 		self.tid: str = "$unresolved$"
 
-		self.bindings: dict[Instance, GenericRegistry] = {}
+		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
+	
+	def refresh_type_data(self, type_expr):
+		from typify.inferencing.generic_utils import GenericRegistry, GenericConstruct
+		from typify.inferencing.expression import TypeExpr, PackedExpr
+		
+		type_expr: TypeExpr = type_expr
+
+		self.type_expr = type_expr
+		self.origin = type_expr.base
+
+		if self.origin:
+			genconstruct = self.origin.genconstruct.copy()
+			for k, v in genconstruct.items():
+				genconstruct[k] = v.copy()
+			
+
 	
 	def __repr__(self) -> str:
 		return self.label()

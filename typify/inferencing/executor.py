@@ -270,11 +270,21 @@ class Executor(ast.NodeVisitor):
 		self.namespace.get_name(name).set_definition(deftable)
 
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
-		entering_symbol.genmap = { entering_symbol: GenericUtils.build_genmap(entering_symbol) }
-		flattened = GenericUtils.flatten_genmap(entering_symbol.genmap)
+		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
+		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
 
-		GenericUtils.pretty_print_genconstruct(flattened)
-		print("______________________________")
+		if name == "NList":
+			GenericUtils.pretty_print_genconstruct(entering_symbol.genconstruct)
+
+			cls = list(entering_symbol.genconstruct.keys())[1]
+			ph = list(entering_symbol.genconstruct[cls].subs.keys())[0]
+			GenericUtils.apply_substitution(
+				ph,
+				TypeExpr(Builtins.get_type("int")), 
+				entering_symbol.genconstruct
+			)
+			print("________________________")
+			GenericUtils.pretty_print_genconstruct(entering_symbol.genconstruct)
 
 		self.add_to_snapshot(deftable.refset)
 		
