@@ -53,8 +53,8 @@ class Instance:
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	
 	def refresh_type_data(self, type_expr):
-		from typify.inferencing.generic_utils import GenericRegistry, GenericConstruct
-		from typify.inferencing.expression import TypeExpr, PackedExpr
+		from typify.inferencing.generic_utils import GenericUtils
+		from typify.inferencing.expression import TypeExpr
 		
 		type_expr: TypeExpr = type_expr
 
@@ -66,8 +66,11 @@ class Instance:
 			for k, v in genconstruct.items():
 				genconstruct[k] = v.copy()
 			
+			GenericUtils.apply_substitution_to_class_args(self.origin, type_expr.typeargs, genconstruct)
+			GenericUtils.pretty_print_genconstruct(genconstruct)
 
-	
+			self.genconstruct = genconstruct
+				
 	def __repr__(self) -> str:
 		return self.label()
 	

@@ -74,16 +74,14 @@ class TypeUtils:
 		from typify.inferencing.generic_utils import GenericUtils
 
 		instance = Instance()
-		instance.type_expr = TypeExpr(typedef, typeargs)
-		instance.origin = typedef
-		if instance.origin and instance.origin == Typing.get_type("TypeVar"):		
+		if typedef and typedef == Typing.get_type("TypeVar"):		
 			instance.tid = f"T{TypeUtils.T_count}"
 			TypeUtils.T_count += 1
-		elif instance.origin and instance.origin == Typing.get_type("TypeVarTuple"):	
+		elif typedef and typedef == Typing.get_type("TypeVarTuple"):	
 			instance.tid = f"Ts{TypeUtils.TVT_count}"
 			TypeUtils.TVT_count += 1
 
-		GenericUtils.update_registry(instance.registry, instance.type_expr.typeargs)
+		instance.refresh_type_data(TypeExpr(typedef, typeargs))
 		return instance
 
 	@staticmethod

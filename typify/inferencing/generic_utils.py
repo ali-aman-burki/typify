@@ -37,7 +37,7 @@ class Placeholder:
     typevar: Instance
 
     def __str__(self):
-        return f"{self.owner_class.parent.id}.{self.typevar.tid}"
+        return f"{self.owner_class.parent.id}.{self.typevar.type_expr.base.parent.id}"
 
     def __repr__(self):
         return str(self)
@@ -78,6 +78,18 @@ class GenericRegistry:
 global_registry: GenericRegistry = GenericRegistry()
 
 class GenericUtils:
+
+	@staticmethod
+	def apply_substitution_to_class_args(
+		classdef: ClassDefinition,
+		concrete_args: list[TypeExpr],
+		flattened: dict[ClassDefinition, GenericConstruct]
+	):
+		placeholders = list(flattened[classdef].subs.keys())
+		binding = GenericUtils.match_type_exprs(placeholders, concrete_args)
+
+		for placeholder, concrete in binding.items():
+			GenericUtils.apply_substitution(placeholder, concrete, flattened)
 
 	@staticmethod
 	def apply_substitution(
@@ -188,6 +200,39 @@ class GenericUtils:
 			flat.update(nested)
 
 		return flat
+
+	@staticmethod
+	def match_type_exprs(
+		placeholders: list[Placeholder],
+		actual_args: list[TypeExpr]
+	) -> dict[Placeholder, TypeExpr | list[TypeExpr]]:
+		
+		result = {}
+		i = 0
+		tvts = [p for p in placeholders if p.typevar.origin == Typing.get_type("TypeVarTuple")]
+
+		if len(tvts) > 1:
+			raise Exception("Multiple TypeVarTuples not supported.")
+
+		for j, ph in enumerate(placeholders):
+			if ph.typevar.origin == Typing.get_type("TypeVarTuple"):
+				fixed_after = len(placeholders) - (j + 1)
+				tvt_len = len(actual_args) - i - fixed_after
+				if tvt_len < 0:
+					result[ph] = None
+					continue
+
+				sliced = actual_args[i:i + tvt_len]
+				result[ph] = sliced
+				i += tvt_len
+			else:
+				if i < len(actual_args):
+					result[ph] = actual_args[i]
+				else:
+					result[ph] = None
+				i += 1
+
+		return result
 
 	@staticmethod
 	def match_placeholders(

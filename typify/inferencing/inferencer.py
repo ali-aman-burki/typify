@@ -73,7 +73,7 @@ class Inferencer:
 				snapshots[meta] = new_snapshot
 				pass_counts[meta.table.fqn] = 1
 				processed.append(meta)
-				sysmodules[meta.table.fqn].type_expr = TypeExpr(Builtins.get_type("module"))
+				sysmodules[meta.table.fqn].refresh_type_data(TypeExpr(Builtins.get_type("module")))
 				continue
 
 			worklist: deque[ModuleMeta] = deque(sequence)
@@ -93,7 +93,7 @@ class Inferencer:
 							worklist.append(dependent)
 							in_worklist.add(dependent)
 
-				sysmodules[meta.table.fqn].type_expr = TypeExpr(Builtins.get_type("module"))
+				sysmodules[meta.table.fqn].refresh_type_data(TypeExpr(Builtins.get_type("module")))
 				processed.append(meta)
 
 			for meta in sequence:

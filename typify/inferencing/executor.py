@@ -239,6 +239,9 @@ class Executor(ast.NodeVisitor):
 					base_inst = base_inst.packed_expr.base
 				entering_symbol.bases.append(base_inst)
 				self.add_to_snapshot(ReferenceSet(base_inst))
+				
+		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
+		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
 		
 		entering_namespace = self.context.symbol_map.setdefault(
 			entering_symbol,
@@ -247,10 +250,10 @@ class Executor(ast.NodeVisitor):
 				[TypeExpr(entering_symbol)]
 			)
 		)
-		entering_namespace.type_expr = TypeExpr(
+		entering_namespace.refresh_type_data(TypeExpr(
 			Builtins.get_type("type"), 
 			[TypeExpr(entering_symbol)]
-		)
+		))
 
 		entering_namespace.origin = entering_symbol
 		Executor(
@@ -270,8 +273,6 @@ class Executor(ast.NodeVisitor):
 		self.namespace.get_name(name).set_definition(deftable)
 
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
-		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
-		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
 
 		if name == "NList":
 			GenericUtils.pretty_print_genconstruct(entering_symbol.genconstruct)
