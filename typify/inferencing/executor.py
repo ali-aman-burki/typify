@@ -14,7 +14,8 @@ from typify.inferencing.commons import (
 	Builtins,
 	Typing,
 	ConstantObjects,
-	ArgTuple
+	ArgTuple,
+	Checker
 )
 from typify.preprocessing.symbol_table import (
 	Module,
@@ -234,7 +235,7 @@ class Executor(ast.NodeVisitor):
 		for base in class_tree.bases:
 			base_inst = self.resolver.resolve_value(base).ref()
 			if base_inst.type_expr.base != Typing.get_type("Any"):
-				if base_inst.origin == Typing.get_type("_GenericAlias"):
+				if base_inst.instanceof(Typing.get_type("_GenericAlias")):
 					entering_symbol.genbases.append(base_inst)
 					base_inst = base_inst.packed_expr.base
 				entering_symbol.bases.append(base_inst)
@@ -336,7 +337,7 @@ class Executor(ast.NodeVisitor):
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
 		
-		if len(resolved_value) == 1 and resolved_value.ref().type_expr.base == Typing.get_type("Any"):
+		if len(resolved_value) == 1 and resolved_value.ref().instanceof(Typing.get_type("Any")):
 			self.generic_visit(node)
 
 	def visit_Assign(self, node):
@@ -346,7 +347,7 @@ class Executor(ast.NodeVisitor):
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
 		
-		if len(resolved_value) == 1 and resolved_value.ref().type_expr.base == Typing.get_type("Any"):
+		if len(resolved_value) == 1 and resolved_value.ref().instanceof(Typing.get_type("Any")):
 			self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):

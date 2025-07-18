@@ -7,10 +7,13 @@ from typify.preprocessing.instance_utils import (
 )
 from typify.preprocessing.symbol_table import FunctionDefinition
 from typify.inferencing.resolver import Resolver
-from typify.inferencing.commons import Builtins, Typing
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.function_utils import FunctionUtils
-from typify.logging import logger
+from typify.inferencing.commons import (
+    Builtins, 
+    Typing,
+	Checker
+)
 
 class CallDispatcher:
 	def __init__(self, resolver: Resolver, node: ast.Call):
@@ -55,7 +58,7 @@ class CallDispatcher:
 				candidate_def = method_attr.get_latest_definition()
 				candidate = candidate_def.refset.ref()
 
-				if candidate.type_expr.base == Builtins.get_type("function"):
+				if candidate.instanceof(Builtins.get_type("function")):
 					shortcircuit = False
 					for decorator in candidate.origin.tree.decorator_list:
 						if isinstance(decorator, ast.Name):
@@ -72,24 +75,24 @@ class CallDispatcher:
 								break
 					
 					if not shortcircuit:
-						if caller.type_expr.base == Builtins.get_type("module"):
+						if caller.instanceof(Builtins.get_type("module")):
 							returns = self.exec(candidate.origin)
 						else:
 							returns = self.exec(candidate.origin, caller)
 						result.update(returns)
 
-				elif candidate.type_expr.base == Builtins.get_type("type"):
+				elif candidate.instanceof(Builtins.get_type("type")):
 					result.add(self.dispatch_instance(candidate))
 		else:
 			candidates = self.resolver.resolve_value(self.node.func)
 		
 			for candidate in candidates:
-				if candidate.type_expr.base == Builtins.get_type("function"):
+				if candidate.instanceof(Builtins.get_type("function")):
 					function_table = candidate.origin
 					returns = self.exec(function_table)
 					result.update(returns)
 
-				elif candidate.type_expr.base == Builtins.get_type("type"):
+				elif candidate.instanceof(Builtins.get_type("type")):
 					result.add(self.dispatch_instance(candidate))
 		return result
 	

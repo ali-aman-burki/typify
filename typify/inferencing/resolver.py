@@ -26,7 +26,8 @@ from typify.inferencing.commons import (
 	Context,
 	Builtins,
 	Typing,
-	ConstantObjects
+	ConstantObjects,
+	Checker
 )
 
 class Resolver:
@@ -67,7 +68,7 @@ class Resolver:
 		
 		if attr in instance.names: return instance.names[attr]
 		
-		if instance.type_expr.base == Builtins.get_type("type"):
+		if instance.instanceof(Builtins.get_type("type")):
 			for m in instance.origin.mro:
 				if attr in m.names: return m.names[attr]
 		else:
@@ -241,7 +242,7 @@ class Resolver:
 				group = resolved_target.groups[i]
 				if isinstance(group, PackGroup):
 					next_instances = TypeUtils.instantiate_from_type_expr(ref.type_expr.typeargs[0])
-					if ref.type_expr.base == Builtins.get_type("tuple"):
+					if ref.instanceof(Builtins.get_type("tuple")):
 						if len(ref.store) > i:
 							next_instances = ref.store[i]
 						elif len(ref.type_expr.typeargs) > i:

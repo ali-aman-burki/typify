@@ -5,8 +5,8 @@ from collections import deque
 
 from typify.inferencing.expression import TypeExpr, PackedExpr
 from typify.preprocessing.instance_utils import Instance
-from typify.inferencing.commons import Typing
 from typify.preprocessing.symbol_table import ClassDefinition
+from typify.inferencing.commons import Typing, Checker
 
 @dataclass
 class GenericTree:
@@ -41,41 +41,6 @@ class Placeholder:
 
     def __repr__(self):
         return str(self)
-
-class GenericRegistry:
-
-	def __init__(self):
-		self.typevars: dict[Instance, TypeExpr] = {}
-		self.typevartuples: dict[Instance, list[TypeExpr]] = {}
-		
-	def update_typevar(self, typevar: Instance, typeexpr: TypeExpr):
-		from typify.inferencing.typeutils import TypeUtils
-		
-		existing_expr = self.typevars.get(typevar)
-		if existing_expr:
-			self.typevars[typevar] = TypeUtils.unify_from_exprs([existing_expr, typeexpr])
-		else:
-			self.typevars[typevar] = typeexpr
-
-		return self.typevars[typevar]
-	
-	def update_typevartuple(self, typevartuple: Instance, typeargs: list[TypeExpr]):
-		from typify.inferencing.typeutils import TypeUtils
-
-		existing = self.typevartuples.get(typevartuple, [])
-		result = []
-		for i in range(max(len(existing), len(typeargs))):
-			a = existing[i] if i < len(existing) else None
-			b = typeargs[i] if i < len(typeargs) else None
-
-			if a and b: result.append(TypeUtils.unify_from_exprs([a, b]))
-			elif a: result.append(a)
-			elif b: result.append(b)
-
-		self.typevartuples[typevartuple] = result
-		return result
-	
-global_registry: GenericRegistry = GenericRegistry()
 
 class GenericUtils:
 
@@ -209,13 +174,13 @@ class GenericUtils:
 		
 		result = {}
 		i = 0
-		tvts = [p for p in placeholders if p.typevar.origin == Typing.get_type("TypeVarTuple")]
+		tvts = [p for p in placeholders if p.typevar.instanceof(Typing.get_type("TypeVarTuple"))]
 
 		if len(tvts) > 1:
 			raise Exception("Multiple TypeVarTuples not supported.")
 
 		for j, ph in enumerate(placeholders):
-			if ph.typevar.origin == Typing.get_type("TypeVarTuple"):
+			if ph.typevar.instanceof(Typing.get_type("TypeVarTuple")):
 				fixed_after = len(placeholders) - (j + 1)
 				tvt_len = len(actual_args) - i - fixed_after
 				if tvt_len < 0:
@@ -242,13 +207,13 @@ class GenericUtils:
 		
 		result = {}
 		i = 0
-		tvts = [p for p in placeholders if p.typevar.origin == Typing.get_type("TypeVarTuple")]
+		tvts = [p for p in placeholders if p.typevar.instanceof(Typing.get_type("TypeVarTuple"))]
 		
 		if len(tvts) > 1:
 			raise Exception("Multiple TypeVarTuples not supported.")
 
 		for j, ph in enumerate(placeholders):
-			if ph.typevar.origin == Typing.get_type("TypeVarTuple"):
+			if ph.typevar.instanceof(Typing.get_type("TypeVarTuple")):
 				fixed_after = len(placeholders) - (j + 1)
 				tvt_len = len(actual_args) - i - fixed_after
 				if tvt_len < 0:
@@ -257,7 +222,7 @@ class GenericUtils:
 
 				sliced = actual_args[i:i + tvt_len]
 
-				if len(sliced) == 1 and sliced[0].typevar.origin == Typing.get_type("TypeVarTuple"):
+				if len(sliced) == 1 and sliced[0].typevar.instanceof(Typing.get_type("TypeVarTuple")):
 					result[ph] = sliced[0]
 				else:
 					result[ph] = sliced
@@ -288,9 +253,9 @@ class GenericUtils:
 		result = GenericTree(subs, {})
 
 		for base in classdef.genbases:
-			if base.packed_expr.base.origin == Typing.get_type("Generic"):
+			if Checker.match_origin(base.packed_expr.base.origin, Typing.get_type("Generic")):
 				continue
-
+			
 			base_classdef = base.packed_expr.base.origin
 			base_placeholders = GenericUtils.init_placeholders(classdef, [base])
 
@@ -309,7 +274,10 @@ class GenericUtils:
 	@staticmethod
 	def collect_typevars(packed_expr: PackedExpr) -> list[Instance]:
 		result = []
-		if packed_expr.base.origin in (Typing.get_type("TypeVar"), Typing.get_type("TypeVarTuple")):
+		if packed_expr.base.type_expr.base in (
+			Typing.get_type("TypeVar"), 
+			Typing.get_type("TypeVarTuple")
+		):
 			result.append(packed_expr.base)
 		
 		for arg in packed_expr.args:
@@ -324,7 +292,7 @@ class GenericUtils:
 	) -> list[Placeholder]:
 
 		for base in generic_bases:
-			if base.packed_expr.base.origin == Typing.get_type("Generic"):
+			if Checker.match_origin(base.packed_expr.base.origin, Typing.get_type("Generic")):
 				placeholders = GenericUtils.collect_typevars(base.packed_expr)
 				return [Placeholder(owner, ph) for ph in placeholders]
 
@@ -335,21 +303,3 @@ class GenericUtils:
 
 		unique = list(OrderedDict.fromkeys(g_placeholders))
 		return unique
-
-	@staticmethod
-	def update_registry(
-		registry: GenericRegistry, 
-		typeargs: list[TypeExpr]
-	) -> None:
-		from typify.inferencing.typeutils import TypeUtils
-
-		typevars = registry.typevars
-		existing_keys = list(typevars.keys())
-		
-		for i in range(len(typeargs)):
-			key = TypeUtils.get_safe(
-				existing_keys, 
-				i, 
-				TypeUtils.instantiate(Typing.get_type("TypeVar"))
-			)
-			typevars[key] = typeargs[i]

@@ -39,37 +39,37 @@ class ReferenceSet:
 
 class Instance:
 	def __init__(self):
-		from typify.inferencing.generic_utils import GenericRegistry, GenericConstruct
+		from typify.inferencing.generic_utils import GenericConstruct
 		from typify.inferencing.expression import TypeExpr, PackedExpr
 
 		self.names: dict[str, Name] = {}
 		self.store: list[ReferenceSet] = []
-		self.registry: GenericRegistry = GenericRegistry()
 		self.type_expr: TypeExpr = None
 		self.packed_expr: PackedExpr = None
 		self.origin: ClassDefinition | FunctionDefinition = None
-		self.tid: str = "$unresolved$"
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	
+	def instanceof(self, typedef: ClassDefinition):
+		from typify.inferencing.commons import Checker
+		return Checker.match_origin(self.type_expr.base, typedef)
+
 	def refresh_type_data(self, type_expr):
 		from typify.inferencing.generic_utils import GenericUtils
 		from typify.inferencing.expression import TypeExpr
 		
-		type_expr: TypeExpr = type_expr
+		self.type_expr: TypeExpr = type_expr
 
-		self.type_expr = type_expr
-		self.origin = type_expr.base
-
-		if self.origin:
-			genconstruct = self.origin.genconstruct.copy()
-			for k, v in genconstruct.items():
-				genconstruct[k] = v.copy()
+		if self.type_expr.base:
+			self.genconstruct = self.type_expr.base.genconstruct.copy()
+			for k, v in self.genconstruct.items():
+				self.genconstruct[k] = v.copy()
 			
-			GenericUtils.apply_substitution_to_class_args(self.origin, type_expr.typeargs, genconstruct)
-			GenericUtils.pretty_print_genconstruct(genconstruct)
-
-			self.genconstruct = genconstruct
+			GenericUtils.apply_substitution_to_class_args(
+				self.type_expr.base, 
+				self.type_expr.typeargs, 
+				self.genconstruct
+			)
 				
 	def __repr__(self) -> str:
 		return self.label()

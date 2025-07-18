@@ -39,7 +39,7 @@ class ModuleMeta:
 
 	def export_typeslots(self, working_directory: Path, export_path: Path):
 		from typify.preprocessing.precollector import PreCollector
-		from typify.inferencing.commons import Typing
+		from typify.inferencing.commons import Typing, Checker
 		from typify.inferencing.expression import TypeExpr
 
 		output_path = self.mirror_export_path(working_directory, export_path, suffix="types")
@@ -66,7 +66,7 @@ class ModuleMeta:
 			data["variables"][k] = v
 			data["variables"]["meta"]["total"] += 1
 
-			is_any = isinstance(value[1], TypeExpr) and value[1].base == Typing.get_type("Any")
+			is_any = isinstance(value[1], TypeExpr) and Checker.match_origin(value[1].base, Typing.get_type("Any"))
 			is_unvisited = value[1] == PreCollector.UNVISITED
 
 			if not is_any and not is_unvisited:
@@ -78,7 +78,7 @@ class ModuleMeta:
 			data["functions"][k] = v
 			data["functions"]["meta"]["total"] += 1
 
-			return_is_any = isinstance(value[3], TypeExpr) and value[3].base == Typing.get_type("Any")
+			return_is_any = isinstance(value[3], TypeExpr) and Checker.match_origin(value[3].base, Typing.get_type("Any"))
 			return_is_unvisited = value[3] == PreCollector.UNVISITED
 			
 			if not return_is_any and not return_is_unvisited:
@@ -87,7 +87,7 @@ class ModuleMeta:
 			for t in value[2].values():
 				data["functions"]["meta"]["total"] += 1
 
-				is_any = isinstance(t, TypeExpr) and t.base == Typing.get_type("Any")
+				is_any = isinstance(t, TypeExpr) and Checker.match_origin(t.base, Typing.get_type("Any"))
 				is_unvisited = t == PreCollector.UNVISITED
 				
 				if not is_any and not is_unvisited:

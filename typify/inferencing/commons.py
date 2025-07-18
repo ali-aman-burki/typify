@@ -59,7 +59,12 @@ class ConstantObjects:
 			result = TypeUtils.instantiate(Builtins.get_type(type_name))
 			ConstantObjects.i_dict[type_name] = result
 		return result
-	
+
+class Checker:
+	@staticmethod
+	def match_origin(lhs: ClassDefinition, rhs: ClassDefinition):
+		return lhs and lhs == rhs
+
 class Builtins:
 
 	@staticmethod

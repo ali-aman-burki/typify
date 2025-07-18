@@ -5,7 +5,7 @@ class MROBuilder:
 	@staticmethod
 	def build_mro(cls: Instance) -> list[Instance]:
 		if cls in cls.origin.bases: return [cls]
-
+		
 		bases_mros = [base.origin.mro[:] for base in cls.origin.bases]
 		bases_mros.append(cls.origin.bases[:])
 

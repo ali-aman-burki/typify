@@ -5,7 +5,11 @@ import ast
 from typify.preprocessing.instance_utils import Instance, ReferenceSet
 from typify.preprocessing.precollector import PreCollector
 from typify.preprocessing.symbol_table import ClassDefinition
-from typify.inferencing.commons import Builtins, Typing
+from typify.inferencing.commons import (
+    Builtins, 
+    Typing,
+    Checker
+)
 
 class PackedExpr:
 
@@ -19,7 +23,12 @@ class PackedExpr:
 		self.args = args or []
 	
 	def __repr__(self):
-		fqn = self.base.origin.parent.id if self.base else PreCollector.UNVISITED
+		prefix = ""
+		if self.base:
+			if self.base.origin: prefix = self.base.origin.parent.id
+			else: prefix = self.base.type_expr.base.parent.id
+
+		fqn = prefix if prefix else PreCollector.UNVISITED
 		strs = []
 		for arg in self.args:
 			strs.append(repr(arg))
@@ -73,14 +82,14 @@ class AliasParser:
 			relt = resolver.resolve_value(elt)
 			if relt: 
 				relt = relt.ref()
-				if relt.type_expr.base == Typing.get_type("_GenericAlias"):
+				if relt.instanceof(Typing.get_type("_GenericAlias")):
 					return relt.packed_expr
 				else:
 					return PackedExpr(relt)
 			return None
 		
 		base_inst = base_set.ref()
-		if base_inst.type_expr.base == Builtins.get_type("type"):
+		if base_inst.instanceof(Builtins.get_type("type")):
 			base_inst = base_set.ref()
 			args = []
 			
