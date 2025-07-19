@@ -70,7 +70,7 @@ class Instance:
 				self.type_expr.typeargs, 
 				self.genconstruct
 			)
-				
+
 	def __repr__(self) -> str:
 		return self.label()
 	

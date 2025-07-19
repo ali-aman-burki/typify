@@ -239,35 +239,37 @@ class GenericUtils:
 
 	@staticmethod
 	def build_gentree(
-		classdef: ClassDefinition, 
-		prev: list[Placeholder] = None
+		classdef: ClassDefinition,
+		prev: list[Placeholder] = None,
+		visited: set[ClassDefinition] = None,
 	) -> GenericTree:
-	
+		
+		if visited is None: visited = set()
+		if classdef in visited: return GenericTree({}, {})
+
+		visited.add(classdef)
+
 		placeholders = GenericUtils.init_placeholders(classdef, classdef.genbases)
 
-		if prev is None:
-			subs = {ph: ph for ph in placeholders}
-		else:
-			subs = GenericUtils.match_placeholders(placeholders, prev)
+		if prev is None: subs = {ph: ph for ph in placeholders}
+		else: subs = GenericUtils.match_placeholders(placeholders, prev)
 
 		result = GenericTree(subs, {})
 
 		for base in classdef.genbases:
 			if Checker.match_origin(base.packed_expr.base.origin, Typing.get_type("Generic")):
 				continue
-			
+
 			base_classdef = base.packed_expr.base.origin
 			base_placeholders = GenericUtils.init_placeholders(classdef, [base])
 
 			base_args = []
 			for bp in base_placeholders:
 				mapped = subs.get(bp, bp)
-				if isinstance(mapped, list):
-					base_args.extend(mapped)
-				else:
-					base_args.append(mapped)
+				if isinstance(mapped, list): base_args.extend(mapped)
+				else: base_args.append(mapped)
 
-			result.gentree[base_classdef] = GenericUtils.build_gentree(base_classdef, base_args)
+			result.gentree[base_classdef] = GenericUtils.build_gentree(base_classdef, base_args, visited)
 
 		return result
 
