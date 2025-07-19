@@ -3,10 +3,6 @@ import ast
 from typify.logging import logger
 from typify.inferencing.resolver import Resolver
 from typify.preprocessing.instance_utils import ReferenceSet
-from typify.preprocessing.symbol_table import (
-	FunctionDefinition, 
-	CallFrame,
-)
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.expression import TypeExpr
 from typify.inferencing.commons import (
@@ -19,6 +15,10 @@ from typify.inferencing.commons import (
 from typify.inferencing.call_stack import (
     CallStack,
     CallSignature,
+)
+from typify.preprocessing.symbol_table import (
+	FunctionDefinition, 
+	CallFrame,
 )
 
 class FunctionUtils:
@@ -176,7 +176,6 @@ class FunctionUtils:
 
 			resolved_args[name] = ArgTuple(refset, defkey)
 
-		# Keyword arguments
 		for kw in call_node.keywords:
 			if kw.arg is None:
 				continue
@@ -191,7 +190,6 @@ class FunctionUtils:
 
 				resolved_args[name] = ArgTuple(refset, defkey)
 
-		# Retain original param entries if not overridden
 		for pname, param_entry in parameters.items():
 			if pname not in resolved_args:
 				resolved_args[pname] = ArgTuple(param_entry.refset, param_entry.defkey)
@@ -232,18 +230,15 @@ class FunctionUtils:
 			parameters[name] = entry
 			return entry
 
-		# Positional-only args
 		posonly_defaults = [None] * (len(args_node.posonlyargs) - len(args_node.defaults)) + args_node.defaults[:len(args_node.posonlyargs)]
 		for arg, default in zip(args_node.posonlyargs, posonly_defaults):
 			register_arg(arg, default, is_posonly=True)
 
-		# Regular args
 		regular_defaults = args_node.defaults[-len(args_node.args):] if args_node.defaults else []
 		regular_defaults = [None] * (len(args_node.args) - len(regular_defaults)) + regular_defaults
 		for arg, default in zip(args_node.args, regular_defaults):
 			register_arg(arg, default)
 
-		# *args
 		if args_node.vararg:
 			name = args_node.vararg.arg
 			refset = ReferenceSet()
@@ -257,11 +252,9 @@ class FunctionUtils:
 				is_vararg=True,
 			)
 
-		# Keyword-only args
 		for arg, default in zip(args_node.kwonlyargs, args_node.kw_defaults):
 			register_arg(arg, default, is_kwonly=True)
 
-		# **kwargs
 		if args_node.kwarg:
 			name = args_node.kwarg.arg
 			refset = ReferenceSet()

@@ -1,7 +1,6 @@
 import subprocess
 import sys
 import json
-import re
 
 from pathlib import Path
 from typing import Union
@@ -9,17 +8,17 @@ from dataclasses import dataclass
 
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
-from typify.preprocessing.libs import RequiredLibs
+from typify.preprocessing.core import Global
 
 @dataclass
-class TypifyPaths:
-	preload: dict[str, Path]
-	ondemand: dict[str, Path]
+class SetupInfo:
+	paths: list[Path]
+	inference: dict[str, Path]
 
 class Preloader:
 
 	@staticmethod
-	def _extract_current_env(python_executable=sys.executable) -> dict[str, Union[str, Path, list[Path]]]:
+	def _extract_current_env(python_executable=sys.executable) -> dict[str, Union[Path, list[Path]]]:
 		script = """
 import site, json
 
@@ -40,57 +39,53 @@ print(json.dumps(info))
 
 		raw_info = json.loads(result.stdout)
 
+		raw_info["user_site_lib"] = Path(raw_info["user_site_lib"])
+		raw_info["site_libs"] = [Path(p) for p in raw_info["site_libs"]]
+
 		return {
 			"user_site_lib": raw_info["user_site_lib"],
 			"site_libs": raw_info["site_libs"],
 		}
 	
 	@staticmethod
-	def _get_paths(config: dict[str, Union[str, dict[str, str]]]) -> TypifyPaths:
-		defaults = Preloader._extract_current_env()
-		config.setdefault("preload", "")
-		config.setdefault("ondemand", "CURRENT_ENV")
-		paths_dict: dict[str, str] = config.get("paths", {})
+	def load(config: dict[str, Union[str, list[str], dict[str, str]]], project_dir: Path) -> DependencyBundle:
+		paths = [project_dir]
+		inference: dict[str, Path] = {}
 
-		for key, value in paths_dict.items():
-			config["preload"] = config["preload"].replace(f"{{{key}}}", value)
-			config["ondemand"] = config["ondemand"].replace(f"{{{key}}}", value)
+		cenv = Preloader._extract_current_env()
+		raw_paths = config.get("paths", [])
 
-		project_dir = Path(config["project_dir"]).resolve()
-
-		def resolve_paths(raw: str) -> dict[str, Path]:
-			result: dict[str, Path] = {}
-			for p in re.split(r"\s*,\s*", raw):
-				if not p:
+		for p in raw_paths:
+			if p == "{CURRENT_ENV_SITES}":
+				for site in cenv.values():
+					if isinstance(site, Path):
+						paths.append(site)
+					elif isinstance(site, list):
+						paths.extend([s for s in site if isinstance(s, Path)])
+			else:
+				try:
+					paths.append(Path(p))
+				except Exception:
 					continue
-				resolved = Path(p).resolve()
-				key = next((k for k, v in paths_dict.items() if v == p), resolved.name)
-				result[key] = resolved
-			return result
 
-		preload_raw = config["preload"]
-		preload_paths = resolve_paths(preload_raw)
-		preload_paths = {project_dir.name: project_dir, **{k: p for k, p in preload_paths.items() if p != project_dir}}
+		for k, v in config.get("inference", {}).items():
+			try:
+				inference[k] = Path(v)
+			except Exception:
+				continue
 
-		ondemand_raw = config["ondemand"].strip()
-		if not ondemand_raw:
-			ondemand_paths = {}
-		elif ondemand_raw == "CURRENT_ENV":
-			ondemand_paths = {
-				"user_site_lib": Path(defaults["user_site_lib"]).resolve(),
-				**{f"site_lib_{i}": Path(p).resolve() for i, p in enumerate(defaults["site_libs"])}
-			}
-		else:
-			ondemand_paths = resolve_paths(ondemand_raw)
+		Global.libs = [LibraryMeta(path) for path in paths]
 
-		return TypifyPaths(preload_paths, ondemand_paths)
+		for lib in Global.libs:
+			for meta in lib.meta_map.values():
+				for k, v in inference.items():
+					try:
+						if meta.src.resolve() == v.resolve() and k not in Global.inference:
+							Global.inference[k] = meta
+					except Exception:
+						continue
 
-	@staticmethod
-	def load(config: dict[str, Union[str, dict[str, str]]]) -> DependencyBundle:
-		paths = Preloader._get_paths(config)
-		RequiredLibs.preloaded = {
-			key: LibraryMeta(preload_path, key) for key, preload_path in paths.preload.items()
-		}
+				if Global.inference.keys() == inference.keys():
+					break
 
-		bundle = GraphBuilder.build_graph(RequiredLibs.preloaded)
-		return bundle
+		return GraphBuilder.build_graph(Global.libs)

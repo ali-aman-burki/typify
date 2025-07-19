@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 @dataclass
 class DependencyBundle:
-	libs: dict[str, LibraryMeta]
+	libs: list[LibraryMeta]
 	meta_map: dict[Module, ModuleMeta]
 	sysmodules: dict[str, Instance]
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]]
@@ -28,28 +28,32 @@ class DependencyUtils:
 
 	@staticmethod
 	def to_absolute_name(module_table: Module, name: str | None, level: int = 0) -> str:
+		level = max(0, level)
+		
 		if level == 0:
 			base_fqn = name or ""
 		else:
 			current_fqn = module_table.fqn
 			parts = current_fqn.split(".")
-
-			if level > len(parts): return []
+			
+			level = min(level, len(parts))
 			base_parts = parts[:len(parts) - level]
-			if name: base_parts.extend(name.split("."))
+			if name:
+				base_parts.extend(name.split("."))
 			base_fqn = ".".join(base_parts)
+		
 		return base_fqn
 
 	@staticmethod
 	def resolve_module_objects(
 		defkey: tuple[Module, tuple[int, int]], 
-		libs: dict[str, LibraryMeta], 
+		libs: list[LibraryMeta], 
 		sysmodules: dict[str, Instance],
 		name: str | None, 
 		level: int = 0
 	) -> list[Instance]:
 		fqn = DependencyUtils.to_absolute_name(defkey[0], name, level)
-		for lib in libs.values():
+		for lib in libs:
 			if fqn in lib.fqn_map:
 				chain = lib.fqn_map[fqn]
 
@@ -86,12 +90,12 @@ class DependencyUtils:
 
 class GraphBuilder:
 	@staticmethod
-	def build_graph(libs: dict[str, LibraryMeta]) -> DependencyBundle:
+	def build_graph(libs: list[LibraryMeta]) -> DependencyBundle:
 		meta_map: dict[Module, ModuleMeta] = {}
 		sysmodules: dict[Package | Module, Instance] = {}
 		dependency_graph: dict[ModuleMeta, set[ModuleMeta | str]] = {}
 
-		for lib in libs.values():
+		for lib in libs:
 			meta_map.update(lib.meta_map)
 			sysmodules.update(lib.sysmodules)
 
@@ -127,7 +131,7 @@ class GraphBuilder:
 class DependencyTracker(ast.NodeVisitor):
 	def __init__(
 		self,
-		libs: dict[str, LibraryMeta],
+		libs: list[LibraryMeta],
 		meta_map: dict[Module, ModuleMeta],
 		dependency_graph: dict[ModuleMeta, set[tuple[ModuleMeta, str]]],
 		module_meta: ModuleMeta
@@ -153,7 +157,7 @@ class DependencyTracker(ast.NodeVisitor):
 	def resolve_fqn_chain(self, name: str | None, level: int = 0) -> list[Module | Package]:
 		base_fqn = DependencyUtils.to_absolute_name(self.module_table, name, level)
 
-		for lib in self.libs.values():
+		for lib in self.libs:
 			if base_fqn in lib.fqn_map:
 				chain = lib.fqn_map[base_fqn]
 				metas = self.as_module_metas(self.filter_chain(chain))

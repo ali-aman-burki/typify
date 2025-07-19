@@ -2,8 +2,7 @@ from dataclasses import dataclass
 
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.libs import RequiredLibs
-
+from typify.preprocessing.core import Global
 from typify.preprocessing.instance_utils import (
 	Instance,
 	ReferenceSet
@@ -32,7 +31,7 @@ class ArgTuple:
 
 @dataclass
 class Context:
-	libs: dict[str, LibraryMeta]
+	libs: list[LibraryMeta]
 	sysmodules: dict[str, Instance]
 	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance]
 	function_object_map: dict[FunctionDefinition, Instance]
@@ -70,7 +69,7 @@ class Builtins:
 	@staticmethod
 	def module() -> Module:
 		try:
-			result = RequiredLibs.preloaded["builtinlib"].library_table.modules["builtins"]
+			result = Global.inference["builtins"].table
 			return result
 		except Exception:
 			return None
@@ -87,7 +86,7 @@ class Typing:
 	@staticmethod
 	def module() -> Module:
 		try:
-			result = RequiredLibs.preloaded["stdlib"].library_table.modules["typing"]
+			result = Global.inference["typing"].table
 			return result
 		except Exception:
 			return None

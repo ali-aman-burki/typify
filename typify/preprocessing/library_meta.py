@@ -12,9 +12,8 @@ from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.precollector import PreCollector
 
 class LibraryMeta:
-	def __init__(self, src: Path, id: str):
+	def __init__(self, src: Path):
 		self.src = Path(src).resolve()
-		self.id = id
 		self.library_table = Library(self.src.name)
 		self.sysmodules: dict[str, Instance] = {}
 		self.meta_map: dict[Module, ModuleMeta] = {}

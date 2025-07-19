@@ -27,7 +27,6 @@ from typify.inferencing.commons import (
 	Builtins,
 	Typing,
 	ConstantObjects,
-	Checker
 )
 
 class Resolver:

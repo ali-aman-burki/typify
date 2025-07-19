@@ -15,7 +15,6 @@ from typify.inferencing.commons import (
 	Typing,
 	ConstantObjects,
 	ArgTuple,
-	Checker
 )
 from typify.preprocessing.symbol_table import (
 	Module,
@@ -275,19 +274,6 @@ class Executor(ast.NodeVisitor):
 
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
 
-		if name == "NList":
-			GenericUtils.pretty_print_genconstruct(entering_symbol.genconstruct)
-
-			cls = list(entering_symbol.genconstruct.keys())[1]
-			ph = list(entering_symbol.genconstruct[cls].subs.keys())[0]
-			GenericUtils.apply_substitution(
-				ph,
-				TypeExpr(Builtins.get_type("int")), 
-				entering_symbol.genconstruct
-			)
-			print("________________________")
-			GenericUtils.pretty_print_genconstruct(entering_symbol.genconstruct)
-
 		self.add_to_snapshot(deftable.refset)
 		
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
@@ -306,7 +292,7 @@ class Executor(ast.NodeVisitor):
 
 		for k, v in function_def.parameters.items():
 			ndef = NameDefinition(v.defkey)
-			ndef.refset = v.refset
+			ndef.refset = v.refset.copy()
 			mdef = function_def.get_name(k).merge_definition(ndef)
 			self.module_meta.fslots[position][2][k] = mdef.refset.as_type()
 

@@ -40,15 +40,13 @@ if not Utils.is_valid_directory(output_dir):
 with open(config_path, "r") as f:
     config: dict[str, Union[str, dict[str, str]]] = json.load(f)
 
-config["project_dir"] = project_dir
-
 logger.info(Utils.title, header=False)
 
-bundle = Preloader.load(config)
+bundle = Preloader.load(config, Path(project_dir))
 
 logger.debug("📦 Libraries loaded:", 1)
-for lib, meta in bundle.libs.items():
-    logger.debug(f"  {lib} -> {str(meta.src)}")
+for libmeta in bundle.libs:
+    logger.debug(f"{str(libmeta.src)}")
 
 logger.debug("🧩 Original Graph:", 1)
 for meta, deps in bundle.dependency_graph.items():
@@ -64,7 +62,7 @@ Inferencer.infer(bundle)
 
 logger.info("💾 Exporting...", 1)
 
-next(iter(bundle.libs.values())).export(
+bundle.libs[0].export(
     path=Path(output_dir), 
     symbols=True, 
     typeslots=True

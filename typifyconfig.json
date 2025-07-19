@@ -1,9 +1,11 @@
 {
-	"paths": {
-		"builtinlib": "typify-defaults/builtinlib",
-		"stdlib": "typify-defaults/stdlib"
-	},
+	"paths": [
+		"typify-defaults/stdlib/"
+    ],
 
-    "preload": "{builtinlib},{stdlib}",
-    "ondemand": "CURRENT_ENV"
+    "inference": {
+        "builtins": "typify-defaults/stdlib/builtins.pyi",
+        "typing": "typify-defaults/stdlib/typing.pyi",
+        "types": "typify-defaults/stdlib/types.pyi"
+    }
 }
