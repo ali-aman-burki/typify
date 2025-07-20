@@ -72,7 +72,6 @@ class Executor(ast.NodeVisitor):
 
 			ndef = NameDefinition(defkey)
 			ndef.refset.update(refset)
-
 			namespace_name.set_definition(ndef)
 			merged = symbol_name.merge_definition(ndef)
 
@@ -214,7 +213,6 @@ class Executor(ast.NodeVisitor):
 	#TODO: add support for multiple possible candidates for a single base
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
 		from typify.inferencing.generic_utils import GenericUtils
-		from typify.inferencing.commons import Checker 
 
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)
@@ -300,7 +298,7 @@ class Executor(ast.NodeVisitor):
 		for k, v in function_def.parameters.items():
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset.copy()
-			mdef = function_def.get_name(k).merge_definition(ndef)
+			mdef = function_def.get_name(k).set_definition(ndef)
 			self.module_meta.fslots[position][2][k] = mdef.refset
 
 		func_obj = self.context.function_object_map.setdefault(

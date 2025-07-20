@@ -12,7 +12,6 @@ from typify.inferencing.function_utils import FunctionUtils
 from typify.inferencing.commons import (
     Builtins, 
     Typing,
-	Checker
 )
 
 class CallDispatcher:

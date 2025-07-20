@@ -1,17 +1,17 @@
 import ast
 
 from typify.preprocessing.instance_utils import Instance
+from typify.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.sequencer import Sequencer
+from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.commons import Builtins
 from typify.preprocessing.symbol_table import (
     Symbol,
     Module, 
     Package, 
 	NameDefinition
 )
-from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.library_meta import LibraryMeta
-from typify.preprocessing.sequencer import Sequencer
-from typify.inferencing.typeutils import TypeUtils
-from typify.inferencing.commons import Builtins
 
 from dataclasses import dataclass
 

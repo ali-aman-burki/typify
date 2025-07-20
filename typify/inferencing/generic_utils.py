@@ -6,7 +6,10 @@ from collections import deque
 from typify.inferencing.expression import TypeExpr, PackedExpr
 from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.symbol_table import ClassDefinition
-from typify.inferencing.commons import Typing, Checker
+from typify.inferencing.commons import (
+    Typing, 
+    Checker
+)
 
 @dataclass
 class GenericTree:
