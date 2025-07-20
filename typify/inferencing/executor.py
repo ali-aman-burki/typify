@@ -36,11 +36,15 @@ class Executor(ast.NodeVisitor):
 			module_meta: ModuleMeta,
 			symbol: Module | ClassDefinition | FunctionDefinition,
 			namespace: Instance, 
+			caller: Instance,
 			arguments: dict[str, ArgTuple],
 			call_stack: list,
 			tree: ast.AST,
 			snapshot_log: list[ReferenceSet] = None
 		):
+
+		from typify.inferencing.generic_utils import GenericUtils
+
 		self.context = context
 		self.module_meta = module_meta
 		self.symbol = symbol
@@ -73,7 +77,7 @@ class Executor(ast.NodeVisitor):
 			merged = symbol_name.merge_definition(ndef)
 
 			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-			self.module_meta.fslots[position][2][argname] = merged.refset.as_type()
+			self.module_meta.fslots[position][2][argname] = merged.refset
 
 	def execute(self) -> ReferenceSet: 
 		self.visit(self.tree)
@@ -130,7 +134,7 @@ class Executor(ast.NodeVisitor):
 			)
 			if not object_chain:
 				deftable = NameDefinition(defkey)
-				deftable.refset.add(TypeUtils.instantiate(Typing.get_type("Any")))
+				deftable.refset.add(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
 				self.symbol.get_name(name).merge_definition(deftable)
 				self.namespace.get_name(name).merge_definition(deftable)
 				continue
@@ -169,7 +173,7 @@ class Executor(ast.NodeVisitor):
 				
 				if not object_chain: 
 					deftable = NameDefinition(defkey)
-					deftable.refset.add(TypeUtils.instantiate(Typing.get_type("Any")))
+					deftable.refset.add(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
 					self.symbol.get_name(name).merge_definition(deftable)
 					self.namespace.get_name(name).merge_definition(deftable)
 					return
@@ -210,6 +214,7 @@ class Executor(ast.NodeVisitor):
 	#TODO: add support for multiple possible candidates for a single base
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
 		from typify.inferencing.generic_utils import GenericUtils
+		from typify.inferencing.commons import Checker 
 
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)
@@ -233,7 +238,8 @@ class Executor(ast.NodeVisitor):
 
 		for base in class_tree.bases:
 			base_inst = self.resolver.resolve_value(base).ref()
-			if base_inst.type_expr.base != Typing.get_type("Any"):
+			not_ambg = base_inst.instantiator and not base_inst.instanceof(Typing.get_type("Any"))
+			if not_ambg:
 				if base_inst.instanceof(Typing.get_type("_GenericAlias")):
 					entering_symbol.genbases.append(base_inst)
 					base_inst = base_inst.packed_expr.base
@@ -245,15 +251,15 @@ class Executor(ast.NodeVisitor):
 		
 		entering_namespace = self.context.symbol_map.setdefault(
 			entering_symbol,
-			TypeUtils.instantiate(
+			TypeUtils.instantiate_with_args(
 				Builtins.get_type("type"),
 				[TypeExpr(entering_symbol)]
 			)
 		)
-		entering_namespace.refresh_type_data(TypeExpr(
+		entering_namespace.update_type_info(
 			Builtins.get_type("type"), 
 			[TypeExpr(entering_symbol)]
-		))
+		)
 
 		entering_namespace.origin = entering_symbol
 		Executor(
@@ -261,6 +267,7 @@ class Executor(ast.NodeVisitor):
 			module_meta=self.module_meta,
 			symbol=entering_symbol,
 			namespace=entering_namespace,
+			caller=None,
 			arguments={},
 			call_stack=self.call_stack,
 			tree=ast.Module(class_tree.body, type_ignores=[]),
@@ -294,13 +301,13 @@ class Executor(ast.NodeVisitor):
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset.copy()
 			mdef = function_def.get_name(k).merge_definition(ndef)
-			self.module_meta.fslots[position][2][k] = mdef.refset.as_type()
+			self.module_meta.fslots[position][2][k] = mdef.refset
 
 		func_obj = self.context.function_object_map.setdefault(
 			function_def,
-			TypeUtils.instantiate(Builtins.get_type("function"))
+			TypeUtils.instantiate_with_args(Builtins.get_type("function"))
 		)
-		func_obj.type_expr.base = Builtins.get_type("function")
+		func_obj.update_type_info(Builtins.get_type("function"))
 		func_obj.origin = function_def
 
 		deftable = NameDefinition(defkey)

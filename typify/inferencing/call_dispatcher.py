@@ -26,7 +26,7 @@ class CallDispatcher:
 			inject: Instance = None
 		):
 
-		if not method: return ReferenceSet(TypeUtils.instantiate(Typing.get_type("Any")))
+		if not method: return ReferenceSet(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
 
 		modified_node = copy.deepcopy(self.node)
 
@@ -42,6 +42,7 @@ class CallDispatcher:
 		
 		return FunctionUtils.exec_function(
 			self.resolver.context, 
+			inject,
 			argmap, 
 			method, 
 			self.resolver.call_stack
@@ -63,7 +64,7 @@ class CallDispatcher:
 					for decorator in candidate.origin.tree.decorator_list:
 						if isinstance(decorator, ast.Name):
 							if decorator.id == "classmethod":
-								class_instance = caller.type_expr.base.mro[0]
+								class_instance = caller.instantiator.mro[0]
 								returns = self.exec(candidate.origin, class_instance)
 								result.update(returns)
 								shortcircuit = True
@@ -98,7 +99,7 @@ class CallDispatcher:
 	
 	def dispatch_instance(self, candidate: Instance) -> Instance:
 		class_table = candidate.origin
-		instance = TypeUtils.instantiate(class_table)
+		instance = TypeUtils.instantiate_with_args(class_table)
 		
 		init_attr = self.resolver.attribute_lookup(instance, "__init__")
 		init_def = init_attr.get_latest_definition()

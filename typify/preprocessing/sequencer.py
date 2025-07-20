@@ -49,7 +49,7 @@ class Sequencer:
 		sequences: list[list[ModuleMeta]] = Sequencer._tarjan(graph)
 
 		reverse_deps: dict[ModuleMeta, int] = defaultdict(int)
-		for src, targets in graph.items():
+		for _, targets in graph.items():
 			for tgt in targets:
 				reverse_deps[tgt] += 1
 

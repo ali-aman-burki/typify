@@ -2,7 +2,10 @@ import ast
 
 from typify.logging import logger
 from typify.inferencing.resolver import Resolver
-from typify.preprocessing.instance_utils import ReferenceSet
+from typify.preprocessing.instance_utils import (
+    ReferenceSet,
+    Instance
+)
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.expression import TypeExpr
 from typify.inferencing.commons import (
@@ -26,6 +29,7 @@ class FunctionUtils:
 	@staticmethod
 	def construct_executor(
 		context: Context, 
+		caller: Instance,
 		arguments: dict[str, ArgTuple], 
 		function_table: FunctionDefinition,
 		call_stack: CallStack
@@ -45,6 +49,7 @@ class FunctionUtils:
 			module_meta=context_meta,
 			symbol=function_table,
 			namespace=call_frame, 
+			caller=caller,
 			arguments=arguments,
 			call_stack=call_stack,
 			tree=ast.Module(tree.body, type_ignores=[]), 
@@ -56,6 +61,7 @@ class FunctionUtils:
 	@staticmethod
 	def exec_function(
 		context: Context, 
+		caller: Instance,
 		arguments: dict[str, ArgTuple], 
 		function_table: FunctionDefinition,
 		call_stack: CallStack
@@ -63,6 +69,7 @@ class FunctionUtils:
 
 		executor = FunctionUtils.construct_executor(
 			context, 
+			caller,
 			arguments, 
 			function_table, 
 			call_stack
@@ -98,6 +105,7 @@ class FunctionUtils:
 						logger.debug(f"🚀 Running: {repr(sig)}", 1)
 						executor = FunctionUtils.construct_executor(
 							context,
+							caller,
 							sig.arguments,
 							sig.function_table,
 							call_stack
@@ -152,7 +160,7 @@ class FunctionUtils:
 			for instance in resolver.resolve_value(arg_node):
 				refset.add(instance)
 
-			resolved_args[name] = ArgTuple(refset, defkey)
+			resolved_args[name] = ArgTuple(refset, defkey, positional_param_entries[i].annotation)
 
 		extra_args = call_node.args[len(positional_param_entries):]
 
@@ -170,11 +178,11 @@ class FunctionUtils:
 				typeargs.append(unified)
 				store.append(resolved)
 
-			instance = TypeUtils.instantiate(Builtins.get_type("tuple"), typeargs)
+			instance = TypeUtils.instantiate_with_args(Builtins.get_type("tuple"), typeargs)
 			instance.store = store
 			refset.add(instance)
 
-			resolved_args[name] = ArgTuple(refset, defkey)
+			resolved_args[name] = ArgTuple(refset, defkey, vararg_param.annotation)
 
 		for kw in call_node.keywords:
 			if kw.arg is None:
@@ -188,11 +196,11 @@ class FunctionUtils:
 				for instance in resolver.resolve_value(kw.value):
 					refset.add(instance)
 
-				resolved_args[name] = ArgTuple(refset, defkey)
+				resolved_args[name] = ArgTuple(refset, defkey, kwentry.annotation)
 
 		for pname, param_entry in parameters.items():
 			if pname not in resolved_args:
-				resolved_args[pname] = ArgTuple(param_entry.refset, param_entry.defkey)
+				resolved_args[pname] = ArgTuple(param_entry.refset, param_entry.defkey, param_entry.annotation)
 
 		return resolved_args
 
@@ -206,6 +214,12 @@ class FunctionUtils:
 		args_node = fdef.args
 		parameters: dict[str, ParameterEntry] = {}
 
+		def resolve_annotation(arg: ast.arg) -> Instance:
+			if arg.annotation:
+				results = resolver.resolve_value(arg.annotation)
+				if results: return results.ref()
+			return None
+
 		def register_arg(
 			arg: ast.arg,
 			default_value: ast.expr = None,
@@ -216,6 +230,7 @@ class FunctionUtils:
 			name = arg.arg
 			refset = ReferenceSet()
 			defkey = (resolver.module_meta.table, (arg.lineno, arg.col_offset))
+			
 			if default_value is not None:
 				for instance in resolver.resolve_value(default_value):
 					refset.add(instance)
@@ -226,6 +241,7 @@ class FunctionUtils:
 				defkey=defkey,
 				is_posonly=is_posonly,
 				is_kwonly=is_kwonly,
+				annotation=resolve_annotation(arg),
 			)
 			parameters[name] = entry
 			return entry
@@ -240,25 +256,28 @@ class FunctionUtils:
 			register_arg(arg, default)
 
 		if args_node.vararg:
-			name = args_node.vararg.arg
+			arg = args_node.vararg
+			name = arg.arg
 			refset = ReferenceSet()
-			defkey = (resolver.module_meta.table, (args_node.vararg.lineno, args_node.vararg.col_offset))
+			defkey = (resolver.module_meta.table, (arg.lineno, arg.col_offset))
 			
-			refset.add(TypeUtils.instantiate(Builtins.get_type("tuple")))
+			refset.add(TypeUtils.instantiate_with_args(Builtins.get_type("tuple")))
 			parameters[name] = ParameterEntry(
 				name=name,
 				refset=refset,
 				defkey=defkey,
 				is_vararg=True,
+				annotation=resolve_annotation(arg),
 			)
 
 		for arg, default in zip(args_node.kwonlyargs, args_node.kw_defaults):
 			register_arg(arg, default, is_kwonly=True)
 
 		if args_node.kwarg:
-			name = args_node.kwarg.arg
+			arg = args_node.kwarg
+			name = arg.arg
 			refset = ReferenceSet()
-			defkey = (resolver.module_meta.table, (args_node.kwarg.lineno, args_node.kwarg.col_offset))
+			defkey = (resolver.module_meta.table, (arg.lineno, arg.col_offset))
 
 			dict_expr = TypeExpr(Builtins.get_type("dict"), [TypeExpr(Builtins.get_type("str")), TypeExpr(Typing.get_type("Any"))])
 			dict_instance = TypeUtils.instantiate_from_type_expr(dict_expr)
@@ -268,11 +287,13 @@ class FunctionUtils:
 				name=name,
 				refset=refset,
 				defkey=defkey,
-				is_kwarg=True
+				is_kwarg=True,
+				annotation=resolve_annotation(arg),
 			)
 
 		return parameters
 
 
 
-		
+
+			

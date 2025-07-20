@@ -8,7 +8,6 @@ from typify.preprocessing.symbol_table import ClassDefinition
 from typify.inferencing.commons import (
     Builtins, 
     Typing,
-    Checker
 )
 
 class PackedExpr:
@@ -26,7 +25,7 @@ class PackedExpr:
 		prefix = ""
 		if self.base:
 			if self.base.origin: prefix = self.base.origin.parent.id
-			else: prefix = self.base.type_expr.base.parent.id
+			else: prefix = self.base.instantiator.parent.id
 
 		fqn = prefix if prefix else PreCollector.UNVISITED
 		strs = []
@@ -101,6 +100,6 @@ class AliasParser:
 				resolved = get_packed_expr(node.slice)
 				if resolved: args.append(resolved)
 
-			ginstance = TypeUtils.instantiate(Typing.get_type("_GenericAlias"))
+			ginstance = TypeUtils.instantiate_with_args(Typing.get_type("_GenericAlias"))
 			ginstance.packed_expr = PackedExpr(base_inst, args)
 			return ReferenceSet(ginstance)

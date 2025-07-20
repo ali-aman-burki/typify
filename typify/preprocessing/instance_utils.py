@@ -35,41 +35,67 @@ class ReferenceSet:
 	
 	def as_type(self):
 		from typify.inferencing.typeutils import TypeUtils
-		return TypeUtils.unify(self)
+		return TypeUtils.unify_from_exprs([ref.as_type() for ref in self.references])
 
 class Instance:
-	def __init__(self):
+	def __init__(self, instantiator: ClassDefinition):
 		from typify.inferencing.generic_utils import GenericConstruct
 		from typify.inferencing.expression import TypeExpr, PackedExpr
 
+		self.instantiator: ClassDefinition = instantiator
 		self.names: dict[str, Name] = {}
 		self.store: list[ReferenceSet] = []
-		self.type_expr: TypeExpr = None
 		self.packed_expr: PackedExpr = None
 		self.origin: ClassDefinition | FunctionDefinition = None
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	
-	def instanceof(self, typedef: ClassDefinition):
+	def instanceof(self, *typedefs: ClassDefinition | tuple[ClassDefinition, ...]) -> bool:
 		from typify.inferencing.commons import Checker
-		return Checker.match_origin(self.type_expr.base, typedef)
 
-	def refresh_type_data(self, type_expr):
+		if len(typedefs) == 1 and isinstance(typedefs[0], tuple):
+			typedefs = typedefs[0]
+
+		return any(Checker.match_origin(self.instantiator, td) for td in typedefs)
+
+	def update_type_info(
+			self, 
+			instantiator: ClassDefinition, 
+			typeargs: list = None
+		):
 		from typify.inferencing.generic_utils import GenericUtils
 		from typify.inferencing.expression import TypeExpr
 		
-		self.type_expr: TypeExpr = type_expr
+		typeargs: list[TypeExpr] = typeargs if typeargs else []
+		self.instantiator = instantiator
 
-		if self.type_expr.base:
-			self.genconstruct = self.type_expr.base.genconstruct.copy()
+		if self.instantiator:
+			self.genconstruct = self.instantiator.genconstruct.copy()
 			for k, v in self.genconstruct.items():
 				self.genconstruct[k] = v.copy()
 			
 			GenericUtils.apply_substitution_to_class_args(
-				self.type_expr.base, 
-				self.type_expr.typeargs, 
+				self.instantiator, 
+				typeargs, 
 				self.genconstruct
 			)
+
+	def as_type(self):
+		from typify.inferencing.expression import TypeExpr
+		from typify.inferencing.commons import Typing
+
+		base = self.instantiator
+		args = []
+
+		if self.genconstruct.keys():
+			gencons = self.genconstruct[base]
+			for k, v in gencons.concsubs.items():
+				if k.typevar.instanceof(Typing.get_type("TypeVarTuple")):
+					args.extend(v if v else [])
+				else:
+					args.append(v if v else TypeExpr(Typing.get_type("Any")))
+			
+		return TypeExpr(base, args)
 
 	def __repr__(self) -> str:
 		return self.label()
@@ -82,4 +108,4 @@ class Instance:
 		return name
 	
 	def label(self) -> str:
-		return f"instance@{repr(self.type_expr)}"
+		return f"instance@{repr(self.as_type())}"

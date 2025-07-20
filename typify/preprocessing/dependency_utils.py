@@ -73,7 +73,7 @@ class DependencyUtils:
 						modules.append(current_object)
 						continue
 					
-					module_object = TypeUtils.instantiate(Builtins.get_type("module"))
+					module_object = TypeUtils.instantiate_with_args(Builtins.get_type("module"))
 					Symbol.transfer_names(table.names, module_object)
 
 					attrdef = NameDefinition(defkey)

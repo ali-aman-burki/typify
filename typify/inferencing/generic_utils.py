@@ -10,8 +10,8 @@ from typify.inferencing.commons import Typing, Checker
 
 @dataclass
 class GenericTree:
-    subs: dict[Placeholder, Placeholder | list[Placeholder]]
-    gentree: dict[ClassDefinition, GenericTree]
+	subs: dict[Placeholder, Placeholder | list[Placeholder]]
+	gentree: dict[ClassDefinition, GenericTree]
 
 @dataclass
 class GenericConstruct:
@@ -33,14 +33,39 @@ class GenericConstruct:
 
 @dataclass(frozen=True)
 class Placeholder:
-    owner_class: ClassDefinition
-    typevar: Instance
+	owner: ClassDefinition
+	typevar: Instance
+	
+	def update_type(self, 
+		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]], 
+		incoming: TypeExpr
+	) -> TypeExpr | list[TypeExpr]:
+		from typify.inferencing.typeutils import TypeUtils
 
-    def __str__(self):
-        return f"{self.owner_class.parent.id}.{self.typevar.type_expr.base.parent.id}"
+		old = concsubs.get(self, None)
 
-    def __repr__(self):
-        return str(self)
+		if isinstance(old, list):
+			result = []
+
+			for i in range(len(min(incoming, old, key=len))):
+				result.append(TypeUtils.unify_from_exprs([old[i], incoming[i]]))
+
+			longer = old if len(old) > len(incoming) else incoming
+			result.extend(longer[len(result):])
+
+			return result
+		
+		elif isinstance(old, TypeExpr):
+			return TypeUtils.unify_from_exprs([old, incoming])
+
+		else:
+			return incoming
+
+	def __str__(self):
+		return f"{self.owner.parent.id}.{self.typevar.instantiator.parent.id}"
+
+	def __repr__(self):
+		return str(self)
 
 class GenericUtils:
 
@@ -85,9 +110,9 @@ class GenericUtils:
 					queue.append(neighbor)
 
 		for ph in visited:
-			classdef = ph.owner_class
+			classdef = ph.owner
 			if classdef in flattened:
-				flattened[classdef].concsubs[ph] = value
+				flattened[classdef].concsubs[ph] = ph.update_type(flattened[classdef].concsubs, value)
 
 	@staticmethod
 	def pretty_print_gentree(
@@ -276,7 +301,7 @@ class GenericUtils:
 	@staticmethod
 	def collect_typevars(packed_expr: PackedExpr) -> list[Instance]:
 		result = []
-		if packed_expr.base.type_expr.base in (
+		if packed_expr.base.instanceof(
 			Typing.get_type("TypeVar"), 
 			Typing.get_type("TypeVarTuple")
 		):

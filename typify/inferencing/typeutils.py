@@ -18,7 +18,7 @@ class TypeUtils:
 	def type_expr_from_refset(refset: ReferenceSet):
 		type_exprs = []
 		for ref in refset:
-			type_exprs.append(ref.type_expr)
+			type_exprs.append(ref.as_type())
 		return TypeUtils.unify_from_exprs(type_exprs)
 
 	@staticmethod
@@ -26,9 +26,9 @@ class TypeUtils:
 		result = ReferenceSet()
 		if Checker.match_origin(unified_type_expr.base, Typing.get_type("Union")):
 			for typeexpr in unified_type_expr.typeargs:
-				result.add(TypeUtils.instantiate(typeexpr.base, typeexpr.typeargs))
+				result.add(TypeUtils.instantiate_with_args(typeexpr.base, typeexpr.typeargs))
 		else:
-			result.add(TypeUtils.instantiate(unified_type_expr.base, unified_type_expr.typeargs))
+			result.add(TypeUtils.instantiate_with_args(unified_type_expr.base, unified_type_expr.typeargs))
 		return result
 
 	@staticmethod
@@ -61,16 +61,16 @@ class TypeUtils:
 
 	@staticmethod
 	def unify(refset: ReferenceSet):
-		return TypeUtils.unify_from_exprs([ref.type_expr for ref in refset])
+		return TypeUtils.unify_from_exprs([ref.as_type() for ref in refset])
 
 	@staticmethod
-	def instantiate(
-		typedef: ClassDefinition, 
+	def instantiate_with_args(
+		instantiator: ClassDefinition, 
 		typeargs: list[Instance] | None = None
 		) -> Instance:
 		
-		instance = Instance()
-		instance.refresh_type_data(TypeExpr(typedef, typeargs))
+		instance = Instance(instantiator)
+		instance.update_type_info(instantiator, typeargs)
 		return instance
 
 	@staticmethod

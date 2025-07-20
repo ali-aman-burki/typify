@@ -24,10 +24,13 @@ class ParameterEntry:
 	is_kwonly: bool = False
 	is_posonly: bool = False
 
+	annotation: Instance = None
+
 @dataclass
 class ArgTuple:
 	refset: ReferenceSet
 	defkey: tuple[Module, tuple[int, int]]
+	annotation: Instance
 
 @dataclass
 class Context:
@@ -55,7 +58,7 @@ class ConstantObjects:
 		from typify.inferencing.typeutils import TypeUtils
 		result = ConstantObjects.i_dict.get(type_name, None)
 		if not result:
-			result = TypeUtils.instantiate(Builtins.get_type(type_name))
+			result = TypeUtils.instantiate_with_args(Builtins.get_type(type_name))
 			ConstantObjects.i_dict[type_name] = result
 		return result
 

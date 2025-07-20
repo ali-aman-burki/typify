@@ -67,6 +67,12 @@ class Symbol:
 			result = result.parent
 		return result
 	
+	def get_enclosing_class_definition(self):
+		result = self
+		while result and not isinstance(result, ClassDefinition):
+			result = result.parent
+		return result
+	
 	def get_enclosing_module(self):
 		result = self
 		while result and not isinstance(result, Module):
