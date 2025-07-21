@@ -34,6 +34,13 @@ class LibraryMeta:
 			self.library_table.trust_annotations = False
 			package_map = {self.src: self.library_table}
 
+		def has_valid_package_chain(path: Path, src: Path) -> bool:
+			while path != src:
+				if not ((path / "__init__.py").is_file() or (path / "__init__.pyi").is_file()):
+					return False
+				path = path.parent
+			return True
+
 		# First pass: register packages and detect py.typed
 		for path in self.src.rglob("*"):
 			if path.is_dir():
@@ -41,7 +48,7 @@ class LibraryMeta:
 					continue
 
 				has_init = (path / "__init__.py").is_file() or (path / "__init__.pyi").is_file()
-				if has_init:
+				if has_init and has_valid_package_chain(path, self.src):
 					parent_table = package_map.get(path.parent, self.library_table)
 					package_table = Package(path.name)
 					package_table.trust_annotations = parent_table.trust_annotations
@@ -85,6 +92,7 @@ class LibraryMeta:
 			table.set_module(meta.table, self.fqn_map)
 			self.meta_map[meta.table] = meta
 			PreCollector(meta).visit(meta.tree)
+
 
 	def export(self, path: Path, symbols=True, typeslots=True):
 		for meta in self.meta_map.values():
