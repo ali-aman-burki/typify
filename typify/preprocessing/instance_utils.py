@@ -40,7 +40,7 @@ class ReferenceSet:
 class Instance:
 	def __init__(self, instantiator: ClassDefinition):
 		from typify.inferencing.generic_utils import GenericConstruct
-		from typify.inferencing.expression import TypeExpr, PackedExpr
+		from typify.inferencing.expression import PackedExpr
 
 		self.instantiator: ClassDefinition = instantiator
 		self.names: dict[str, Name] = {}

@@ -327,9 +327,6 @@ class Executor(ast.NodeVisitor):
 
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
-		
-		if len(resolved_value) == 1 and resolved_value.ref().instanceof(Typing.get_type("Any")):
-			self.generic_visit(node)
 
 	def visit_Assign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
@@ -337,9 +334,6 @@ class Executor(ast.NodeVisitor):
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
-		
-		if len(resolved_value) == 1 and resolved_value.ref().instanceof(Typing.get_type("Any")):
-			self.generic_visit(node)
 	
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(
