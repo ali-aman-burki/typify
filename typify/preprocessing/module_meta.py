@@ -6,7 +6,6 @@ from typify.preprocessing.symbol_table import Module
 class ModuleMeta:
 
 	def __init__(self, src: Path, trust_annotations: bool):
-		from typify.inferencing.expression import TypeExpr
 		from typify.preprocessing.instance_utils import ReferenceSet
 
 		self.src = src

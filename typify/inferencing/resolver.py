@@ -260,4 +260,8 @@ class Resolver:
 				ndef.refset.update(target.definition.refset)
 				target.symbol_name.merge_definition(ndef)
 			
-			self.module_meta.vslots[position][1] = resolved_value
+			to_export = resolved_value.copy()
+			if isinstance(self.module_meta.vslots[position][1], ReferenceSet):
+				self.module_meta.vslots[position][1].update(to_export)
+			else:
+				self.module_meta.vslots[position][1] = to_export
