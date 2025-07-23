@@ -172,7 +172,7 @@ class Module(
 class ClassDefinition(_LocatableSymbol): 
 	def __init__(self, defkey: tuple[Module, tuple[int, int]]):
 		from typify.preprocessing.instance_utils import Instance
-		from typify.inferencing.generic_utils import GenericConstruct
+		from typify.inferencing.generics.model import GenericConstruct
 
 		super().__init__(defkey)
 		self.bases: list[Instance] = []

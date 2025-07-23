@@ -43,8 +43,6 @@ class Executor(ast.NodeVisitor):
 			snapshot_log: list[ReferenceSet] = None
 		):
 
-		from typify.inferencing.generic_utils import GenericUtils
-
 		self.context = context
 		self.module_meta = module_meta
 		self.symbol = symbol
@@ -212,7 +210,7 @@ class Executor(ast.NodeVisitor):
 
 	#TODO: add support for multiple possible candidates for a single base
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
-		from typify.inferencing.generic_utils import GenericUtils
+		from typify.inferencing.generics.utils import GenericUtils
 
 		name = class_tree.name
 		position = (class_tree.lineno, class_tree.col_offset)

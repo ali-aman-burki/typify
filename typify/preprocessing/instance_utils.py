@@ -39,7 +39,7 @@ class ReferenceSet:
 
 class Instance:
 	def __init__(self, instantiator: ClassDefinition):
-		from typify.inferencing.generic_utils import GenericConstruct
+		from typify.inferencing.generics.model import GenericConstruct
 		from typify.inferencing.expression import PackedExpr
 
 		self.instantiator: ClassDefinition = instantiator
@@ -63,7 +63,7 @@ class Instance:
 			instantiator: ClassDefinition, 
 			typeargs: list = None
 		):
-		from typify.inferencing.generic_utils import GenericUtils
+		from typify.inferencing.generics.utils import GenericUtils
 		from typify.inferencing.expression import TypeExpr
 		
 		typeargs: list[TypeExpr] = typeargs if typeargs else []
