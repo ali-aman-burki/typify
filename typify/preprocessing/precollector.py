@@ -101,17 +101,19 @@ class PreCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
 		self.module_meta = module_meta
 		self.module_meta.load_tree()
-		self.scope_stack: list[str] = []
+		self.scope_stack: list[str] = [module_meta.table.fqn]
 
 	def visit_AnnAssign(self, node):
+		fqn = ".".join(self.scope_stack)
 		position = (node.target.lineno, node.target.col_offset)
-		self.module_meta.vslots[position] = [ast.unparse(node.target), PreCollector.UNVISITED]
+		self.module_meta.vslots[position] = [ast.unparse(node.target), PreCollector.UNVISITED, fqn]
 
 	def visit_Assign(self, node):
+		fqn = ".".join(self.scope_stack)
 		for target in node.targets:
 			packs = PreCollector.collect_targets(target)
 			for k, v in packs.items():
-				self.module_meta.vslots[v] = [ast.unparse(target), PreCollector.UNVISITED]
+				self.module_meta.vslots[v] = [ast.unparse(target), PreCollector.UNVISITED, fqn]
 
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(
@@ -133,10 +135,10 @@ class PreCollector(ast.NodeVisitor):
 		self.scope_stack.pop()
 
 	def visit_FunctionDef(self, node):
-		fqn = self._get_local_fqn(node.name)
+		fqn = ".".join(self.scope_stack)
 		position = (node.lineno, node.col_offset)
 		param_slots = PreCollector.collect_parameter_slots(node)
-		self.module_meta.fslots[position] = [node, fqn, param_slots, PreCollector.UNVISITED]
+		self.module_meta.fslots[position] = [node, node.name, param_slots, PreCollector.UNVISITED, fqn]
 
 		self.scope_stack.append(node.name)
 		self.generic_visit(node)

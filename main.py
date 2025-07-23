@@ -64,14 +64,14 @@ logger.info("💾 Exporting...", 1)
 
 bundle.libs[0].export(
     path=Path(output_dir), 
-    symbols=True, 
+    symbols=False, 
     typeslots=True
 )
 
-bundle.libs[1].export(
-    path=Path(output_dir) / "stdlib",
-    symbols=True,
-    typeslots=False)
+# bundle.libs[1].export(
+#     path=Path(output_dir) / "stdlib",
+#     symbols=True,
+#     typeslots=False)
 
 logger.info("✅ Done.")
 

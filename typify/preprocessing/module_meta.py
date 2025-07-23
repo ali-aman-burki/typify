@@ -63,8 +63,7 @@ class ModuleMeta:
 
 		for key, value in self.vslots.items():
 			value[1] = value[1].as_type() if isinstance(value[1], ReferenceSet) else value[1]
-
-			k = f"{key[0]}:{key[1]}"
+			k = f"{value[2]}:{key[0]}:{key[1]}"
 			v = f"{value[0]}: {value[1]}"
 			data["variables"][k] = v
 			data["variables"]["meta"]["total"] += 1
@@ -76,7 +75,7 @@ class ModuleMeta:
 				data["variables"]["meta"]["typed"] += 1
 
 		for key, value in self.fslots.items():
-			k = f"{key[0]}:{key[1]}"
+			k = f"{value[4]}:{key[0]}:{key[1]}"
 
 			for x, y in value[2].items():
 				value[2][x] = repr(y.as_type()) if isinstance(value[2][x], ReferenceSet) else value[2][x]
