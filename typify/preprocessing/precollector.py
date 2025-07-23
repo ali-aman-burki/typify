@@ -73,11 +73,9 @@ class PreCollector(ast.NodeVisitor):
 
 		for arg in args_node.posonlyargs: parameters[arg.arg] = PreCollector.UNVISITED
 		for arg in args_node.args: parameters[arg.arg] = PreCollector.UNVISITED
-
-		if args_node.vararg: parameters[args_node.vararg.arg] = PreCollector.UNVISITED
-
 		for arg in args_node.kwonlyargs: parameters[arg.arg] = PreCollector.UNVISITED
 
+		if args_node.vararg: parameters[args_node.vararg.arg] = PreCollector.UNVISITED
 		if args_node.kwarg: parameters[args_node.kwarg.arg] = PreCollector.UNVISITED
 
 		return parameters
