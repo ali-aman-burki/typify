@@ -43,6 +43,8 @@ class Executor(ast.NodeVisitor):
 			snapshot_log: list[ReferenceSet] = None
 		):
 
+		from typify.inferencing.generics.utils import GenericUtils
+
 		self.context = context
 		self.module_meta = module_meta
 		self.symbol = symbol
@@ -72,6 +74,18 @@ class Executor(ast.NodeVisitor):
 			ndef.refset.update(refset)
 			namespace_name.set_definition(ndef)
 			merged = symbol_name.merge_definition(ndef)
+
+			if argtuple.annotation and caller:
+				if argtuple.annotation.packed_expr:
+					sm = GenericUtils.build_substitution_map(
+						caller.genconstruct,
+						argtuple.annotation.packed_expr,
+						self.symbol.get_enclosing_class_definition(),
+						merged.refset.as_type()
+					)
+
+					for k, v in sm.items():
+						print(f"Substituting {k} with {v}")
 
 			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
 			self.module_meta.fslots[position][2][argname] = merged.refset

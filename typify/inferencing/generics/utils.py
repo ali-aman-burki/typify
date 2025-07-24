@@ -17,6 +17,117 @@ from typify.inferencing.generics.model import (
 class GenericUtils:
 
 	@staticmethod
+	def build_substitution_map(
+		genconstruct: dict[ClassDefinition, GenericConstruct],
+		packed_expr: PackedExpr,
+		classdef: ClassDefinition,
+		type_expr: TypeExpr
+	) -> dict[Placeholder, TypeExpr | list[TypeExpr]]:
+
+		result: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
+
+		if not Checker.match_origin(
+			packed_expr.base.origin, 
+			type_expr.base
+		):
+			return result
+
+		TypingUnion = Typing.get_type("Union")
+
+		packed_is_union = Checker.match_origin(packed_expr.base.origin, TypingUnion)
+		type_is_union = Checker.match_origin(type_expr.base, TypingUnion)
+
+		if packed_is_union and type_is_union:
+			matches: list[dict[Placeholder, TypeExpr | list[TypeExpr]]] = []
+			for packed_branch in packed_expr.args:
+				for type_branch in type_expr.typeargs:
+					try:
+						subst = GenericUtils.build_substitution_map(
+							genconstruct,
+							packed_branch,
+							classdef,
+							type_branch
+						)
+						matches.append(subst)
+					except Exception:
+						continue
+
+			if not matches:
+				raise Exception("No matching pairs found in union cross-product.")
+
+			for subst in matches:
+				for p, v in subst.items():
+					result[p] = p.update_type(result, v)
+
+			return result
+
+		if packed_is_union:
+			matches = []
+			for branch in packed_expr.args:
+				try:
+					subst = GenericUtils.build_substitution_map(
+						genconstruct,
+						branch,
+						classdef,
+						type_expr
+					)
+					matches.append(subst)
+				except Exception:
+					continue
+
+			if not matches:
+				raise Exception("No union branches in packed_expr matched type_expr.")
+
+			for subst in matches:
+				for p, v in subst.items():
+					result[p] = p.update_type(result, v)
+
+			return result
+
+		if type_is_union:
+			for branch in type_expr.typeargs:
+				new_result = GenericUtils.build_substitution_map(
+					genconstruct,
+					packed_expr,
+					classdef,
+					branch
+				)
+				for p, v in new_result.items():
+					result[p] = p.update_type(result, v)
+
+			return result
+
+		lenpacked = len(packed_expr.args)
+		lentx = len(type_expr.typeargs)
+		tindex = 0
+		for i in range(lenpacked):
+			arg = packed_expr.args[i]
+			if arg.base.instanceof(Typing.get_type("TypeVar")):
+				for p in genconstruct[classdef].subs:
+					if p.typevar == arg.base:
+						result[p] = p.update_type(result, type_expr.typeargs[tindex])
+						tindex += 1
+			elif Checker.match_origin(arg.base.origin, Typing.get_type("Unpack")):
+				tvt = arg.args[0].base
+				for p in genconstruct[classdef].subs:
+					if p.typevar == tvt:
+						endcut = lenpacked - i
+						result[p] = p.update_type(result, type_expr.typeargs[tindex:lentx - endcut + 1])
+						tindex += len(result[p])
+			else:
+				new_result = GenericUtils.build_substitution_map(
+					genconstruct,
+					arg,
+					classdef,
+					type_expr.typeargs[tindex]
+				)
+				for p, v in new_result.items():
+					result[p] = p.update_type(result, v)
+				tindex += 1
+
+		return result
+
+	@staticmethod
 	def apply_substitution_to_class_args(
 		classdef: ClassDefinition,
 		concrete_args: list[TypeExpr],

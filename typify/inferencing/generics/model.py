@@ -34,7 +34,7 @@ class Placeholder:
     def update_type(
         self,
         concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]],
-        incoming: TypeExpr
+        incoming: TypeExpr | list[TypeExpr]
     ) -> TypeExpr | list[TypeExpr]:
         from typify.inferencing.typeutils import TypeUtils
 
