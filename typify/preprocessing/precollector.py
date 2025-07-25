@@ -99,7 +99,7 @@ class PreCollector(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
 		self.module_meta = module_meta
 		self.module_meta.load_tree()
-		self.scope_stack: list[str] = [module_meta.table.fqn]
+		self.scope_stack: list[str] = [module_meta.table.fqn.split(".")[-1]]
 
 	def visit_AnnAssign(self, node):
 		fqn = ".".join(self.scope_stack)
