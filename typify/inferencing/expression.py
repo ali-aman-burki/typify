@@ -45,6 +45,25 @@ class TypeExpr:
 		self.base = base
 		self.typeargs = typeargs or []
 
+	def strip(self) -> TypeExpr:
+		from typify.inferencing.commons import Checker, Typing
+
+		new_args = [arg.strip() for arg in self.typeargs]
+
+		if Checker.match_origin(self.base, Typing.get_type("Union")):
+			new_args = [
+				arg for arg in new_args
+				if not Checker.match_origin(arg.base, Typing.get_type("Any"))
+			]
+			if not new_args:
+				return TypeExpr(Typing.get_type("Any"))
+			if len(new_args) == 1:
+				return new_args[0]
+			return TypeExpr(self.base, new_args)
+
+		return TypeExpr(self.base, new_args)
+
+
 	def __eq__(self, other: TypeExpr):
 		if not isinstance(other, TypeExpr):
 			return NotImplemented
@@ -71,7 +90,7 @@ class AliasParser:
 		resolver, 
 		base_set: ReferenceSet, 
 		node: ast.Subscript
-	) -> ReferenceSet | None:
+	) -> ReferenceSet:
 		from typify.inferencing.typeutils import TypeUtils
 		from typify.inferencing.resolver import Resolver
 
@@ -103,3 +122,5 @@ class AliasParser:
 			ginstance = TypeUtils.instantiate_with_args(Typing.get_type("_GenericAlias"))
 			ginstance.packed_expr = PackedExpr(base_inst, args)
 			return ReferenceSet(ginstance)
+
+		return ReferenceSet()

@@ -25,7 +25,7 @@ class CallDispatcher:
 			inject: Instance = None
 		):
 
-		if not method: return ReferenceSet(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
+		if not method: return ReferenceSet()
 
 		modified_node = copy.deepcopy(self.node)
 

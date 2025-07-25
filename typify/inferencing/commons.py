@@ -30,7 +30,6 @@ class ParameterEntry:
 class ArgTuple:
 	refset: ReferenceSet
 	defkey: tuple[Module, tuple[int, int]]
-	annotation: Instance
 
 @dataclass
 class Context:
@@ -42,7 +41,7 @@ class Context:
 
 class ConstantObjects:
 	
-	i_dict = {
+	i_dict: dict[str, Instance] = {
 		"int": None,
 		"float": None,
 		"complex": None,
@@ -60,6 +59,8 @@ class ConstantObjects:
 		if not result:
 			result = TypeUtils.instantiate_with_args(Builtins.get_type(type_name))
 			ConstantObjects.i_dict[type_name] = result
+		else:
+			result.update_type_info(Builtins.get_type(type_name))
 		return result
 
 class Checker:

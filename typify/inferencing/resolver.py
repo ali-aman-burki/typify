@@ -137,12 +137,12 @@ class Resolver:
 
 		if isinstance(node, ast.Subscript):
 			base_set = self.resolve_value(node.value)
-			if not base_set: return ReferenceSet(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
+			if not base_set: return ReferenceSet()
 
 			result = AliasParser.resolve_if_generic_alias(self, base_set, node)
 			if result: return result
 			
-			return ReferenceSet(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
+			return ReferenceSet()
 		elif isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			instance = ConstantObjects.get(type_name)
@@ -160,6 +160,7 @@ class Resolver:
 				resolved = self.resolve_value(elt)
 				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
+				
 			instance = TypeUtils.instantiate_with_args(typeclass, [TypeUtils.unify_from_exprs(typeargs)])
 			return ReferenceSet(instance)
 		
@@ -170,6 +171,7 @@ class Resolver:
 				resolved = self.resolve_value(elt)
 				unified = TypeUtils.unify(resolved)
 				typeargs.append(unified)
+			
 			instance = TypeUtils.instantiate_with_args(typeclass, [TypeUtils.unify_from_exprs(typeargs)])
 			return ReferenceSet(instance)
 		
@@ -198,6 +200,7 @@ class Resolver:
 				resolved = self.resolve_value(elt)
 				unified = TypeUtils.unify(resolved)
 				valueargs.append(unified)
+
 			instance = TypeUtils.instantiate_with_args(
 				typeclass, 
 				[TypeUtils.unify_from_exprs(keyargs), TypeUtils.unify_from_exprs(valueargs)]
@@ -206,12 +209,13 @@ class Resolver:
 		
 		elif isinstance(node, ast.Call):
 			dispatcher = CallDispatcher(self, node)
-			return dispatcher.dispatch()
+			result = dispatcher.dispatch()
+			return result
 
 		elif isinstance(node, ast.Name):
 			name = self.LEGB_lookup(node.id)
 			if name: return name.get_latest_definition().refset
-			return ReferenceSet(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
+			return ReferenceSet()
 		
 		elif isinstance(node, ast.Attribute):
 			value_references = self.resolve_value(node.value)
@@ -221,9 +225,9 @@ class Resolver:
 				if namet:
 					namedef = namet.get_latest_definition()
 					result.update(namedef.refset)
-			return result if result else ReferenceSet(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
+			return result if result else ReferenceSet()
 		else:
-			return ReferenceSet(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
+			return ReferenceSet()
 	
 	#TODO: in the future, remove hardcoded logic for tuple and generalize it based on generics
 	#TODO: add support for starred unpacking

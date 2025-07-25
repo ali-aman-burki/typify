@@ -20,8 +20,8 @@ class CallSignature:
 		if self.arguments.keys() != other.arguments.keys(): return False
 
 		for key in self.arguments:
-			t1 = TypeUtils.unify(self.arguments[key].refset)
-			t2 = TypeUtils.unify(other.arguments[key].refset)
+			t1 = TypeUtils.unify(self.arguments[key].refset).strip()
+			t2 = TypeUtils.unify(other.arguments[key].refset).strip()
 			if t1 != t2: return False
 
 		return True
@@ -29,7 +29,7 @@ class CallSignature:
 	def __hash__(self):
 		param_fingerprint = tuple(
 			sorted(
-				(k, TypeUtils.unify(v.refset))
+				(k, TypeUtils.unify(v.refset).strip())
 				for k, v in self.arguments.items()
 			)
 		)
@@ -38,7 +38,7 @@ class CallSignature:
 	def __repr__(self):
 		args = []
 		for arg in self.arguments.values():
-			args.append(TypeUtils.unify(arg.refset))
+			args.append(TypeUtils.unify(arg.refset).strip())
 		joined = ", ".join(repr(arg) for arg in args)
 		return self.function_table.parent.id + f"({joined})"
 

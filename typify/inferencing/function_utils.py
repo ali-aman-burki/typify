@@ -160,7 +160,7 @@ class FunctionUtils:
 			for instance in resolver.resolve_value(arg_node):
 				refset.add(instance)
 
-			resolved_args[name] = ArgTuple(refset, defkey, positional_param_entries[i].annotation)
+			resolved_args[name] = ArgTuple(refset, defkey)
 
 		extra_args = call_node.args[len(positional_param_entries):]
 
@@ -182,7 +182,7 @@ class FunctionUtils:
 			instance.store = store
 			refset.add(instance)
 
-			resolved_args[name] = ArgTuple(refset, defkey, vararg_param.annotation)
+			resolved_args[name] = ArgTuple(refset, defkey)
 
 		for kw in call_node.keywords:
 			if kw.arg is None:
@@ -196,11 +196,11 @@ class FunctionUtils:
 				for instance in resolver.resolve_value(kw.value):
 					refset.add(instance)
 
-				resolved_args[name] = ArgTuple(refset, defkey, kwentry.annotation)
+				resolved_args[name] = ArgTuple(refset, defkey)
 
 		for pname, param_entry in parameters.items():
 			if pname not in resolved_args:
-				resolved_args[pname] = ArgTuple(param_entry.refset, param_entry.defkey, param_entry.annotation)
+				resolved_args[pname] = ArgTuple(param_entry.refset, param_entry.defkey)
 
 		return resolved_args
 

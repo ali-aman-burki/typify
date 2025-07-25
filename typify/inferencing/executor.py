@@ -49,6 +49,7 @@ class Executor(ast.NodeVisitor):
 		self.module_meta = module_meta
 		self.symbol = symbol
 		self.namespace = namespace
+		self.caller = caller
 		self.call_stack = call_stack
 		self.tree = tree
 		self.snapshot_log = snapshot_log if snapshot_log else []
@@ -75,30 +76,38 @@ class Executor(ast.NodeVisitor):
 			namespace_name.set_definition(ndef)
 			merged = symbol_name.merge_definition(ndef)
 
-			if argtuple.annotation and caller:
-				if argtuple.annotation.packed_expr:
-					sm = GenericUtils.build_substitution_map(
-						caller.genconstruct,
-						argtuple.annotation.packed_expr,
-						self.symbol.get_enclosing_class_definition(),
-						merged.refset.as_type()
-					)
+			annotation = self.symbol.parameters[argname].annotation
 
-					for k, v in sm.items():
-						print(f"Substituting {k} with {v}")
+			if annotation and caller:
+				GenericUtils.register_annotation(
+					annotation=annotation,
+					type_expr=merged.refset.as_type(),
+					classdef=self.symbol.get_enclosing_class_definition(),
+					genconstruct=caller.genconstruct,
+				)
 
 			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
 			self.module_meta.fslots[position][2][argname] = merged.refset
 
 	def execute(self) -> ReferenceSet: 
+		from typify.inferencing.generics.utils import GenericUtils
+
 		self.visit(self.tree)
 		if isinstance(self.namespace, CallFrame):
 			if not TypeUtils.has_complete_return(self.tree.body):
 				self.returns.add(ConstantObjects.get("NoneType"))
 				self.symbol.refset.add(ConstantObjects.get("NoneType"))
+			
+			if self.symbol.return_annotation and self.caller:
+				GenericUtils.register_annotation(
+					annotation=self.symbol.return_annotation,
+					type_expr=self.symbol.refset.as_type(),
+					classdef=self.symbol.get_enclosing_class_definition(),
+					genconstruct=self.caller.genconstruct
+				)
 
-				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-				self.module_meta.fslots[position][3] = self.symbol.refset
+			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+			self.module_meta.fslots[position][3] = self.symbol.refset
 		return self.returns
 
 	def snapshot(self): 
@@ -122,12 +131,8 @@ class Executor(ast.NodeVisitor):
 			resolved = ReferenceSet(ConstantObjects.get("NoneType"))
 
 		self.add_to_snapshot(resolved)
-
 		self.symbol.refset.update(resolved)
 		self.returns.update(resolved)
-
-		position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-		self.module_meta.fslots[position][3] = self.symbol.refset
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
@@ -145,7 +150,6 @@ class Executor(ast.NodeVisitor):
 			)
 			if not object_chain:
 				deftable = NameDefinition(defkey)
-				deftable.refset.add(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
 				self.symbol.get_name(name).merge_definition(deftable)
 				self.namespace.get_name(name).merge_definition(deftable)
 				continue
@@ -184,7 +188,6 @@ class Executor(ast.NodeVisitor):
 				
 				if not object_chain: 
 					deftable = NameDefinition(defkey)
-					deftable.refset.add(TypeUtils.instantiate_with_args(Typing.get_type("Any")))
 					self.symbol.get_name(name).merge_definition(deftable)
 					self.namespace.get_name(name).merge_definition(deftable)
 					return
@@ -247,14 +250,16 @@ class Executor(ast.NodeVisitor):
 					self.add_to_snapshot(ReferenceSet(instance))
 
 		for base in class_tree.bases:
-			base_inst = self.resolver.resolve_value(base).ref()
-			not_ambg = base_inst.instantiator and not base_inst.instanceof(Typing.get_type("Any"))
-			if not_ambg:
-				if base_inst.instanceof(Typing.get_type("_GenericAlias")):
-					entering_symbol.genbases.append(base_inst)
-					base_inst = base_inst.packed_expr.base
-				entering_symbol.bases.append(base_inst)
-				self.add_to_snapshot(ReferenceSet(base_inst))
+			base_inst_set = self.resolver.resolve_value(base)
+			if base_inst_set:
+				base_inst = base_inst_set.ref()
+				not_ambg = base_inst.instantiator and not base_inst.instanceof(Typing.get_type("Any"))
+				if not_ambg:
+					if base_inst.instanceof(Typing.get_type("_GenericAlias")):
+						entering_symbol.genbases.append(base_inst)
+						base_inst = base_inst.packed_expr.base
+					entering_symbol.bases.append(base_inst)
+					self.add_to_snapshot(ReferenceSet(base_inst))
 				
 		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
 		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
@@ -277,7 +282,7 @@ class Executor(ast.NodeVisitor):
 			module_meta=self.module_meta,
 			symbol=entering_symbol,
 			namespace=entering_namespace,
-			caller=None,
+			caller=self.caller,
 			arguments={},
 			call_stack=self.call_stack,
 			tree=ast.Module(class_tree.body, type_ignores=[]),
@@ -307,6 +312,10 @@ class Executor(ast.NodeVisitor):
 		function_def.tree = func_tree
 		function_def.parameters = FunctionUtils.collect_parameters(func_tree, self.resolver)
 
+		if func_tree.returns:
+			arefset = self.resolver.resolve_value(func_tree.returns)
+			if arefset: function_def.return_annotation = arefset.ref()
+
 		for k, v in function_def.parameters.items():
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset.copy()
@@ -334,8 +343,20 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(self.resolver.resolve_value(node))
 
 	def visit_AnnAssign(self, node):
+		from typify.inferencing.generics.utils import GenericUtils
+
 		resolved_value = self.resolver.resolve_value(node.value)
 		self.add_to_snapshot(resolved_value)
+
+		arefset = self.resolver.resolve_value(node.annotation)
+		if arefset and self.caller:
+			annotation = arefset.ref()
+			GenericUtils.register_annotation(
+				annotation=annotation,
+				type_expr=resolved_value.as_type(),
+				classdef=self.symbol.get_enclosing_class_definition(),
+				genconstruct=self.caller.genconstruct,
+			)
 
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
