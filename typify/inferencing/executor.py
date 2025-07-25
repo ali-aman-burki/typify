@@ -81,7 +81,7 @@ class Executor(ast.NodeVisitor):
 			if annotation and caller:
 				GenericUtils.register_annotation(
 					annotation=annotation,
-					type_expr=merged.refset.as_type(),
+					type_expr=refset.as_type(),
 					classdef=self.symbol.get_enclosing_class_definition(),
 					genconstruct=caller.genconstruct,
 				)
@@ -101,7 +101,7 @@ class Executor(ast.NodeVisitor):
 			if self.symbol.return_annotation and self.caller:
 				GenericUtils.register_annotation(
 					annotation=self.symbol.return_annotation,
-					type_expr=self.symbol.refset.as_type(),
+					type_expr=self.returns.as_type(),
 					classdef=self.symbol.get_enclosing_class_definition(),
 					genconstruct=self.caller.genconstruct
 				)
