@@ -178,7 +178,8 @@ class Executor(ast.NodeVisitor):
 		if node.names[0].name == "*":
 			if not object_chain: return
 			for name in object_chain[-1].names.values():
-				lat_def = name.get_latest_definition()
+				lat_def = NameDefinition(defkey)
+				lat_def.refset = name.get_plausible_refset().copy()
 				self.namespace.get_name(name.id).set_definition(lat_def)
 				self.add_to_snapshot(lat_def.refset)
 		else:
@@ -195,12 +196,12 @@ class Executor(ast.NodeVisitor):
 				
 				if alias.name in object_chain[-1].names:
 					mname = object_chain[-1].names[alias.name]
-					lat_def = mname.get_latest_definition()
+					
+					lat_def = NameDefinition(defkey)
+					lat_def.refset = mname.get_plausible_refset().copy()
 
-					deftable = NameDefinition(defkey)
-					deftable.refset.update(lat_def.refset)
-					self.symbol.get_name(name).merge_definition(deftable)
-					self.namespace.get_name(name).merge_definition(deftable)
+					self.symbol.get_name(name).merge_definition(lat_def)
+					self.namespace.get_name(name).merge_definition(lat_def)
 				else:
 					fqn = DependencyUtils.to_absolute_name(
 						self.module_meta.table, 

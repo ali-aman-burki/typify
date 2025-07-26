@@ -310,3 +310,12 @@ class Name(Symbol):
 	def lookup_definition(self, defkey: tuple[Module, tuple[int, int]]) -> NameDefinition:
 		key = f"{defkey[0].fqn}:{defkey[1][0]}:{defkey[1][1]}"
 		return self.definitions[key]
+	
+	def get_plausible_refset(self):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
+		result = ReferenceSet()
+		for definition in self.definitions.values():
+			result.update(definition.refset)
+		
+		return result

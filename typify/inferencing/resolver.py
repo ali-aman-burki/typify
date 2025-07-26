@@ -215,7 +215,7 @@ class Resolver:
 
 		elif isinstance(node, ast.Name):
 			name = self.LEGB_lookup(node.id)
-			if name: return name.get_latest_definition().refset
+			if name: return name.get_plausible_refset().copy()
 			return ReferenceSet()
 		
 		elif isinstance(node, ast.Attribute):
@@ -224,8 +224,7 @@ class Resolver:
 			for ref in value_references:
 				namet = self.attribute_lookup(ref, node.attr)
 				if namet:
-					namedef = namet.get_latest_definition()
-					result.update(namedef.refset)
+					result.update(namet.get_plausible_refset())
 			return result if result else ReferenceSet()
 		else:
 			return ReferenceSet()
