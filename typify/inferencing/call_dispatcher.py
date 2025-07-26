@@ -5,13 +5,16 @@ from typify.preprocessing.instance_utils import (
 	ReferenceSet,
 	Instance,
 )
-from typify.preprocessing.symbol_table import FunctionDefinition
+from typify.preprocessing.symbol_table import (
+    FunctionDefinition,
+	ClassDefinition
+)
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.function_utils import FunctionUtils
 from typify.inferencing.commons import (
-    Builtins, 
-    Typing,
+    Builtins,
+    Checker
 )
 
 class CallDispatcher:
@@ -63,7 +66,10 @@ class CallDispatcher:
 					for decorator in candidate.origin.tree.decorator_list:
 						if isinstance(decorator, ast.Name):
 							if decorator.id == "classmethod":
-								class_instance = caller.instantiator.mro[0]
+								if isinstance(caller.origin, ClassDefinition):
+									class_instance = caller
+								else:
+									class_instance = caller.instantiator
 								returns = self.exec(candidate.origin, class_instance)
 								result.update(returns)
 								shortcircuit = True
@@ -100,6 +106,9 @@ class CallDispatcher:
 		class_table = candidate.origin
 		instance = TypeUtils.instantiate_with_args(class_table)
 		
+		if Checker.match_origin(class_table, Builtins.get_type("type")):
+			instance.origin = Builtins.get_type("type")
+
 		init_attr = self.resolver.attribute_lookup(instance, "__init__")
 		init_def = init_attr.get_latest_definition()
 		init_method = init_def.refset.ref().origin

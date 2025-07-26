@@ -1,39 +1,142 @@
-class Generic: ...
+class Any: ...
 class TypeVar: ...
 class TypeVarTuple: ...
-class Unpack: ...
-class Any: ...
-class _GenericAlias: ...
+class NoReturn: ...
+class NewType: ...
 
 T = TypeVar('T')
 K = TypeVar('K')
 V = TypeVar('V')
 Ts = TypeVarTuple('Ts')
 
-class Optional(Generic[T]): ...
-class Union(Generic[Unpack[Ts]]): ...
-class Literal(Generic[Unpack[Ts]]): ...
-class Annotated(Generic[T, Unpack[Ts]]): ...
-class Final(Generic[T]): ...
-class ClassVar(Generic[T]): ...
-class NoReturn: ...
-class NewType: ...
+class _GenericAlias:
+    def __init__(self, origin, args) -> None: ...
+class _UnpackGenericAlias:
+    def __init__(self, origin, args) -> None: ...
+	
+class Unpack: 
 
-class List(Generic[T]): ...
-class Set(Generic[T]): ...
-class Dict(Generic[K, V]): ...
-class Tuple(Generic[Unpack[Ts]]): ...
-class FrozenSet(Generic[T]): ...
-class DefaultDict(Generic[K, V]): ...
-class Counter(Generic[T]): ...
-class ChainMap(Generic[K, V]): ...
-class Deque(Generic[T]): ...
+	@classmethod
+	def __class_getitem__(cls, item): return _UnpackGenericAlias(cls, item)
 
-class Type(Generic[T]): ...
-class Callable(Generic[Unpack[Ts], T]): ...
-class Generator(Generic[T, V, K]): ...
-class AsyncGenerator(Generic[T, V]): ...
-class Coroutine(Generic[T, V, K]): ...
-class Awaitable(Generic[T]): ...
-class AsyncIterable(Generic[T]): ...
-class AsyncIterator(AsyncIterable[T], Generic[T]): ...
+class Generic: 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+
+class Optional(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Union(Generic[Unpack[Ts]]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Literal(Generic[Unpack[Ts]]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Annotated(Generic[T, Unpack[Ts]]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Final(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class ClassVar(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+
+class List(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Set(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Dict(Generic[K, V]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Tuple(Generic[Unpack[Ts]]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class FrozenSet(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class DefaultDict(Generic[K, V]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Counter(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class ChainMap(Generic[K, V]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Deque(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+
+class Type(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Callable(Generic[Unpack[Ts], T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Generator(Generic[T, V, K]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class AsyncGenerator(Generic[T, V]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Coroutine(Generic[T, V, K]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class Awaitable(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class AsyncIterable(Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	
+class AsyncIterator(AsyncIterable[T], Generic[T]): 
+
+	@classmethod
+	def __class_getitem__(cls, item): return _GenericAlias(cls, item)
+	

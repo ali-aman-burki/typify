@@ -31,7 +31,7 @@ class GenericUtils:
 						type_expr, 
 						genconstruct
 					)
-		elif annotation.instanceof(Typing.get_type("_GenericAlias")):
+		elif Checker.is_generic_alias(annotation):
 			subst = GenericUtils.build_substitution_map(
 				annotation.packed_expr, 
 				type_expr,

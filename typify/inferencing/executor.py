@@ -15,6 +15,7 @@ from typify.inferencing.commons import (
 	Typing,
 	ConstantObjects,
 	ArgTuple,
+	Checker
 )
 from typify.preprocessing.symbol_table import (
 	Module,
@@ -255,7 +256,7 @@ class Executor(ast.NodeVisitor):
 				base_inst = base_inst_set.ref()
 				not_ambg = base_inst.instantiator and not base_inst.instanceof(Typing.get_type("Any"))
 				if not_ambg:
-					if base_inst.instanceof(Typing.get_type("_GenericAlias")):
+					if Checker.is_generic_alias(base_inst):
 						entering_symbol.genbases.append(base_inst)
 						base_inst = base_inst.packed_expr.base
 					entering_symbol.bases.append(base_inst)
@@ -340,6 +341,9 @@ class Executor(ast.NodeVisitor):
 		self.visit_FunctionDef(node)
 
 	def visit_Call(self, node):
+		self.add_to_snapshot(self.resolver.resolve_value(node))
+	
+	def visit_Subscript(self, node):
 		self.add_to_snapshot(self.resolver.resolve_value(node))
 
 	def visit_AnnAssign(self, node):

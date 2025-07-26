@@ -136,13 +136,14 @@ class Resolver:
 		from typify.inferencing.expression import AliasParser
 
 		if isinstance(node, ast.Subscript):
-			base_set = self.resolve_value(node.value)
-			if not base_set: return ReferenceSet()
-
-			result = AliasParser.resolve_if_generic_alias(self, base_set, node)
-			if result: return result
+			refset = self.resolve_value(node.value)
+			result = ReferenceSet()
+			for ref in refset:
+				if ref.instanceof(Builtins.get_type("type")):
+					genalias = AliasParser.parse(self, ref, node)
+					if genalias: result.add(genalias)
 			
-			return ReferenceSet()
+			return result
 		elif isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			instance = ConstantObjects.get(type_name)

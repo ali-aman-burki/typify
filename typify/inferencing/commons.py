@@ -67,6 +67,14 @@ class Checker:
 	@staticmethod
 	def match_origin(lhs: ClassDefinition, rhs: ClassDefinition):
 		return lhs and lhs == rhs
+	
+	@staticmethod
+	def is_generic_alias(instance: Instance):
+		return instance.instanceof(
+			Types.get_type("GenericAlias"),
+			Typing.get_type("_GenericAlias"),
+			Typing.get_type("_UnpackGenericAlias")
+		)
 
 class Builtins:
 
@@ -85,6 +93,7 @@ class Builtins:
 			return result
 		except Exception: 
 			return None
+
 class Typing:
 	
 	@staticmethod
@@ -101,4 +110,22 @@ class Typing:
 			result = Typing.module().classes[type_name].get_latest_definition()
 			return result
 		except Exception: 
-			return None 
+			return None
+		
+class Types:
+	
+	@staticmethod
+	def module() -> Module:
+		try:
+			result = Global.inference["types"].table
+			return result
+		except Exception:
+			return None
+	
+	@staticmethod
+	def get_type(type_name: str) -> ClassDefinition | None:
+		try: 
+			result = Types.module().classes[type_name].get_latest_definition()
+			return result
+		except Exception: 
+			return None
