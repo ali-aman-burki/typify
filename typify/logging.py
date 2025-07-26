@@ -1,3 +1,5 @@
+import sys
+
 class LogLevel:
 	OFF = 0
 	INFO = 1
@@ -9,21 +11,22 @@ class AnsiColor:
 	INFO = "\033[38;5;250m"
 	DEBUG = "\033[38;5;108m"
 	TRACE = "\033[38;5;179m"
-	ERROR = "\033[38;5;160m"  # Bright red
+	ERROR = "\033[38;5;160m"
 	WARN = "\033[38;5;179m"
 
-import sys
-
 class Logger:
-	def __init__(self, level=LogLevel.OFF, outputs: list = None):
+	def __init__(self, level=LogLevel.OFF):
 		self.level = level
-		self.outputs = outputs or [sys.stdout]
-
+		self.outputs = []
+	
 	def set_level(self, level: int):
 		self.level = level
 
 	def add_output(self, stream):
 		self.outputs.append(stream)
+
+	def to_terminal(self, msg: str):
+		print(msg)
 
 	def _log(self, level_name: str, msg: str, color: str, min_level: int, trail: int, header: bool):
 		if self.level >= min_level:

@@ -13,25 +13,30 @@ from typify.logging import logger, LogLevel
 config_path = "typifyconfig.json"
 
 parser = argparse.ArgumentParser(description="Build and export type bindings for a Python project.")
-parser.add_argument("project_dir", help="Path to the Python project directory.")
-parser.add_argument("-o", "--output-dir", help="Path to the export directory (defaults to project path).")
-parser.add_argument("-l", "--log", choices=["off", "info", "debug", "trace"], default="info", help="Set the logging level.")
+parser.add_argument(
+    "project_dir", 
+    help="Path to the Python project directory."
+)
+parser.add_argument(
+    "-o", 
+    "--output-dir", 
+    help="Path to the export directory (defaults to project path)."
+)
+parser.add_argument(
+    "-l", 
+    "--log", 
+    choices=["off", "info", "debug", "trace"], 
+    default="info", 
+    help="Set the logging level."
+)
 
 args = parser.parse_args()
-
-log_levels = {
-    "off": LogLevel.OFF,
-    "info": LogLevel.INFO,
-    "debug": LogLevel.DEBUG,
-    "trace": LogLevel.TRACE,
-}
-logger.set_level(log_levels[args.log])
 
 project_dir = args.project_dir
 output_dir = args.output_dir or (project_dir + "/.typify")
 
 if not Utils.is_valid_directory(project_dir):
-    logger.info("❌ Invalid project path given.")
+    print("Invalid project path given.")
     exit(1)
 
 if not Utils.is_valid_directory(output_dir):
@@ -40,7 +45,16 @@ if not Utils.is_valid_directory(output_dir):
 with open(config_path, "r") as f:
     config: dict[str, Union[str, dict[str, str]]] = json.load(f)
 
-logger.info(Utils.title, header=False)
+log_levels = {
+    "off": LogLevel.OFF,
+    "info": LogLevel.INFO,
+    "debug": LogLevel.DEBUG,
+    "trace": LogLevel.TRACE,
+}
+logger.set_level(log_levels[args.log])
+logger.add_output(open(Path(output_dir) / "typify.log", "w", encoding="utf-8"))
+
+print(Utils.title)
 
 bundle = Preloader.load(config, Path(project_dir))
 
@@ -60,7 +74,7 @@ for meta, deps in bundle.cleaned_graph.items():
 
 Inferencer.infer(bundle)
 
-logger.info("💾 Exporting...", 1)
+print("💾 Exporting...")
 
 bundle.libs[0].export(
     path=Path(output_dir), 
@@ -68,11 +82,6 @@ bundle.libs[0].export(
     typeslots=True
 )
 
-# bundle.libs[1].export(
-#     path=Path(output_dir) / "stdlib",
-#     symbols=True,
-#     typeslots=False)
-
-logger.info("✅ Done.")
+print("✅ Done.")
 
 logger.close()
