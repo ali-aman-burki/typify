@@ -74,8 +74,6 @@ for meta, deps in bundle.cleaned_graph.items():
 
 Inferencer.infer(bundle)
 
-print("💾 Exporting...")
-
 bundle.libs[0].export(
     path=Path(output_dir), 
     symbols=False, 

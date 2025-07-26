@@ -242,7 +242,20 @@ class Executor(ast.NodeVisitor):
 		entering_symbol.bases.clear()
 		entering_symbol.genbases.clear()
 
-		if not class_tree.bases:
+		for base in class_tree.bases:
+			base_inst_set = self.resolver.resolve_value(base)
+			if base_inst_set:
+				base_inst = base_inst_set.ref()
+				if base_inst.instanceof(Builtins.get_type("NoneType")): continue
+
+				if Checker.is_generic_alias(base_inst):
+					entering_symbol.genbases.append(base_inst)
+					base_inst = base_inst.packed_expr.base
+				
+				entering_symbol.bases.append(base_inst)
+				self.add_to_snapshot(ReferenceSet(base_inst))
+
+		if not entering_symbol.bases:
 			if builtins_module_object:
 				object_class = builtins_module_object.names.get("object")
 				if object_class:
@@ -250,19 +263,7 @@ class Executor(ast.NodeVisitor):
 					instance = object_def.refset.ref()
 					entering_symbol.bases.append(instance)
 					self.add_to_snapshot(ReferenceSet(instance))
-
-		for base in class_tree.bases:
-			base_inst_set = self.resolver.resolve_value(base)
-			if base_inst_set:
-				base_inst = base_inst_set.ref()
-				not_ambg = base_inst.instantiator and not base_inst.instanceof(Typing.get_type("Any"))
-				if not_ambg:
-					if Checker.is_generic_alias(base_inst):
-						entering_symbol.genbases.append(base_inst)
-						base_inst = base_inst.packed_expr.base
-					entering_symbol.bases.append(base_inst)
-					self.add_to_snapshot(ReferenceSet(base_inst))
-				
+			
 		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
 		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
 		

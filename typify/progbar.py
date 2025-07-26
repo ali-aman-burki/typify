@@ -1,5 +1,4 @@
 import sys
-import time
 from typing import (
 	Optional, 
 	Literal
@@ -10,14 +9,14 @@ class ProgressBar:
 		self,
 		total: int,
 		length: int = 24,
-		fill: str = '█',
+		fill: str = '■',
 		empty: str = '-',
 		prefix: str = '',
 		suffix: str = '',
-		left: str = '|',
-		right: str = '|',
+		left: str = '[',
+		right: str = ']',
 		decimals: int = 1,
-		progress_format: Literal["percent", "counter", "none"] = "percent"
+		progress_format: Literal["percent", "counter", "none"] = "counter"
 	) -> None:
 		self.total: int = total
 		self.length: int = length
@@ -40,10 +39,9 @@ class ProgressBar:
 		else:
 			self.iteration += 1
 
-		filled_len: int = int(self.length * self.iteration // self.total)
+		filled_len: int = int(self.length * self.iteration // self.total) if self.total > 0 else 0
 		bar: str = self.fill * filled_len + self.empty * (self.length - filled_len)
 
-		# Decide what to show for progress status
 		if self.progress_format == "percent":
 			progress_info = f"{100 * (self.iteration / float(self.total)):.{self.decimals}f}%"
 		elif self.progress_format == "counter":
@@ -51,7 +49,6 @@ class ProgressBar:
 		else:
 			progress_info = ""
 
-		# Assemble parts
 		components: list[str] = []
 		if self.prefix:
 			components.append(self.prefix)
@@ -67,24 +64,6 @@ class ProgressBar:
 			print(file=sys.stdout)
 
 	def finish(self) -> None:
-		self.iteration = self.total
-		self.update()
-
-
-if __name__ == '__main__':
-	total = 20
-	pb = ProgressBar(
-		total,
-		prefix='Progress:',
-		suffix='Done!',
-		length=20,
-		left='[',
-		right=']',
-		fill='■',
-		empty=' ',
-		progress_format="counter"  # Options: "percent", "counter", "none"
-	)
-	pb.display()
-	for i in range(total):
-		time.sleep(1)
-		pb.update(i + 1)
+		if self.iteration < self.total:
+			self.iteration = self.total
+			self.update()
