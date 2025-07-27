@@ -86,7 +86,12 @@ class CallDispatcher:
 						if caller.instanceof(Builtins.get_type("module")):
 							returns = self.exec(candidate.origin)
 						else:
-							returns = self.exec(candidate.origin, caller)
+							caller_to_pass = None
+							for ci in caller.instantiator.mro:
+								if candidate.origin.get_enclosing_class_definition() == ci.origin:
+									caller_to_pass = caller
+									break
+							returns = self.exec(candidate.origin, caller_to_pass)
 						result.update(returns)
 
 				elif candidate.instanceof(Builtins.get_type("type")):

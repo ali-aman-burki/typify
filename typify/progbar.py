@@ -1,5 +1,6 @@
 import sys
 from typing import Optional, Literal
+from typify.utils import ANSIColors
 
 class ProgressBar:
 	def __init__(
@@ -38,15 +39,15 @@ class ProgressBar:
 		else:
 			self.iteration += 1
 
-		GREEN = "\033[32m"
-		GRAY = "\033[90m"
-		RESET = "\033[0m"
-
 		filled_len: int = int(self.length * self.iteration // self.total) if self.total > 0 else 0
-		bar = f"{GREEN}{self.fill * filled_len}{RESET}{GRAY}{self.empty * (self.length - filled_len)}{RESET}"
+		bar = (
+			f"{ANSIColors.GREEN}{self.fill * filled_len}{ANSIColors.RESET}"
+			f"{ANSIColors.GRAY}{self.empty * (self.length - filled_len)}{ANSIColors.RESET}"
+		)
 
 		if self.progress_format == "percent":
-			progress_info = f"[{100 * (self.iteration / float(self.total)):.{self.decimals}f}%]"
+			frac = self.iteration / float(self.total) if float(self.total) > 0 else 0
+			progress_info = f"[{100 * (frac):.{self.decimals}f}%]"
 		elif self.progress_format == "counter":
 			progress_info = f"[{self.iteration}/{self.total}]"
 		else:
