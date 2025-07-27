@@ -51,8 +51,11 @@ class Resolver:
 				current_symbol = current_symbol.get_enclosing_symbol()
 				continue
 			
-			result = self.context.symbol_map[current_symbol.get_latest_definition()].names.get(name)
-			if result: return result
+			scope = self.context.symbol_map.get(current_symbol.get_latest_definition())
+			
+			if scope: 
+				result = scope.names.get(name)
+				if result: return result
 
 			current_symbol = current_symbol.get_enclosing_symbol()
 
@@ -244,13 +247,19 @@ class Resolver:
 			for i in range(len(resolved_target.groups)):
 				group = resolved_target.groups[i]
 				if isinstance(group, PackGroup):
-					next_instances = TypeUtils.instantiate_from_type_expr(reftype.typeargs[0])
-					if ref.instanceof(Builtins.get_type("tuple")):
-						if len(ref.store) > i:
-							next_instances = ref.store[i]
-						elif len(reftype.typeargs) > i:
-							next_instances = TypeUtils.instantiate_from_type_expr(reftype.typeargs[i])
-					self.process_assignment(group, next_instances)
+					if ref.instanceof(
+						Builtins.get_type("list"),
+						Builtins.get_type("tuple"),
+						Builtins.get_type("set"),
+						Builtins.get_type("dict"),
+					):
+						next_instances = TypeUtils.instantiate_from_type_expr(reftype.typeargs[0])
+						if ref.instanceof(Builtins.get_type("tuple")):
+							if len(ref.store) > i:
+								next_instances = ref.store[i]
+							elif len(reftype.typeargs) > i:
+								next_instances = TypeUtils.instantiate_from_type_expr(reftype.typeargs[i])
+						self.process_assignment(group, next_instances)
 				else:
 					for target_entry in group:
 						target_entry.definition.refset.add(ref)

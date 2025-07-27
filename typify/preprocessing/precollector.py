@@ -111,7 +111,7 @@ class PreCollector(ast.NodeVisitor):
 		for target in node.targets:
 			packs = PreCollector.collect_targets(target)
 			for k, v in packs.items():
-				self.module_meta.vslots[v] = [ast.unparse(target), PreCollector.UNVISITED, fqn]
+				self.module_meta.vslots[v] = [ast.unparse(k), PreCollector.UNVISITED, fqn]
 
 	def visit_AugAssign(self, node):
 		toAssign = ast.Assign(

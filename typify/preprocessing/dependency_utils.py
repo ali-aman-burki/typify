@@ -71,18 +71,6 @@ class DependencyUtils:
 					if table.fqn in sysmodules:
 						current_object = sysmodules[table.fqn]
 						modules.append(current_object)
-						continue
-					
-					module_object = TypeUtils.instantiate_with_args(Builtins.get_type("module"))
-					Symbol.transfer_names(table.names, module_object)
-
-					attrdef = NameDefinition(defkey)
-					attrdef.refset.add(module_object)
-					current_object.get_name(table.id).set_definition(attrdef)
-
-					sysmodules[table.fqn] = module_object
-					current_object = module_object
-					modules.append(current_object)
 
 				return modules
 

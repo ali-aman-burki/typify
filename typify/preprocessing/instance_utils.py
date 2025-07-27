@@ -29,8 +29,10 @@ class ReferenceSet:
 		self.references.update(other.references)
 	
 	def ref(self) -> Instance | None:
-		if len(self.references) != 1: 
+		if len(self.references) > 1: 
 			logger.error("Multiple references found where 1 was expected.")
+		elif len(self.references) < 1:
+			return None
 		return next(iter(self.references))
 	
 	def as_type(self):

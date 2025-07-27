@@ -59,6 +59,8 @@ class CallDispatcher:
 				if not method_attr: continue
 
 				candidate_def = method_attr.get_latest_definition()
+				if not candidate_def.refset: continue
+
 				candidate = candidate_def.refset.ref()
 
 				if candidate.instanceof(Builtins.get_type("function")):
@@ -69,7 +71,7 @@ class CallDispatcher:
 								if isinstance(caller.origin, ClassDefinition):
 									class_instance = caller
 								else:
-									class_instance = caller.instantiator
+									class_instance = caller.instantiator.mro[0]
 								returns = self.exec(candidate.origin, class_instance)
 								result.update(returns)
 								shortcircuit = True
