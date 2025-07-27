@@ -24,13 +24,15 @@ class GenericUtils:
 		genconstruct: dict[ClassDefinition, GenericConstruct]
 	):
 		if annotation.instanceof(Typing.get_type("TypeVar")):
-			for placeholder in genconstruct[classdef].subs:
-				if placeholder.typevar == annotation:
-					GenericUtils.apply_substitution(
-						placeholder, 
-						type_expr, 
-						genconstruct
-					)
+			gencons = genconstruct.get(classdef)
+			if gencons:
+				for placeholder in gencons.subs:
+					if placeholder.typevar == annotation:
+						GenericUtils.apply_substitution(
+							placeholder, 
+							type_expr, 
+							genconstruct
+						)
 		elif Checker.is_generic_alias(annotation):
 			subst = GenericUtils.build_substitution_map(
 				annotation.packed_expr, 
@@ -125,15 +127,18 @@ class GenericUtils:
 			tx_arg = type_expr.typeargs[tindex]
 
 			if arg.base.instanceof(Typing.get_type("TypeVar")):
-				for p in genconstruct[classdef].subs:
-					if p.typevar == arg.base:
-						result[p] = p.update_type(result, tx_arg)
-						tindex += 1
-						break
+				gencons = genconstruct.get(classdef)
+				if gencons:
+					for p in gencons.subs:
+						if p.typevar == arg.base:
+							result[p] = p.update_type(result, tx_arg)
+							tindex += 1
+							break
 
 			elif Checker.match_origin(arg.base.origin, Typing.get_type("Unpack")):
 				tvt = arg.args[0].base
-				for p in genconstruct[classdef].subs:
+				gencons = genconstruct.get(classdef)
+				for p in gencons.subs:
 					if p.typevar == tvt:
 						endcut = lenpacked - i
 						remaining = lentx - tindex - (endcut - 1)

@@ -7,14 +7,14 @@ class ProgressBar:
 		total: int,
 		length: int = 24,
 		fill: str = '━',
-		empty: str = '─',
+		empty: str = '━',
 		prefix: str = '',
 		suffix: str = '',
 		left: str = '',
 		right: str = '',
 		decimals: int = 1,
 		progress_format: Literal["percent", "counter", "none"] = "counter",
-		prefix_width: int = 34,  # New parameter
+		prefix_width: int = 36,
 	) -> None:
 		self.total: int = total
 		self.length: int = length
@@ -26,7 +26,7 @@ class ProgressBar:
 		self.right: str = right
 		self.decimals: int = decimals
 		self.progress_format: Literal["percent", "counter", "none"] = progress_format
-		self.prefix_width: Optional[int] = max(prefix_width or 0, len(prefix))  # Clamp to prefix length
+		self.prefix_width: Optional[int] = max(prefix_width or 0, len(prefix))
 		self.iteration: int = 0
 
 	def display(self) -> None:
