@@ -87,5 +87,5 @@ print(json.dumps(info))
 
 				if Global.inference.keys() == inference.keys():
 					break
-
+		print()
 		return GraphBuilder.build_graph(Global.libs)

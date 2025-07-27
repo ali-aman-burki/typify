@@ -1,16 +1,13 @@
 import ast
 
+from typify.progbar import ProgressBar
 from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.sequencer import Sequencer
-from typify.inferencing.typeutils import TypeUtils
-from typify.inferencing.commons import Builtins
 from typify.preprocessing.symbol_table import (
-    Symbol,
     Module, 
     Package, 
-	NameDefinition
 )
 
 from dataclasses import dataclass
@@ -87,7 +84,11 @@ class GraphBuilder:
 			meta_map.update(lib.meta_map)
 			sysmodules.update(lib.sysmodules)
 
-		for meta in meta_map.values():
+		meta_values = list(meta_map.values())
+		progress = ProgressBar(len(meta_values), prefix="Building dependency graph:")
+		progress.display()
+
+		for i, meta in enumerate(meta_values, 1):
 			tracker = DependencyTracker(libs, meta_map, dependency_graph, meta)
 
 			meta.load_tree()
@@ -99,6 +100,8 @@ class GraphBuilder:
 			tracker.visit(meta.tree)
 
 			meta.tree.body.pop(0)
+
+			progress.update(i)
 
 		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = {
 			key: {dep for dep in deps if not isinstance(dep, str)}

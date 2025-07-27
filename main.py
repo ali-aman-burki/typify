@@ -80,6 +80,4 @@ bundle.libs[0].export(
     typeslots=True
 )
 
-print("✅ Done.")
-
 logger.close()

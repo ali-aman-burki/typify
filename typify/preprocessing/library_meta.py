@@ -102,9 +102,9 @@ class LibraryMeta:
 		for i, meta in enumerate(meta_values, 1):
 			PreCollector(meta).visit(meta.tree)
 			progress.update(i)
-		progress.finish()
 
 	def export(self, path: Path, symbols=True, typeslots=True) -> None:
+		print()
 		if symbols:
 			progress = ProgressBar(
 				len(self.meta_map), 
@@ -114,15 +114,13 @@ class LibraryMeta:
 			for i, meta in enumerate(self.meta_map.values(), 1):
 				meta.export_symbols(self.src, path)
 				progress.update(i)
-			progress.finish()
 
 		if typeslots:
 			progress = ProgressBar(
 				len(self.meta_map), 
-				prefix=f"Exporting typeslots for {self.library_table.id}:"
+				prefix=f"Exporting types for {self.library_table.id}:"
 			)
 			progress.display()
 			for i, meta in enumerate(self.meta_map.values(), 1):
 				meta.export_typeslots(self.src, path)
 				progress.update(i)
-			progress.finish()

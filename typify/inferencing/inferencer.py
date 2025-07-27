@@ -4,6 +4,7 @@ from collections import (
 )
 
 from typify.logging import logger
+from typify.progbar import ProgressBar
 from typify.utils import Utils
 from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
@@ -33,6 +34,10 @@ class Inferencer:
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
 		processed: list[ModuleMeta] = []
 		pass_counts: dict[str, int] = {}
+
+		progress = ProgressBar(total=len(meta_map), prefix="Performing Inference:")
+		progress.display()
+		shown_in_progress: set[ModuleMeta] = set()
 
 		for src, targets in cleaned_graph.items():
 			for tgt in targets:
@@ -77,6 +82,11 @@ class Inferencer:
 				snapshots[meta] = new_snapshot
 				pass_counts[meta.table.fqn] = 1
 				processed.append(meta)
+
+				if meta not in shown_in_progress:
+					progress.update()
+					shown_in_progress.add(meta)
+
 				sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 				continue
 
@@ -99,6 +109,10 @@ class Inferencer:
 
 				sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 				processed.append(meta)
+
+				if meta not in shown_in_progress:
+					progress.update()
+					shown_in_progress.add(meta)
 
 			for meta in sequence:
 				pass_counts[meta.table.fqn] = passes[meta]
