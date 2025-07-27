@@ -11,7 +11,7 @@ from typify.preprocessing.instance_utils import (
 from typify.preprocessing.symbol_table import (
 	ClassDefinition
 )
-		
+
 class TypeUtils:
 
 	@staticmethod

@@ -137,11 +137,8 @@ class Resolver:
 		from typify.inferencing.call_dispatcher import CallDispatcher
 		from typify.inferencing.typeutils import TypeUtils
 		from typify.inferencing.desugar import Desugar
-
-		if isinstance(node, ast.Subscript):
-			return Desugar.resolve(node, self)
 		
-		elif isinstance(node, ast.Constant):
+		if isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			instance = ConstantObjects.get(type_name)
 			return ReferenceSet(instance)
@@ -224,7 +221,7 @@ class Resolver:
 					result.update(namet.get_plausible_refset())
 			return result if result else ReferenceSet()
 		else:
-			return ReferenceSet()
+			return Desugar.resolve(node, self)
 	
 	#TODO: in the future, remove hardcoded logic for tuple and generalize it based on generics
 	#TODO: add support for starred unpacking
