@@ -5,11 +5,7 @@ import ast
 from typify.preprocessing.instance_utils import Instance, ReferenceSet
 from typify.preprocessing.precollector import PreCollector
 from typify.preprocessing.symbol_table import ClassDefinition
-from typify.inferencing.desugar import Desugar
-from typify.inferencing.commons import (
-    Typing,
-	Checker
-)
+from typify.inferencing.commons import Checker
 
 class PackedExpr:
 
@@ -99,34 +95,24 @@ class AliasParser:
 		return None
 
 	@staticmethod
-	def parse(
+	def attach(
 		resolver, 
-		base_inst: Instance, 
-		node: ast.Subscript
+		node: ast.Subscript,
+		base_inst: Instance,
+		genref: Instance, 
 	) -> ReferenceSet:
 		from typify.inferencing.resolver import Resolver
-		from typify.inferencing.call_dispatcher import CallDispatcher
-
 
 		resolver: Resolver = resolver
 		
-		base = base_inst
 		args = []
 		
-		desugared = Desugar.subscript(node, True)
-		dispatcher = CallDispatcher(resolver, desugared)
-		genset = dispatcher.dispatch()
+		if isinstance(node.slice, ast.Tuple):
+			for elt in node.slice.elts:
+				resolved = AliasParser.get_packed_expr(resolver, elt)
+				if resolved: args.append(resolved)
+		else:
+			resolved = AliasParser.get_packed_expr(resolver, node.slice)
+			if resolved: args.append(resolved)
 
-		if genset:
-			genref = genset.ref()
-			if Checker.is_generic_alias(genref):	
-				if isinstance(node.slice, ast.Tuple):
-					for elt in node.slice.elts:
-						resolved = AliasParser.get_packed_expr(resolver, elt)
-						if resolved: args.append(resolved)
-				else:
-					resolved = AliasParser.get_packed_expr(resolver, node.slice)
-					if resolved: args.append(resolved)
-
-				genref.packed_expr = PackedExpr(base, args)
-				return genref
+		genref.packed_expr = PackedExpr(base_inst, args)

@@ -136,17 +136,11 @@ class Resolver:
 	def resolve_value(self, node: ast.Expr) -> ReferenceSet:
 		from typify.inferencing.call_dispatcher import CallDispatcher
 		from typify.inferencing.typeutils import TypeUtils
-		from typify.inferencing.expression import AliasParser
+		from typify.inferencing.desugar import Desugar
 
 		if isinstance(node, ast.Subscript):
-			refset = self.resolve_value(node.value)
-			result = ReferenceSet()
-			for ref in refset:
-				if ref.instanceof(Builtins.get_type("type")):
-					genalias = AliasParser.parse(self, ref, node)
-					if genalias: result.add(genalias)
-			
-			return result
+			return Desugar.resolve(node, self)
+		
 		elif isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			instance = ConstantObjects.get(type_name)

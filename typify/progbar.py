@@ -13,7 +13,7 @@ class ProgressBar:
 		left: str = '[',
 		right: str = ']',
 		decimals: int = 1,
-		progress_format: Literal["percent", "counter", "none"] = "counter",
+		progress_format: Literal["percent", "counter", "none"] = "percent",
 		prefix_width: int = 36,
 	) -> None:
 		self.total: int = total
@@ -46,7 +46,7 @@ class ProgressBar:
 		bar = f"{GREEN}{self.fill * filled_len}{RESET}{GRAY}{self.empty * (self.length - filled_len)}{RESET}"
 
 		if self.progress_format == "percent":
-			progress_info = f"{100 * (self.iteration / float(self.total)):.{self.decimals}f}%"
+			progress_info = f"[{100 * (self.iteration / float(self.total)):.{self.decimals}f}%]"
 		elif self.progress_format == "counter":
 			progress_info = f"[{self.iteration}/{self.total}]"
 		else:
