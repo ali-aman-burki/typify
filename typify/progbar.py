@@ -29,9 +29,13 @@ class ProgressBar:
 		self.progress_format: Literal["percent", "counter", "none"] = progress_format
 		self.prefix_width: Optional[int] = max(prefix_width or 0, len(prefix))
 		self.iteration: int = 0
+		self._last_line_len: int = 0
 
 	def display(self) -> None:
 		self.update(0)
+	
+	def refresh(self) -> None:
+		self.update(self.iteration) 
 
 	def update(self, iteration: Optional[int] = None) -> None:
 		if iteration is not None:
@@ -67,7 +71,20 @@ class ProgressBar:
 		if self.suffix:
 			components.append(self.suffix)
 
-		print('\r' + ' '.join(components), end='', file=sys.stdout)
+		output_str = ' '.join(components)
+		output_len = len(output_str)
+
+		leftover = max(self._last_line_len - output_len, 0)
+
+		print('\r' + output_str, end='', file=sys.stdout)
+
+		if leftover > 0:
+			print(' ' * leftover, end='', file=sys.stdout)
+			print('\b' * leftover, end='', file=sys.stdout)
+
+		sys.stdout.flush()
+
+		self._last_line_len = output_len
 
 		if self.iteration >= self.total:
 			print(file=sys.stdout)
