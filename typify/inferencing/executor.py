@@ -375,15 +375,26 @@ class Executor(ast.NodeVisitor):
 			self.resolver.process_assignment(resolved_target, resolved_value)
 	
 	def visit_AugAssign(self, node):
-		toAssign = ast.Assign(
-			targets=[node.target],
-			value=ast.BinOp(
-				left=copy.deepcopy(node.target),
-				op=node.op,
-				right=node.value
+		from typify.inferencing.desugar import Desugar
+		from typify.inferencing.call_dispatcher import CallDispatcher
+
+		desugared = Desugar.to_dunder(node)
+		dispatcher = CallDispatcher(self.resolver, desugared)
+		refset = dispatcher.dispatch()
+
+		if not refset:
+			toAssign = ast.Assign(
+				targets=[node.target],
+				value=ast.BinOp(
+					left=copy.deepcopy(node.target),
+					op=node.op,
+					right=node.value
+				)
 			)
-		)
-		ast.copy_location(toAssign, node)
-		ast.copy_location(toAssign.value, node)
-		toAssign = ast.fix_missing_locations(toAssign)
-		self.visit_Assign(toAssign)
+			ast.copy_location(toAssign, node)
+			ast.copy_location(toAssign.value, node)
+			toAssign = ast.fix_missing_locations(toAssign)
+			self.visit_Assign(toAssign)
+		else:
+			resolved_target = self.resolver.resolve_target(node.target)
+			self.resolver.process_assignment(resolved_target, refset)

@@ -32,7 +32,7 @@ class Desugar:
 }
 
 	@staticmethod
-	def to_dunder(expr: ast.expr, use_reverse: bool = False) -> ast.Call:
+	def to_dunder(expr: ast.expr | ast.AugAssign, use_reverse: bool = False) -> ast.Call:
 		if isinstance(expr, ast.BinOp):
 			op_type = type(expr.op)
 			dunders = Desugar.operator_to_dunder.get(op_type)
@@ -60,8 +60,21 @@ class Desugar:
 			func = ast.Attribute(value=expr.operand, attr=dunder_name, ctx=ast.Load())
 			return ast.Call(func=func, args=[], keywords=[])
 
+		elif isinstance(expr, ast.AugAssign):
+			op_type = type(expr.op)
+			dunders = Desugar.operator_to_dunder.get(op_type)
+			if not dunders:
+				raise ValueError(f"No dunder mapping for augassign operator {op_type}")
+
+			forward_dunder = dunders[0] if isinstance(dunders, tuple) else dunders
+			inplace_dunder = "__i" + forward_dunder[2:]
+
+			func = ast.Attribute(value=expr.target, attr=inplace_dunder, ctx=ast.Load())
+			return ast.Call(func=func, args=[expr.value], keywords=[])
+
 		else:
 			raise TypeError(f"Unsupported expr type: {type(expr)}")
+
 
 	@staticmethod
 	def subscript(node: ast.Subscript, use_class_getitem: bool) -> ast.Call:

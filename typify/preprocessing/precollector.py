@@ -114,18 +114,9 @@ class PreCollector(ast.NodeVisitor):
 				self.module_meta.vslots[v] = [ast.unparse(k), PreCollector.UNVISITED, fqn]
 
 	def visit_AugAssign(self, node):
-		toAssign = ast.Assign(
-			targets=[node.target],
-			value=ast.BinOp(
-				left=copy.deepcopy(node.target),
-				op=node.op,
-				right=node.value
-			)
-		)
-		ast.copy_location(toAssign, node)
-		ast.copy_location(toAssign.value, node)
-		toAssign = ast.fix_missing_locations(toAssign)
-		self.visit_Assign(toAssign)
+		fqn = ".".join(self.scope_stack)
+		v = (node.target.lineno, node.target.col_offset)
+		self.module_meta.vslots[v] = [ast.unparse(node.target), PreCollector.UNVISITED, fqn]
 
 	def visit_ClassDef(self, node):
 		self.scope_stack.append(node.name)
