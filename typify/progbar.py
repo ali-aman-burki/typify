@@ -14,7 +14,7 @@ class ProgressBar:
 		left: str = '[',
 		right: str = ']',
 		decimals: int = 1,
-		progress_format: Literal["percent", "counter", "none"] = "percent",
+		progress_format: Literal["percent", "counter", "none"] = "counter",
 		prefix_width: int = 36,
 	) -> None:
 		self.total: int = total

@@ -35,7 +35,13 @@ class Inferencer:
 		processed: list[ModuleMeta] = []
 		pass_counts: dict[str, int] = {}
 
-		progress = ProgressBar(total=len(meta_map), prefix="Performing Inference:")
+		project_only_modules: set[ModuleMeta] = set(libs[0].meta_map.values())
+		total_project_modules = len(project_only_modules)
+
+		progress = ProgressBar(
+			total=total_project_modules,
+			prefix="Performing Inference:"
+		)
 		progress.display()
 		shown_in_progress: set[ModuleMeta] = set()
 
@@ -46,6 +52,10 @@ class Inferencer:
 		logger.debug("", header=False)
 
 		for sequence in sequences:
+			if project_only_modules.issubset(shown_in_progress):
+				if not any(meta in project_only_modules for meta in sequence):
+					continue
+
 			is_single = len(sequence) == 1
 			has_self_loop = (
 				sequence[0] in cleaned_graph.get(sequence[0], set())
@@ -83,9 +93,10 @@ class Inferencer:
 				pass_counts[meta.table.fqn] = 1
 				processed.append(meta)
 
-				if meta not in shown_in_progress:
+				if meta in project_only_modules and meta not in shown_in_progress:
 					progress.update()
 					shown_in_progress.add(meta)
+
 
 				sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 				continue
@@ -110,7 +121,7 @@ class Inferencer:
 				sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 				processed.append(meta)
 
-				if meta not in shown_in_progress:
+				if meta in project_only_modules and meta not in shown_in_progress:
 					progress.update()
 					shown_in_progress.add(meta)
 
