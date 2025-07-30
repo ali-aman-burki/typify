@@ -23,13 +23,17 @@ class TypeUtils:
 
 	@staticmethod
 	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> ReferenceSet:
-		result = ReferenceSet()
 		if Checker.match_origin(unified_type_expr.base, Typing.get_type("Union")):
+			result = ReferenceSet()
 			for typeexpr in unified_type_expr.typeargs:
-				result.add(TypeUtils.instantiate_with_args(typeexpr.base, typeexpr.typeargs))
+				result.update(TypeUtils.instantiate_from_type_expr(typeexpr))
+			return result
+		elif Checker.match_origin(unified_type_expr.base, Typing.get_type("Any")):
+			return ReferenceSet()
 		else:
+			result = ReferenceSet()
 			result.add(TypeUtils.instantiate_with_args(unified_type_expr.base, unified_type_expr.typeargs))
-		return result
+			return result
 
 	@staticmethod
 	def unify_from_exprs(typeargs: list[TypeExpr] = None) -> TypeExpr:
