@@ -86,8 +86,9 @@ class Executor(ast.NodeVisitor):
 					genconstruct=caller.genconstruct,
 				)
 
-			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-			self.module_meta.fslots[position][2][argname] = merged.refset
+			if self.module_meta.fslots:
+				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+				self.module_meta.fslots[position][2][argname] = merged.refset
 
 	def execute(self) -> ReferenceSet: 
 		from typify.inferencing.generics.utils import GenericUtils
@@ -106,8 +107,9 @@ class Executor(ast.NodeVisitor):
 					genconstruct=self.caller.genconstruct
 				)
 
-			position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
-			self.module_meta.fslots[position][3] = self.symbol.refset
+			if self.module_meta.fslots:
+				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+				self.module_meta.fslots[position][3] = self.symbol.refset
 		return self.returns
 
 	def snapshot(self): 
@@ -322,7 +324,8 @@ class Executor(ast.NodeVisitor):
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset.copy()
 			mdef = function_def.get_name(k).set_definition(ndef)
-			self.module_meta.fslots[position][2][k] = mdef.refset
+			if self.module_meta.fslots:
+				self.module_meta.fslots[position][2][k] = mdef.refset
 
 		func_obj = self.context.function_object_map.setdefault(
 			function_def,

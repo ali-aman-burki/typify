@@ -1,5 +1,4 @@
 import ast
-import copy
 
 from typify.preprocessing.module_meta import ModuleMeta
 

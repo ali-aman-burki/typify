@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Union
 from dataclasses import dataclass
 
+from typify.progbar import ProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
 from typify.preprocessing.core import Global
@@ -49,6 +50,8 @@ print(json.dumps(info))
 	
 	@staticmethod
 	def load(config: dict[str, Union[str, list[str], dict[str, str]]], project_dir: Path) -> DependencyBundle:
+		from typify.preprocessing.precollector import PreCollector
+
 		paths = [project_dir]
 		inference: dict[str, Path] = {}
 
@@ -75,7 +78,20 @@ print(json.dumps(info))
 				continue
 
 		Global.libs = [LibraryMeta(path) for path in paths]
+		print()
 
+		project_lib = Global.libs[0]
+		meta_values = list(project_lib.meta_map.values())
+		progress = ProgressBar(
+			len(meta_values), 
+			prefix=f"Collecting typeslots:", 
+		)
+		progress.display()
+
+		for i, meta in enumerate(meta_values, 1):
+			PreCollector(meta).visit(meta.tree)
+			progress.update(i)
+		
 		for lib in Global.libs:
 			for meta in lib.meta_map.values():
 				for k, v in inference.items():
@@ -87,5 +103,4 @@ print(json.dumps(info))
 
 				if Global.inference.keys() == inference.keys():
 					break
-		print()
 		return GraphBuilder.build_graph(Global.libs)

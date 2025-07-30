@@ -9,8 +9,10 @@ from typify.preprocessing.symbol_table import (
 )
 from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.preprocessing.precollector import PreCollector
-from typify.progbar import ProgressBar
+from typify.progbar import (
+    ProgressBar,
+    IndeterminateProgressBar
+)
 
 class LibraryMeta:
 	def __init__(self, src: Path):
@@ -24,7 +26,22 @@ class LibraryMeta:
 		self._build()
 
 	def _build(self):
+		def last_n_parts(path: Path, n: int) -> str:
+			parts = path.parts
+			n = max(1, min(n, len(parts)))
+
+			if len(parts) <= n:
+				return str(path)
+			else:
+				truncated_path = Path("...") / Path(*parts[-n:])
+				return str(truncated_path)
+		
 		working_is_package = (self.src / "__init__.py").is_file() or (self.src / "__init__.pyi").is_file()
+		progress_bar = IndeterminateProgressBar(
+			prefix=f"Searching modules in {last_n_parts(self.src, 2)}", 
+			suffix="Discovered: 0 modules", 
+		)
+		progress_bar.start()
 
 		if working_is_package:
 			root_package_table = Package(self.src.name)
@@ -70,6 +87,7 @@ class LibraryMeta:
 					meta = ModuleMeta(init_path, package_table.trust_annotations)
 					package_table.set_module(meta.table, self.fqn_map)
 					self.meta_map[meta.table] = meta
+					progress_bar.set_suffix(f"Discovered: {len(self.meta_map)} modules")
 					break  # Prefer .pyi over .py
 
 		# Second pass: collect .py and .pyi candidates (excluding __init__)
@@ -91,24 +109,23 @@ class LibraryMeta:
 			meta = ModuleMeta(chosen_path, True if chosen_path.suffix == ".pyi" else table.trust_annotations)
 			table.set_module(meta.table, self.fqn_map)
 			self.meta_map[meta.table] = meta
+			progress_bar.set_suffix(f"Discovered: {len(self.meta_map)} modules")
 		
-		meta_values = list(self.meta_map.values())
-		progress = ProgressBar(
-			len(meta_values), 
-			prefix=f"Searching modules in {self.library_table.id}:", 
-		)
-		progress.display()
+		progress_bar.done()
 
-		for i, meta in enumerate(meta_values, 1):
-			PreCollector(meta).visit(meta.tree)
-			progress.update(i)
-
-	def export(self, path: Path, symbols=True, typeslots=True) -> None:
-		print()
+	def export(
+			self, 
+			path: Path, 
+			prefix_ts: str, 
+			prefix_sy: str, 
+			symbols=True, 
+			typeslots=True
+		) -> None:
+		
 		if symbols:
 			progress = ProgressBar(
 				len(self.meta_map), 
-				prefix=f"Exporting symbols for {self.library_table.id}:"
+				prefix=prefix_sy
 			)
 			progress.display()
 			for i, meta in enumerate(self.meta_map.values(), 1):
@@ -118,7 +135,7 @@ class LibraryMeta:
 		if typeslots:
 			progress = ProgressBar(
 				len(self.meta_map), 
-				prefix=f"Exporting types for {self.library_table.id}:"
+				prefix=prefix_ts
 			)
 			progress.display()
 			for i, meta in enumerate(self.meta_map.values(), 1):

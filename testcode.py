@@ -1,90 +1,13 @@
-import sys
+from typify.progbar import IndeterminateProgressBar
 import time
-from typing import (
-	Optional, 
-	Literal
-)
 
-class ProgressBar:
-	def __init__(
-		self,
-		total: int,
-		length: int = 24,
-		fill: str = '█',
-		empty: str = '-',
-		prefix: str = '',
-		suffix: str = '',
-		left: str = '|',
-		right: str = '|',
-		decimals: int = 1,
-		progress_format: Literal["percent", "counter", "none"] = "percent"
-	) -> None:
-		self.total: int = total
-		self.length: int = length
-		self.fill: str = fill
-		self.empty: str = empty
-		self.prefix: str = prefix
-		self.suffix: str = suffix
-		self.left: str = left
-		self.right: str = right
-		self.decimals: int = decimals
-		self.progress_format: Literal["percent", "counter", "none"] = progress_format
-		self.iteration: int = 0
-	
-	def display(self) -> None:
-		self.update(0)
+bar = IndeterminateProgressBar(prefix="Loading", suffix="Please wait...")
+bar.start()
 
-	def update(self, iteration: Optional[int] = None) -> None:
-		if iteration is not None:
-			self.iteration = iteration
-		else:
-			self.iteration += 1
+# Simulate work
+time.sleep(5)
 
-		filled_len: int = int(self.length * self.iteration // self.total)
-		bar: str = self.fill * filled_len + self.empty * (self.length - filled_len)
+bar.set_suffix("Almost done...")
+time.sleep(2)
 
-		# Decide what to show for progress status
-		if self.progress_format == "percent":
-			progress_info = f"{100 * (self.iteration / float(self.total)):.{self.decimals}f}%"
-		elif self.progress_format == "counter":
-			progress_info = f"{self.iteration}/{self.total}"
-		else:
-			progress_info = ""
-
-		# Assemble parts
-		components: list[str] = []
-		if self.prefix:
-			components.append(self.prefix)
-		components.append(f'{self.left}{bar}{self.right}')
-		if progress_info:
-			components.append(progress_info)
-		if self.suffix:
-			components.append(self.suffix)
-
-		print('\r' + ' '.join(components), end='', file=sys.stdout)
-
-		if self.iteration >= self.total:
-			print(file=sys.stdout)
-
-	def finish(self) -> None:
-		self.iteration = self.total
-		self.update()
-
-
-if __name__ == '__main__':
-	total = 20
-	pb = ProgressBar(
-		total,
-		prefix='Progress:',
-		suffix='Done!',
-		length=20,
-		left='[',
-		right=']',
-		fill='■',
-		empty=' ',
-		progress_format="counter"  # Options: "percent", "counter", "none"
-	)
-	pb.display()
-	for i in range(total):
-		time.sleep(1)
-		pb.update(i + 1)
+bar.done()  # Will instantly fill and finish

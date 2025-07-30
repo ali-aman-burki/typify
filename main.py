@@ -76,6 +76,8 @@ Inferencer.infer(bundle)
 
 bundle.libs[0].export(
     path=Path(output_dir), 
+    prefix_ts="Exporting types",
+    prefix_sy="Exporting symbols",
     symbols=False, 
     typeslots=True
 )
