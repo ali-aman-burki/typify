@@ -60,6 +60,24 @@ class Instance:
 
 		return any(Checker.match_origin(self.instantiator, td) for td in typedefs)
 
+	def attribute_lookup(
+			self, 
+			attr: str
+		) -> Name:
+		
+		from typify.inferencing.commons import Checker
+
+		if attr in self.names: return self.names[attr]
+		
+		if Checker.is_type(self):
+			for m in self.origin.mro:
+				if attr in m.names: return m.names[attr]
+		else:
+			for m in self.instantiator.mro:
+				if attr in m.names: return m.names[attr]
+		
+		return None
+
 	def update_type_info(
 			self, 
 			instantiator: ClassDefinition, 

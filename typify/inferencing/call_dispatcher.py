@@ -55,7 +55,7 @@ class CallDispatcher:
 		if isinstance(self.node.func, ast.Attribute):
 			callers_set = self.resolver.resolve_value(self.node.func.value)
 			for caller in callers_set:
-				method_attr = self.resolver.attribute_lookup(caller, self.node.func.attr)
+				method_attr = caller.attribute_lookup(self.node.func.attr)
 				if not method_attr: continue
 
 				candidate_def = method_attr.get_latest_definition()
@@ -116,7 +116,7 @@ class CallDispatcher:
 		if Checker.match_origin(class_table, Builtins.get_type("type")):
 			instance.origin = Builtins.get_type("type")
 
-		init_attr = self.resolver.attribute_lookup(instance, "__init__")
+		init_attr = instance.attribute_lookup("__init__")
 		init_def = init_attr.get_latest_definition()
 		init_method = init_def.refset.ref().origin
 

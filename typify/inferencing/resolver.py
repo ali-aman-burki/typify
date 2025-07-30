@@ -61,23 +61,6 @@ class Resolver:
 
 		return Builtins.module().names.get(name, None)
 
-	def attribute_lookup(
-			self, 
-			instance: Instance, 
-			attr: str
-		) -> Name:
-		
-		if attr in instance.names: return instance.names[attr]
-		
-		if Checker.is_type(instance):
-			for m in instance.origin.mro:
-				if attr in m.names: return m.names[attr]
-		else:
-			for m in instance.instantiator.mro:
-				if attr in m.names: return m.names[attr]
-		
-		return None
-
 	def resolve_target(self, expr: ast.expr) -> PackGroup:
 		position = (expr.lineno, expr.col_offset)
 		defkey = (self.module_meta.table, position)
@@ -216,7 +199,7 @@ class Resolver:
 			value_references = self.resolve_value(node.value)
 			result = ReferenceSet()
 			for ref in value_references:
-				namet = self.attribute_lookup(ref, node.attr)
+				namet = ref.attribute_lookup(node.attr)
 				if namet:
 					result.update(namet.get_plausible_refset())
 			return result if result else ReferenceSet()

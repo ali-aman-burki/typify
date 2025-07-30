@@ -31,9 +31,13 @@ class TypeUtils:
 		elif Checker.match_origin(unified_type_expr.base, Typing.get_type("Any")):
 			return ReferenceSet()
 		else:
-			result = ReferenceSet()
-			result.add(TypeUtils.instantiate_with_args(unified_type_expr.base, unified_type_expr.typeargs))
-			return result
+			if not unified_type_expr.base: return ReferenceSet()
+
+			instance = TypeUtils.instantiate_with_args(unified_type_expr.base, unified_type_expr.typeargs)
+			init_method_name = instance.attribute_lookup("__init__")
+			function_def = init_method_name.get_latest_definition().refset.ref()
+			
+			return ReferenceSet(instance)
 
 	@staticmethod
 	def unify_from_exprs(typeargs: list[TypeExpr] = None) -> TypeExpr:
