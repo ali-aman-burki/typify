@@ -84,7 +84,7 @@ class Instance:
 
 	def as_type(self):
 		from typify.inferencing.expression import TypeExpr
-		from typify.inferencing.commons import Typing
+		from typify.inferencing.commons import Typing, Checker
 
 		base = self.instantiator
 		args = []
@@ -92,7 +92,7 @@ class Instance:
 		if self.genconstruct.keys():
 			gencons = self.genconstruct[base]
 			for k, v in gencons.concsubs.items():
-				if k.typevar.instanceof(Typing.get_type("TypeVarTuple")):
+				if Checker.is_typevartuple(k.typevar):
 					args.extend(v if v else [])
 				else:
 					args.append(v if v else TypeExpr(Typing.get_type("Any")))

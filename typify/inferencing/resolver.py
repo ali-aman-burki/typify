@@ -24,7 +24,7 @@ from typify.preprocessing.symbol_table import (
 from typify.inferencing.commons import (
 	Context,
 	Builtins,
-	Typing,
+	Checker,
 	ConstantObjects,
 )
 
@@ -69,7 +69,7 @@ class Resolver:
 		
 		if attr in instance.names: return instance.names[attr]
 		
-		if instance.instanceof(Builtins.get_type("type")):
+		if Checker.is_type(instance):
 			for m in instance.origin.mro:
 				if attr in m.names: return m.names[attr]
 		else:

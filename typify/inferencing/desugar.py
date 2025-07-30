@@ -102,7 +102,7 @@ class Desugar:
 			baseset = resolver.resolve_value(node.value)
 			result = ReferenceSet()
 			for base in baseset:
-				if base.instanceof(Builtins.get_type("type")):
+				if Checker.is_type(base):
 					processed_node = Desugar.subscript(node, True)
 					dispatcher = CallDispatcher(resolver, processed_node)
 					

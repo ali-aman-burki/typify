@@ -75,6 +75,24 @@ class Checker:
 			Typing.get_type("_GenericAlias"),
 			Typing.get_type("_UnpackGenericAlias")
 		)
+	
+	@staticmethod
+	def is_type(instance: Instance):
+		return instance.instanceof(
+			Builtins.get_type("type")
+		)
+
+	@staticmethod
+	def is_typevar(instance: Instance):
+		return instance.instanceof(
+			Typing.get_type("TypeVar")
+		)
+	
+	@staticmethod
+	def is_typevartuple(instance: Instance):
+		return instance.instanceof(
+			Typing.get_type("TypeVarTuple")
+		)
 
 class Builtins:
 

@@ -94,7 +94,7 @@ class CallDispatcher:
 							returns = self.exec(candidate.origin, caller_to_pass)
 						result.update(returns)
 
-				elif candidate.instanceof(Builtins.get_type("type")):
+				elif Checker.is_type(candidate):
 					result.add(self.dispatch_instance(candidate))
 		else:
 			candidates = self.resolver.resolve_value(self.node.func)
@@ -105,7 +105,7 @@ class CallDispatcher:
 					returns = self.exec(function_table)
 					result.update(returns)
 
-				elif candidate.instanceof(Builtins.get_type("type")):
+				elif Checker.is_type(candidate):
 					result.add(self.dispatch_instance(candidate))
 		return result
 	

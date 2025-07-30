@@ -5,7 +5,10 @@ import ast
 from typify.preprocessing.instance_utils import Instance, ReferenceSet
 from typify.preprocessing.precollector import PreCollector
 from typify.preprocessing.symbol_table import ClassDefinition
-from typify.inferencing.commons import Checker
+from typify.inferencing.commons import (
+    Checker,
+    Typing
+)
 
 class PackedExpr:
 
@@ -81,6 +84,67 @@ class TypeExpr:
 	
 class AliasParser:
 
+	@staticmethod
+	def annotation_to_typeexpr(
+		annotation: Instance, 
+		concsubs: dict
+	) -> TypeExpr:
+		
+		from typify.inferencing.generics.model import Placeholder
+		
+		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = concsubs
+		
+		if Checker.is_generic_alias(annotation):
+			return AliasParser.resolve_type_expr(annotation.packed_expr, concsubs)
+		elif Checker.is_typevar(annotation):
+			for k, v in concsubs.items():
+				if k.typevar == annotation:
+					return v
+		elif Checker.is_type(annotation):
+			return TypeExpr(annotation.origin)
+		else:
+			return TypeExpr(Typing.get_type("Any"))
+
+	@staticmethod
+	def resolve_type_expr(
+		packed_expr: PackedExpr, 
+		concsubs: dict
+	) -> TypeExpr | list[TypeExpr]:
+		
+		from typify.inferencing.generics.model import Placeholder
+		
+		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = concsubs
+
+		if Checker.is_type(packed_expr.base):
+			targs: list[TypeExpr] = []
+
+			if Checker.match_origin(
+				packed_expr.base.origin, 
+				Typing.get_type("Unpack")
+			):
+				tvt = packed_expr.args[0].base
+				for k, v in concsubs.items():
+					if k.typevar == tvt:
+						return v
+				return []
+
+			for parg in packed_expr.args:
+				result = AliasParser.resolve_type_expr(parg, concsubs)
+				if isinstance(result, list):
+					targs.extend(result)
+				else:
+					targs.append(result)
+			return TypeExpr(packed_expr.base.origin, targs)
+		elif Checker.is_typevar(packed_expr.base):
+			tv = packed_expr.base
+			for k, v in concsubs.items():
+				if k.typevar == tv:
+					return v
+			return TypeExpr(Typing.get_type("Any"))
+		else:
+			return TypeExpr(Typing.get_type("Any"))
+
+	@staticmethod
 	def get_packed_expr(resolver, elt: ast.Expr):
 		from typify.inferencing.resolver import Resolver
 

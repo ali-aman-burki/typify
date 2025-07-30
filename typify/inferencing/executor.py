@@ -12,7 +12,6 @@ from typify.inferencing.expression import TypeExpr
 from typify.inferencing.commons import (
 	Context,
 	Builtins,
-	Typing,
 	ConstantObjects,
 	ArgTuple,
 	Checker

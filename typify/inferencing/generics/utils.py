@@ -23,7 +23,7 @@ class GenericUtils:
 		classdef: ClassDefinition,
 		genconstruct: dict[ClassDefinition, GenericConstruct]
 	):
-		if annotation.instanceof(Typing.get_type("TypeVar")):
+		if Checker.is_typevar(annotation):
 			gencons = genconstruct.get(classdef)
 			if gencons:
 				for placeholder in gencons.subs:
@@ -126,7 +126,7 @@ class GenericUtils:
 			arg = packed_expr.args[i]
 			tx_arg = type_expr.typeargs[tindex]
 
-			if arg.base.instanceof(Typing.get_type("TypeVar")):
+			if Checker.is_typevar(arg.base):
 				gencons = genconstruct.get(classdef)
 				if gencons:
 					for p in gencons.subs:
@@ -230,13 +230,13 @@ class GenericUtils:
 		
 		result = {}
 		i = 0
-		tvts = [p for p in placeholders if p.typevar.instanceof(Typing.get_type("TypeVarTuple"))]
+		tvts = [p for p in placeholders if Checker.is_typevartuple(p.typevar)]
 
 		if len(tvts) > 1:
 			raise Exception("Multiple TypeVarTuples not supported.")
 
 		for j, ph in enumerate(placeholders):
-			if ph.typevar.instanceof(Typing.get_type("TypeVarTuple")):
+			if Checker.is_typevartuple(ph.typevar):
 				fixed_after = len(placeholders) - (j + 1)
 				tvt_len = len(actual_args) - i - fixed_after
 				if tvt_len < 0:
@@ -263,13 +263,13 @@ class GenericUtils:
 		
 		result = {}
 		i = 0
-		tvts = [p for p in placeholders if p.typevar.instanceof(Typing.get_type("TypeVarTuple"))]
+		tvts = [p for p in placeholders if Checker.is_typevartuple(p.typevar)]
 		
 		if len(tvts) > 1:
 			raise Exception("Multiple TypeVarTuples not supported.")
 
 		for j, ph in enumerate(placeholders):
-			if ph.typevar.instanceof(Typing.get_type("TypeVarTuple")):
+			if Checker.is_typevartuple(ph.typevar):
 				fixed_after = len(placeholders) - (j + 1)
 				tvt_len = len(actual_args) - i - fixed_after
 				if tvt_len < 0:
@@ -278,7 +278,7 @@ class GenericUtils:
 
 				sliced = actual_args[i:i + tvt_len]
 
-				if len(sliced) == 1 and sliced[0].typevar.instanceof(Typing.get_type("TypeVarTuple")):
+				if len(sliced) == 1 and Checker.is_typevartuple(sliced[0].typevar):
 					result[ph] = sliced[0]
 				else:
 					result[ph] = sliced
