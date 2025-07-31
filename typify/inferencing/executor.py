@@ -142,9 +142,6 @@ class Executor(ast.NodeVisitor):
 
 	def visit_Return(self, node):
 		resolved = self.resolver.resolve_value(node.value)
-		if not node.value:
-			resolved = ReferenceSet(ConstantObjects.get("NoneType"))
-
 		self.add_to_snapshot(resolved)
 		self.symbol.refset.update(resolved)
 		self.returns.update(resolved)
