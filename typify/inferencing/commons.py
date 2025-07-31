@@ -10,7 +10,8 @@ from typify.preprocessing.instance_utils import (
 from typify.preprocessing.symbol_table import (
     ClassDefinition, 
 	FunctionDefinition,
-    Module
+    Module,
+	CallFrame
 )
 
 @dataclass
@@ -35,7 +36,7 @@ class ArgTuple:
 class Context:
 	libs: list[LibraryMeta]
 	sysmodules: dict[str, Instance]
-	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance]
+	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance | CallFrame]
 	function_object_map: dict[FunctionDefinition, Instance]
 	meta_map: dict[Module, ModuleMeta]
 

@@ -26,6 +26,18 @@ from typify.preprocessing.symbol_table import (
 
 class FunctionUtils:
 
+	def is_stub(func_node):
+		if len(func_node.body) != 1:
+			return False
+
+		stmt = func_node.body[0]
+
+		return (
+			isinstance(stmt, ast.Expr)
+			and isinstance(stmt.value, ast.Constant)
+			and stmt.value.value is Ellipsis
+		)
+
 	@staticmethod
 	def construct_executor(
 		context: Context, 
@@ -115,7 +127,7 @@ class FunctionUtils:
 						returns = executor.execute()
 						snapshot_after = executor.snapshot()
 
-						sig.returns.update(returns)
+						sig.returns = returns.copy()
 						sig.snapshot = snapshot_after
 
 						logger.debug(f"  ▸ Before snapshot: {snapshot_before}")

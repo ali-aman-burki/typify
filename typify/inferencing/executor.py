@@ -8,7 +8,7 @@ from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.mro import MROBuilder
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import TypeUtils
-from typify.inferencing.expression import TypeExpr
+from typify.inferencing.expression import TypeExpr, AliasParser
 from typify.inferencing.commons import (
 	Context,
 	Builtins,
@@ -92,6 +92,19 @@ class Executor(ast.NodeVisitor):
 
 	def execute(self) -> ReferenceSet: 
 		from typify.inferencing.generics.utils import GenericUtils
+		
+		if isinstance(self.namespace, CallFrame) and FunctionUtils.is_stub(self.symbol.tree):
+			if self.symbol.return_annotation:
+				concsubs = {}
+				if self.caller:
+					gencons = self.caller.genconstruct.get(self.symbol.get_enclosing_class_definition())
+					if gencons:
+						concsubs = gencons.concsubs
+				type_expr = AliasParser.annotation_to_typeexpr(self.symbol.return_annotation, concsubs)
+				result = TypeUtils.instantiate_from_type_expr(type_expr)
+				self.returns.update(result)
+				self.symbol.refset.update(result)
+				return self.returns
 
 		self.visit(self.tree)
 		if isinstance(self.namespace, CallFrame):

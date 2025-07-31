@@ -42,13 +42,16 @@ class CallDispatcher:
 			first_param = next(iter(argmap.values()))
 			first_param.refset = ReferenceSet(inject)
 		
-		return FunctionUtils.exec_function(
+		prev = self.resolver.context.symbol_map[self.resolver.symbol]
+		result = FunctionUtils.exec_function(
 			self.resolver.context, 
 			inject,
 			argmap, 
 			method, 
 			self.resolver.call_stack
 		)
+		self.resolver.context.symbol_map[self.resolver.symbol] = prev
+		return result
 
 	def dispatch(self) -> ReferenceSet:
 		result = ReferenceSet()
