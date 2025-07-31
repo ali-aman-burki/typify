@@ -148,3 +148,21 @@ class Types:
 			return result
 		except Exception: 
 			return None
+
+class Future:
+
+	@staticmethod
+	def module() -> Module:
+		try:
+			result = Global.inference["__future__"].table
+			return result
+		except Exception:
+			return None
+	
+	@staticmethod
+	def get_type(type_name: str) -> ClassDefinition | None:
+		try: 
+			result = Future.module().classes[type_name].get_latest_definition()
+			return result
+		except Exception: 
+			return None

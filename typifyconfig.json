@@ -6,6 +6,7 @@
     "inference": {
         "builtins": "typify-defaults/stdlib/builtins.pyi",
         "typing": "typify-defaults/stdlib/typing.pyi",
-        "types": "typify-defaults/stdlib/types.pyi"
+        "types": "typify-defaults/stdlib/types.pyi",
+        "__future__": "typify-defaults/stdlib/__future__.pyi"
     }
 }

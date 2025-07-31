@@ -12,6 +12,7 @@ from typify.inferencing.expression import TypeExpr, AliasParser
 from typify.inferencing.commons import (
 	Context,
 	Builtins,
+	Future,
 	ConstantObjects,
 	ArgTuple,
 	Checker
@@ -35,7 +36,7 @@ class Executor(ast.NodeVisitor):
 			context: Context,
 			module_meta: ModuleMeta,
 			symbol: Module | ClassDefinition | FunctionDefinition,
-			namespace: Instance, 
+			namespace: Instance | CallFrame, 
 			caller: Instance,
 			arguments: dict[str, ArgTuple],
 			call_stack: list,
@@ -54,6 +55,10 @@ class Executor(ast.NodeVisitor):
 		self.tree = tree
 		self.snapshot_log = snapshot_log if snapshot_log else []
 		self.returns = ReferenceSet()
+		
+		self.deferred_annotations: dict[str, Instance] = {}
+		self.defer_annotations = False
+		self.import_stmt_count = 0
 
 		self.resolver = Resolver(
 			self.context, 
@@ -149,6 +154,9 @@ class Executor(ast.NodeVisitor):
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_meta.table, position)
+		
+		self.import_stmt_count += 1
+
 		for alias in node.names:
 			name = alias.asname if alias.asname else alias.name.split(".")[0]
 			self.symbol.get_name(name).merge_definition(NameDefinition(defkey))
@@ -179,6 +187,9 @@ class Executor(ast.NodeVisitor):
 	def visit_ImportFrom(self, node):
 		position = (node.lineno, node.col_offset)
 		defkey = (self.module_meta.table, position)
+		
+		self.import_stmt_count += 1
+
 		object_chain = DependencyUtils.resolve_module_objects(
 			defkey,
 			self.context.libs,
@@ -213,6 +224,13 @@ class Executor(ast.NodeVisitor):
 
 					self.symbol.get_name(name).merge_definition(lat_def)
 					self.namespace.get_name(name).merge_definition(lat_def)
+
+					if lat_def.refset and self.import_stmt_count == 1 and isinstance(self.symbol, Module):
+						fobject = self.context.symbol_map.get(Future.module())
+						if fobject:
+							annobject = fobject.names["annotations"].get_plausible_refset().ref()
+							if lat_def.refset.ref() == annobject:
+								self.defer_annotations = True
 				else:
 					fqn = DependencyUtils.to_absolute_name(
 						self.module_meta.table, 
