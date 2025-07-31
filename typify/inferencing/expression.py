@@ -7,7 +7,8 @@ from typify.preprocessing.precollector import PreCollector
 from typify.preprocessing.symbol_table import ClassDefinition
 from typify.inferencing.commons import (
     Checker,
-    Typing
+    Typing,
+	Builtins
 )
 
 class PackedExpr:
@@ -100,8 +101,11 @@ class AliasParser:
 			for k, v in concsubs.items():
 				if k.typevar == annotation:
 					return v
+			return TypeExpr(Typing.get_type("Any"))
 		elif Checker.is_type(annotation):
 			return TypeExpr(annotation.origin)
+		elif annotation.instanceof(Builtins.get_type("NoneType")):
+			return TypeExpr(Builtins.get_type("NoneType"))
 		else:
 			return TypeExpr(Typing.get_type("Any"))
 
@@ -141,6 +145,8 @@ class AliasParser:
 				if k.typevar == tv:
 					return v
 			return TypeExpr(Typing.get_type("Any"))
+		elif packed_expr.base.instanceof(Builtins.get_type("NoneType")):
+			return TypeExpr(Builtins.get_type("NoneType"))
 		else:
 			return TypeExpr(Typing.get_type("Any"))
 
