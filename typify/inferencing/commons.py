@@ -1,3 +1,5 @@
+import ast
+
 from dataclasses import dataclass
 
 from typify.preprocessing.core import GlobalContext
@@ -30,27 +32,28 @@ class ArgTuple:
 
 class Singletons:
 	
-	i_dict: dict[str, Instance] = {
-		"int": None,
-		"float": None,
-		"complex": None,
-		"str": None,
-		"bytes": None,
-		"bool": None,
-		"NoneType": None,
-		"ellipsis": None
+	_dict: dict[str, Instance] = {
+		"True": "bool",
+		"False": "bool",
+		"None": "NoneType",
 	}
 
 	@staticmethod
-	def get(type_name: str):
+	def get(singname: str):
 		from typify.inferencing.typeutils import TypeUtils
-		result = Singletons.i_dict.get(type_name, None)
-		if not result:
-			result = TypeUtils.instantiate_with_args(Builtins.get_type(type_name))
-			Singletons.i_dict[type_name] = result
-		else:
-			result.update_type_info(Builtins.get_type(type_name))
-		return result
+
+		entry = Singletons._dict.get(singname)
+
+		if isinstance(entry, str):
+			instance = TypeUtils.instantiate_with_args(Builtins.get_type(entry))
+			Singletons._dict[instance] = instance
+			return instance
+
+		elif isinstance(entry, Instance):
+			entry.update_type_info(Builtins.get_type(entry))
+			return entry
+
+		return entry
 
 class Checker:
 	@staticmethod

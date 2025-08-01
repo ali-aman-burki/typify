@@ -120,7 +120,13 @@ class Resolver:
 		
 		if isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
-			instance = Singletons.get(type_name)
+			singname = ast.unparse(node)
+			singleton = Singletons.get(singname)
+
+			if singleton: 
+				instance = singleton
+			else:
+				instance = TypeUtils.instantiate_with_args(Builtins.get_type(type_name))
 			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.JoinedStr):

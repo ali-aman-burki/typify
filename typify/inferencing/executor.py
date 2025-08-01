@@ -111,8 +111,8 @@ class Executor(ast.NodeVisitor):
 		self.visit(self.tree)
 		if isinstance(self.namespace, CallFrame):
 			if not TypeUtils.has_complete_return(self.tree.body):
-				self.returns.add(Singletons.get("NoneType"))
-				self.symbol.refset.add(Singletons.get("NoneType"))
+				self.returns.add(Singletons.get("None"))
+				self.symbol.refset.add(Singletons.get("None"))
 			
 			if self.symbol.return_annotation and self.caller:
 				GenericUtils.register_annotation(
