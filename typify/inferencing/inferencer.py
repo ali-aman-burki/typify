@@ -6,29 +6,24 @@ from collections import (
 from typify.logging import logger
 from typify.progbar import ProgressBar
 from typify.utils import Utils
-from typify.preprocessing.dependency_utils import DependencyBundle
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
-from typify.inferencing.executor import Context, Executor
+from typify.inferencing.executor import Executor
 from typify.inferencing.call_stack import CallStack
-from typify.preprocessing.symbol_table import Module
-from typify.preprocessing.instance_utils import (
-    ReferenceSet,
-	Instance
-)
+from typify.preprocessing.instance_utils import ReferenceSet
+from typify.preprocessing.core import GlobalContext
 
 class Inferencer:
 
 	@staticmethod
-	def infer(bundle: DependencyBundle) -> None:
-		meta_map: dict[Module, ModuleMeta] = bundle.meta_map
-		sequences: list[list[ModuleMeta]] = bundle.sequences
-		sysmodules: dict[str, Instance] = bundle.sysmodules
-		libs = bundle.libs
-		cleaned_graph: dict[ModuleMeta, set[ModuleMeta]] = bundle.cleaned_graph
+	def infer() -> None:
 
-		context = Context(libs, sysmodules, {}, {}, meta_map)
+		sequences = GlobalContext.sequences
+		sysmodules = GlobalContext.sysmodules
+		libs = GlobalContext.libs
+		cleaned_graph = GlobalContext.cleaned_graph
+
 		call_stack = CallStack()
 
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
@@ -71,9 +66,8 @@ class Inferencer:
 					meta.table.fqn,
 					TypeUtils.instantiate_with_args(Builtins.get_type("module"))
 				)
-				context.symbol_map[meta.table] = sysmodules[meta.table.fqn]
+				GlobalContext.symbol_map[meta.table] = sysmodules[meta.table.fqn]
 				executor = Executor(
-					context=context,
 					module_meta=meta,
 					symbol=meta.table,
 					namespace=sysmodules[meta.table.fqn],
@@ -128,8 +122,8 @@ class Inferencer:
 			for meta in sequence:
 				pass_counts[meta.table.fqn] = passes[meta]
 
-		logger.debug("Sequence Followed:", trail=1)
+		logger.info("Sequence Followed:", trail=1)
 		sequence_output = [meta.table.fqn for meta in processed]
 		
 		pretty = Utils.pretty_list_arrow(sequence_output, columns=3)
-		logger.debug(pretty, header=False)
+		logger.info(pretty, header=False)

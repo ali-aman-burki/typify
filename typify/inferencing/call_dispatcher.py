@@ -1,6 +1,13 @@
 import ast
 import copy
-
+from typify.inferencing.resolver import Resolver
+from typify.inferencing.typeutils import TypeUtils
+from typify.inferencing.function_utils import FunctionUtils
+from typify.preprocessing.core import GlobalContext
+from typify.inferencing.commons import (
+    Builtins,
+    Checker
+)
 from typify.preprocessing.instance_utils import (
 	ReferenceSet,
 	Instance,
@@ -8,13 +15,6 @@ from typify.preprocessing.instance_utils import (
 from typify.preprocessing.symbol_table import (
     FunctionDefinition,
 	ClassDefinition
-)
-from typify.inferencing.resolver import Resolver
-from typify.inferencing.typeutils import TypeUtils
-from typify.inferencing.function_utils import FunctionUtils
-from typify.inferencing.commons import (
-    Builtins,
-    Checker
 )
 
 class CallDispatcher:
@@ -42,15 +42,14 @@ class CallDispatcher:
 			first_param = next(iter(argmap.values()))
 			first_param.refset = ReferenceSet(inject)
 		
-		prev = self.resolver.context.symbol_map[self.resolver.symbol]
+		prev = GlobalContext.symbol_map[self.resolver.symbol]
 		result = FunctionUtils.exec_function(
-			self.resolver.context, 
 			inject,
 			argmap, 
 			method, 
 			self.resolver.call_stack
 		)
-		self.resolver.context.symbol_map[self.resolver.symbol] = prev
+		GlobalContext.symbol_map[self.resolver.symbol] = prev
 		return result
 
 	def dispatch(self) -> ReferenceSet:

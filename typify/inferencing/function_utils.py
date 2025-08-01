@@ -2,18 +2,18 @@ import ast
 
 from typify.logging import logger
 from typify.inferencing.resolver import Resolver
-from typify.preprocessing.instance_utils import (
-    ReferenceSet,
-    Instance
-)
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.expression import TypeExpr
+from typify.preprocessing.core import GlobalContext
 from typify.inferencing.commons import (
 	Typing, 
 	Builtins,
-	Context,
 	ParameterEntry,
 	ArgTuple
+)
+from typify.preprocessing.instance_utils import (
+    ReferenceSet,
+    Instance
 )
 from typify.inferencing.call_stack import (
     CallStack,
@@ -40,7 +40,6 @@ class FunctionUtils:
 
 	@staticmethod
 	def construct_executor(
-		context: Context, 
 		caller: Instance,
 		arguments: dict[str, ArgTuple], 
 		function_table: FunctionDefinition,
@@ -53,11 +52,10 @@ class FunctionUtils:
 		call_frame.parent = function_table.parent
 
 		mod = call_frame.get_enclosing_module() 
-		context.symbol_map[function_table] = call_frame
-		context_meta = context.meta_map[mod]
+		GlobalContext.symbol_map[function_table] = call_frame
+		context_meta = GlobalContext.meta_map[mod]
 
 		executor = Executor(
-			context=context,
 			module_meta=context_meta,
 			symbol=function_table,
 			namespace=call_frame, 
@@ -72,7 +70,6 @@ class FunctionUtils:
 
 	@staticmethod
 	def exec_function(
-		context: Context, 
 		caller: Instance,
 		arguments: dict[str, ArgTuple], 
 		function_table: FunctionDefinition,
@@ -80,7 +77,6 @@ class FunctionUtils:
 	) -> ReferenceSet:
 
 		executor = FunctionUtils.construct_executor(
-			context, 
 			caller,
 			arguments, 
 			function_table, 
@@ -116,7 +112,6 @@ class FunctionUtils:
 					for sig in traced:
 						logger.debug(f"🚀 Running: {repr(sig)}", 1)
 						executor = FunctionUtils.construct_executor(
-							context,
 							caller,
 							sig.arguments,
 							sig.function_table,

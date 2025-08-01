@@ -7,6 +7,7 @@ from pathlib import Path
 
 from typify.utils import Utils
 from typify.preprocessing.preloader import Preloader
+from typify.preprocessing.core import GlobalContext
 from typify.inferencing.inferencer import Inferencer
 from typify.logging import logger, LogLevel
 
@@ -56,25 +57,25 @@ logger.add_output(open(Path(output_dir) / "typify.log", "w", encoding="utf-8"))
 
 print(Utils.title)
 
-bundle = Preloader.load(config, Path(project_dir))
+Preloader.load(config, Path(project_dir))
 
-logger.debug("📦 Libraries loaded:", 1)
-for libmeta in bundle.libs:
-    logger.debug(f"{str(libmeta.src)}")
+logger.info("📦 Libraries loaded:", 1)
+for libmeta in GlobalContext.libs:
+    logger.info(f"{str(libmeta.src)}")
 
-logger.debug("🧩 Original Graph:", 1)
-for meta, deps in bundle.dependency_graph.items():
+logger.info("🧩 Original Graph:", 1)
+for meta, deps in GlobalContext.dependency_graph.items():
     joined = ", ".join(f"<{dep}>" if isinstance(dep, str) else repr(dep) for dep in deps)
-    logger.debug(f"  {repr(meta)} -> [{joined}]")
+    logger.info(f"  {repr(meta)} -> [{joined}]")
 
-logger.debug("🧹 Cleaned Graph:", 1)
-for meta, deps in bundle.cleaned_graph.items():
+logger.info("🧹 Cleaned Graph:", 1)
+for meta, deps in GlobalContext.cleaned_graph.items():
     joined = ", ".join(f"<{dep}>" if isinstance(dep, str) else repr(dep) for dep in deps)
-    logger.debug(f"  {repr(meta)} -> [{joined}]")
+    logger.info(f"  {repr(meta)} -> [{joined}]")
 
-Inferencer.infer(bundle)
+Inferencer.infer()
 
-bundle.libs[0].export(
+GlobalContext.libs[0].export(
     path=Path(output_dir), 
     prefix_ts="Exporting types",
     prefix_sy="Exporting symbols",

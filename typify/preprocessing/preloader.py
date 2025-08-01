@@ -8,8 +8,8 @@ from dataclasses import dataclass
 
 from typify.progbar import ProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
-from typify.preprocessing.dependency_utils import GraphBuilder, DependencyBundle
-from typify.preprocessing.core import Global
+from typify.preprocessing.dependency_utils import GraphBuilder
+from typify.preprocessing.core import GlobalContext
 
 @dataclass
 class SetupInfo:
@@ -49,7 +49,7 @@ print(json.dumps(info))
 		}
 	
 	@staticmethod
-	def load(config: dict[str, Union[str, list[str], dict[str, str]]], project_dir: Path) -> DependencyBundle:
+	def load(config: dict[str, Union[str, list[str], dict[str, str]]], project_dir: Path):
 		from typify.preprocessing.precollector import PreCollector
 
 		paths = [project_dir]
@@ -77,10 +77,11 @@ print(json.dumps(info))
 			except Exception:
 				continue
 
-		Global.libs = [LibraryMeta(path) for path in paths]
+		GlobalContext.libs = [LibraryMeta(path) for path in paths]
+		
 		print()
 
-		project_lib = Global.libs[0]
+		project_lib = GlobalContext.libs[0]
 		meta_values = list(project_lib.meta_map.values())
 		progress = ProgressBar(
 			len(meta_values), 
@@ -92,15 +93,15 @@ print(json.dumps(info))
 			PreCollector(meta).visit(meta.tree)
 			progress.update(i)
 		
-		for lib in Global.libs:
+		for lib in GlobalContext.libs:
 			for meta in lib.meta_map.values():
 				for k, v in inference.items():
 					try:
-						if meta.src.resolve() == v.resolve() and k not in Global.inference:
-							Global.inference[k] = meta
+						if meta.src.resolve() == v.resolve() and k not in GlobalContext.inference:
+							GlobalContext.inference[k] = meta
 					except Exception:
 						continue
 
-				if Global.inference.keys() == inference.keys():
+				if GlobalContext.inference.keys() == inference.keys():
 					break
-		return GraphBuilder.build_graph(Global.libs)
+		GraphBuilder.build_graph()

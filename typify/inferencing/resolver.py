@@ -3,6 +3,7 @@ import ast
 
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.call_stack import CallStack
+from typify.preprocessing.core import GlobalContext
 from typify.inferencing.unpacking_utils import (
 	TargetEntry,
 	PackGroup
@@ -22,22 +23,18 @@ from typify.preprocessing.symbol_table import (
 	NameDefinition,
 )
 from typify.inferencing.commons import (
-	Context,
 	Builtins,
-	Checker,
-	ConstantObjects,
+	Singletons,
 )
 
 class Resolver:
 	def __init__(
 			self, 
-			context: Context,
 			module_meta: ModuleMeta,
 			symbol: Module | ClassDefinition | FunctionDefinition, 
 			namespace: Instance,
 			call_stack: CallStack
 		):
-		self.context = context
 		self.module_meta = module_meta
 		self.symbol = symbol
 		self.namespace = namespace
@@ -51,7 +48,7 @@ class Resolver:
 				current_symbol = current_symbol.get_enclosing_symbol()
 				continue
 			
-			scope = self.context.symbol_map.get(current_symbol.get_latest_definition())
+			scope = GlobalContext.symbol_map.get(current_symbol.get_latest_definition())
 			
 			if scope: 
 				result = scope.names.get(name)
@@ -123,7 +120,7 @@ class Resolver:
 		
 		if isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
-			instance = ConstantObjects.get(type_name)
+			instance = Singletons.get(type_name)
 			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.JoinedStr):

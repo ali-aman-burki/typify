@@ -9,7 +9,7 @@ class ModuleMeta:
 		from typify.preprocessing.instance_utils import ReferenceSet
 
 		self.src = src
-		self.tree: ast.AST = None
+		self.tree: ast.Module = None
 		self.table = Module(src.stem)
 		self.trust_annotations = trust_annotations
 

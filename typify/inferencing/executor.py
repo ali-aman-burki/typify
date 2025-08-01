@@ -10,10 +10,9 @@ from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.expression import TypeExpr, AliasParser
 from typify.inferencing.commons import (
-	Context,
 	Builtins,
 	Future,
-	ConstantObjects,
+	Singletons,
 	ArgTuple,
 	Checker
 )
@@ -29,11 +28,11 @@ from typify.preprocessing.instance_utils import (
 	Instance,
 	ReferenceSet
 )
+from typify.preprocessing.core import GlobalContext
 
 class Executor(ast.NodeVisitor):
 	def __init__(
 			self, 
-			context: Context,
 			module_meta: ModuleMeta,
 			symbol: Module | ClassDefinition | FunctionDefinition,
 			namespace: Instance | CallFrame, 
@@ -46,7 +45,6 @@ class Executor(ast.NodeVisitor):
 
 		from typify.inferencing.generics.utils import GenericUtils
 
-		self.context = context
 		self.module_meta = module_meta
 		self.symbol = symbol
 		self.namespace = namespace
@@ -61,7 +59,6 @@ class Executor(ast.NodeVisitor):
 		self.import_stmt_count = 0
 
 		self.resolver = Resolver(
-			self.context, 
 			self.module_meta, 
 			self.symbol, 
 			self.namespace,
@@ -114,8 +111,8 @@ class Executor(ast.NodeVisitor):
 		self.visit(self.tree)
 		if isinstance(self.namespace, CallFrame):
 			if not TypeUtils.has_complete_return(self.tree.body):
-				self.returns.add(ConstantObjects.get("NoneType"))
-				self.symbol.refset.add(ConstantObjects.get("NoneType"))
+				self.returns.add(Singletons.get("NoneType"))
+				self.symbol.refset.add(Singletons.get("NoneType"))
 			
 			if self.symbol.return_annotation and self.caller:
 				GenericUtils.register_annotation(
@@ -164,8 +161,6 @@ class Executor(ast.NodeVisitor):
 
 			object_chain = DependencyUtils.resolve_module_objects(
 				defkey, 
-				self.context.libs, 
-				self.context.sysmodules, 
 				alias.name
 			)
 			if not object_chain:
@@ -192,8 +187,6 @@ class Executor(ast.NodeVisitor):
 
 		object_chain = DependencyUtils.resolve_module_objects(
 			defkey,
-			self.context.libs,
-			self.context.sysmodules,
 			node.module, node.level
 		)
 		
@@ -226,7 +219,7 @@ class Executor(ast.NodeVisitor):
 					self.namespace.get_name(name).merge_definition(lat_def)
 
 					if lat_def.refset and self.import_stmt_count == 1 and isinstance(self.symbol, Module):
-						fobject = self.context.symbol_map.get(Future.module())
+						fobject = GlobalContext.symbol_map.get(Future.module())
 						if fobject:
 							annobject = fobject.names["annotations"].get_plausible_refset().ref()
 							if lat_def.refset.ref() == annobject:
@@ -240,8 +233,6 @@ class Executor(ast.NodeVisitor):
 					fqn += f".{alias.name}"
 					new_object_chain = DependencyUtils.resolve_module_objects(
 						defkey,
-						self.context.libs,
-						self.context.sysmodules,
 						fqn
 					)
 					if not new_object_chain: continue
@@ -267,7 +258,7 @@ class Executor(ast.NodeVisitor):
 		class_table = self.symbol.get_class(name)
 		entering_symbol = class_table.get_definition(ClassDefinition(defkey))
 
-		builtins_module_object = self.context.symbol_map.get(Builtins.module())
+		builtins_module_object = GlobalContext.symbol_map.get(Builtins.module())
 		entering_symbol.bases.clear()
 		entering_symbol.genbases.clear()
 
@@ -296,7 +287,7 @@ class Executor(ast.NodeVisitor):
 		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
 		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
 		
-		entering_namespace = self.context.symbol_map.setdefault(
+		entering_namespace = GlobalContext.symbol_map.setdefault(
 			entering_symbol,
 			TypeUtils.instantiate_with_args(
 				Builtins.get_type("type"),
@@ -310,7 +301,6 @@ class Executor(ast.NodeVisitor):
 
 		entering_namespace.origin = entering_symbol
 		Executor(
-			context=self.context,
 			module_meta=self.module_meta,
 			symbol=entering_symbol,
 			namespace=entering_namespace,
@@ -355,7 +345,7 @@ class Executor(ast.NodeVisitor):
 			if self.module_meta.fslots:
 				self.module_meta.fslots[position][2][k] = mdef.refset
 
-		func_obj = self.context.function_object_map.setdefault(
+		func_obj = GlobalContext.function_object_map.setdefault(
 			function_def,
 			TypeUtils.instantiate_with_args(Builtins.get_type("function"))
 		)
