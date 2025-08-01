@@ -32,7 +32,13 @@ class ArgTuple:
 
 class Singletons:
 	
-	_dict: dict[str, Instance] = {
+	_dict: dict[str, str | Instance] = {
+		"True": None,
+		"False": None,
+		"None": None,
+	}
+
+	_typenames = {
 		"True": "bool",
 		"False": "bool",
 		"None": "NoneType",
@@ -42,18 +48,19 @@ class Singletons:
 	def get(singname: str):
 		from typify.inferencing.typeutils import TypeUtils
 
+		if singname not in Singletons._dict: return None
+
 		entry = Singletons._dict.get(singname)
+		typename = Singletons._typenames.get(singname)
+		btype = Builtins.get_type(typename)
 
-		if isinstance(entry, str):
-			instance = TypeUtils.instantiate_with_args(Builtins.get_type(entry))
-			Singletons._dict[instance] = instance
-			return instance
-
-		elif isinstance(entry, Instance):
-			entry.update_type_info(Builtins.get_type(entry))
+		if isinstance(entry, Instance):
+			entry.update_type_info(btype)
 			return entry
-
-		return entry
+		else:
+			instance = TypeUtils.instantiate_with_args(btype)
+			Singletons._dict[singname] = instance
+			return instance
 
 class Checker:
 	@staticmethod

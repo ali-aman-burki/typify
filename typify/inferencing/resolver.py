@@ -117,7 +117,6 @@ class Resolver:
 		from typify.inferencing.call_dispatcher import CallDispatcher
 		from typify.inferencing.typeutils import TypeUtils
 		from typify.inferencing.desugar import Desugar
-		
 		if isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			singname = ast.unparse(node)
@@ -127,6 +126,8 @@ class Resolver:
 				instance = singleton
 			else:
 				instance = TypeUtils.instantiate_with_args(Builtins.get_type(type_name))
+
+			instance.cval = node.value
 			return ReferenceSet(instance)
 		
 		elif isinstance(node, ast.JoinedStr):

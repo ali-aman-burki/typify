@@ -49,6 +49,7 @@ class Instance:
 		self.store: list[ReferenceSet] = []
 		self.packed_expr: PackedExpr = None
 		self.origin: ClassDefinition | FunctionDefinition = None
+		self.cval = None
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	
