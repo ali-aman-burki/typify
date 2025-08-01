@@ -14,8 +14,8 @@ class ProgressBar:
 		empty: str = '━',
 		prefix: str = '',
 		suffix: str = '',
-		left: str = '[',
-		right: str = ']',
+		left: str = '',
+		right: str = '',
 		decimals: int = 1,
 		progress_format: Literal["percent", "counter", "none"] = "counter",
 		prefix_width: int = 36,
@@ -102,8 +102,8 @@ class IndeterminateProgressBar:
 		empty: str = '━',
 		prefix: str = '',
 		suffix: str = '',
-		left: str = '[',
-		right: str = ']',
+		left: str = '',
+		right: str = '',
 		prefix_width: int = 50,
 	) -> None:
 		self.length: int = length

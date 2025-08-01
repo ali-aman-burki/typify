@@ -1,7 +1,7 @@
 from typify.progbar import IndeterminateProgressBar
 import time
 
-bar = IndeterminateProgressBar(prefix="Loading", suffix="Please wait...")
+bar = IndeterminateProgressBar(prefix="Loading", suffix="Please wait...", speed=0.01)
 bar.start()
 
 # Simulate work
