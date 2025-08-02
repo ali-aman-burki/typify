@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+
 from typify.logging import logger
 from typify.preprocessing.symbol_table import (
 	Name, 
@@ -8,32 +10,32 @@ from typify.preprocessing.symbol_table import (
 )
 
 class ReferenceSet:
-
 	def __init__(self, *reference_list: Instance):
-		self.references = set(reference_list)
-	
+		self.references = dict.fromkeys(reference_list)
+
 	def __repr__(self) -> str: return repr(self.as_type())
 	def __len__(self) -> int: return len(self.references)
 	def __contains__(self, item: Instance) -> bool: return item in self.references
 	def __iter__(self): return iter(self.references)
-	
+
 	def copy(self):
 		c = ReferenceSet()
-		c.update(self)
+		c.references = self.references.copy()
 		return c
 
 	def add(self, reference: Instance):
-		self.references.add(reference)
-	
-	def update(self, other: ReferenceSet):
-		self.references.update(other.references)
+		self.references[reference] = None
+
+	def update(self, other: 'ReferenceSet'):
+		for ref in other:
+			self.references[ref] = None
 	
 	def ref(self) -> Instance | None:
 		if len(self.references) > 1: 
 			logger.error("Multiple references found where 1 was expected.")
-		elif len(self.references) < 1:
+		if not self.references:
 			return None
-		return next(iter(self.references))
+		return next(reversed(self.references))
 	
 	def as_type(self):
 		from typify.inferencing.typeutils import TypeUtils
@@ -53,6 +55,68 @@ class Instance:
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	
+	def mutate_to(self, another: Instance):
+		self.origin = another.origin
+		self.names = another.names
+		self.packed_expr = another.packed_expr
+		self.store = another.store
+		self.cval = another.cval
+		self.genconstruct = another.genconstruct
+
+		self.update_type_info(
+			another.instantiator, 
+			another.as_type().typeargs
+		)
+
+	def build_annotation_lookup(self) -> dict[str, Instance]:
+		from typify.inferencing.commons import Builtins, Typing, Checker
+
+		if self.instanceof(Builtins.get_type("str")):
+			return { self.cval: self }
+		elif Checker.is_generic_alias(self):
+			pexpr = self.packed_expr
+			if not Checker.match_origin(pexpr.base.origin, Typing.get_type("Literal")):
+				result = {}
+				for arg in pexpr.args:
+					result.update(arg.base.build_annotation_lookup())
+				return result
+		return {}
+
+	def resolve_ignore_str(self, resolver):
+		from typify.inferencing.commons import Builtins, Typing, Checker
+		from typify.inferencing.resolver import Resolver
+
+		resolver: Resolver = resolver
+
+		if self.instanceof(Builtins.get_type("str")):
+			node = ast.parse(self.cval, mode="eval").body
+			refset = resolver.resolve_value(node)
+			if refset:
+				ref = refset.ref()
+				self.mutate_to(ref)
+				self.resolve_ignore_str(resolver)
+		elif Checker.is_generic_alias(self):
+			pexpr = self.packed_expr
+			if not Checker.match_origin(pexpr.base.origin, Typing.get_type("Literal")):
+				for arg in pexpr.args:
+					arg.base.resolve_ignore_str(resolver)				
+
+	def build_string_lookup(self) -> dict[Instance, str]:
+		from typify.inferencing.commons import Builtins, Typing, Checker
+		
+		if self.instanceof(Builtins.get_type("str")):
+			return { self: self.cval }
+		elif Checker.is_generic_alias(self):
+			pexpr = self.packed_expr
+			if Checker.match_origin(pexpr.base.origin, Typing.get_type("Literal")):
+				return {}
+			result = {}
+			for arg in pexpr.args:
+				result.update(arg.base.build_string_lookup())
+			return result
+		else:
+			return {}
+
 	def instanceof(self, *typedefs: ClassDefinition | tuple[ClassDefinition, ...]) -> bool:
 		from typify.inferencing.commons import Checker
 

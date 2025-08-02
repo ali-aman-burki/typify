@@ -26,7 +26,7 @@ class PackedExpr:
 		prefix = ""
 		if self.base:
 			if self.base.origin: prefix = self.base.origin.parent.id
-			else: prefix = self.base.instantiator.parent.id
+			else: prefix = repr(self.base)
 
 		fqn = prefix if prefix else PreCollector.UNVISITED
 		strs = []
@@ -150,6 +150,7 @@ class AliasParser:
 		else:
 			return TypeExpr(Typing.get_type("Any"))
 
+	#TODO: may need to later uncomment. so far no evidence of incorrect output if not uncommented
 	@staticmethod
 	def get_packed_expr(resolver, elt: ast.Expr):
 		from typify.inferencing.resolver import Resolver
@@ -158,10 +159,10 @@ class AliasParser:
 		relt = resolver.resolve_value(elt)
 		if relt: 
 			relt = relt.ref()
-			if Checker.is_generic_alias(relt):
-				return relt.packed_expr
-			else:
-				return PackedExpr(relt)
+			# if Checker.is_generic_alias(relt):
+			# 	return relt.packed_expr
+			# else:
+			return PackedExpr(relt)
 		return None
 
 	@staticmethod

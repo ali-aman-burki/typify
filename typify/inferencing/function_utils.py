@@ -77,10 +77,10 @@ class FunctionUtils:
 	) -> ReferenceSet:
 
 		executor = FunctionUtils.construct_executor(
-			caller,
-			arguments, 
-			function_table, 
-			call_stack
+			caller=caller,
+			arguments=arguments, 
+			function_table=function_table, 
+			call_stack=call_stack
 		)
 		sigkey = CallSignature(function_table, arguments)
 		signature = call_stack.get(sigkey) or sigkey
@@ -112,10 +112,10 @@ class FunctionUtils:
 					for sig in traced:
 						logger.debug(f"🚀 Running: {repr(sig)}", 1)
 						executor = FunctionUtils.construct_executor(
-							caller,
-							sig.arguments,
-							sig.function_table,
-							call_stack
+							caller=caller,
+							arguments=sig.arguments,
+							function_table=sig.function_table,
+							call_stack=call_stack
 						)
 
 						snapshot_before = sig.snapshot
@@ -215,7 +215,8 @@ class FunctionUtils:
 	@staticmethod
 	def collect_parameters(
 		fdef: ast.FunctionDef | ast.AsyncFunctionDef, 
-		resolver: Resolver
+		resolver: Resolver,
+		defer_annotations: bool
 	) -> dict[str, ParameterEntry]:
 		
 		args_node = fdef.args
@@ -223,9 +224,13 @@ class FunctionUtils:
 
 		def resolve_annotation(arg: ast.arg) -> Instance:
 			if arg.annotation:
-				results = resolver.resolve_value(arg.annotation)
+				node = arg.annotation
+				if defer_annotations:
+					node = ast.Constant(ast.unparse(arg.annotation))
+				results = resolver.resolve_value(node)
 				if results: return results.ref()
-			return None
+
+			return Instance(None)
 
 		def register_arg(
 			arg: ast.arg,
@@ -248,6 +253,7 @@ class FunctionUtils:
 				defkey=defkey,
 				is_posonly=is_posonly,
 				is_kwonly=is_kwonly,
+				node=arg.annotation,
 				annotation=resolve_annotation(arg),
 			)
 			parameters[name] = entry
@@ -274,6 +280,7 @@ class FunctionUtils:
 				refset=refset,
 				defkey=defkey,
 				is_vararg=True,
+				node=arg.annotation,
 				annotation=resolve_annotation(arg),
 			)
 
@@ -295,6 +302,7 @@ class FunctionUtils:
 				refset=refset,
 				defkey=defkey,
 				is_kwarg=True,
+				node=arg.annotation,
 				annotation=resolve_annotation(arg),
 			)
 

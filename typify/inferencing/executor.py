@@ -1,6 +1,11 @@
 import ast
 import copy
+
 from collections import defaultdict
+from dataclasses import (
+    dataclass,
+    field
+)
 
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.function_utils import FunctionUtils
@@ -8,7 +13,11 @@ from typify.preprocessing.dependency_utils import DependencyUtils
 from typify.inferencing.mro import MROBuilder
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import TypeUtils
-from typify.inferencing.expression import TypeExpr, AliasParser
+from typify.preprocessing.core import GlobalContext
+from typify.inferencing.expression import (
+    TypeExpr, 
+    AliasParser
+)
 from typify.inferencing.commons import (
 	Builtins,
 	Future,
@@ -28,7 +37,27 @@ from typify.preprocessing.instance_utils import (
 	Instance,
 	ReferenceSet
 )
-from typify.preprocessing.core import GlobalContext
+
+@dataclass
+class DeferredAnnotations:
+	resolver: Resolver
+	on: bool = False
+	annotation_lookup: dict[str, Instance] = field(default_factory=dict)
+	string_lookup: dict[Instance, str] = field(default_factory=dict)
+
+	def compute(self):
+		newlookup: dict[str, Instance] = {}
+		for k in self.annotation_lookup:
+			aststr = ast.Constant(k)
+			refset = self.resolver.resolve_value(aststr)
+			if refset:
+				ref = refset.ref()
+				ref.resolve_ignore_str(self.resolver)
+				newlookup[k] = ref
+
+		for k, v in self.string_lookup.items():
+			from_lookup = newlookup[v]
+			k.mutate_to(from_lookup)
 
 class Executor(ast.NodeVisitor):
 	def __init__(
@@ -40,6 +69,7 @@ class Executor(ast.NodeVisitor):
 			arguments: dict[str, ArgTuple],
 			call_stack: list,
 			tree: ast.AST,
+			deferred_annotations: DeferredAnnotations = None,
 			snapshot_log: list[ReferenceSet] = None
 		):
 
@@ -52,18 +82,18 @@ class Executor(ast.NodeVisitor):
 		self.call_stack = call_stack
 		self.tree = tree
 		self.snapshot_log = snapshot_log if snapshot_log else []
-		self.returns = ReferenceSet()
-		
-		self.deferred_annotations: dict[str, Instance] = {}
-		self.defer_annotations = False
+
 		self.import_stmt_count = 0
 
+		self.returns = ReferenceSet()
 		self.resolver = Resolver(
 			self.module_meta, 
 			self.symbol, 
 			self.namespace,
 			self.call_stack
 		)
+
+		self.deferred_annotations = deferred_annotations or DeferredAnnotations(self.resolver)
 
 		for argname in arguments:
 			argtuple = arguments[argname]
@@ -125,6 +155,7 @@ class Executor(ast.NodeVisitor):
 			if self.module_meta.fslots:
 				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
 				self.module_meta.fslots[position][3] = self.symbol.refset
+		
 		return self.returns
 
 	def snapshot(self): 
@@ -223,7 +254,7 @@ class Executor(ast.NodeVisitor):
 						if fobject:
 							annobject = fobject.names["annotations"].get_plausible_refset().ref()
 							if lat_def.refset.ref() == annobject:
-								self.defer_annotations = True
+								self.deferred_annotations.on = True
 				else:
 					fqn = DependencyUtils.to_absolute_name(
 						self.module_meta.table, 
@@ -244,7 +275,8 @@ class Executor(ast.NodeVisitor):
 				
 				reference = self.namespace.get_name(name).lookup_definition(defkey).refset
 				self.add_to_snapshot(reference)
-				
+	
+		self.deferred_annotations.compute()
 		self.generic_visit(node)
 
 	#TODO: add support for multiple possible candidates for a single base
@@ -308,6 +340,7 @@ class Executor(ast.NodeVisitor):
 			arguments={},
 			call_stack=self.call_stack,
 			tree=ast.Module(class_tree.body, type_ignores=[]),
+			deferred_annotations=self.deferred_annotations,
 			snapshot_log=self.snapshot_log
 		).execute()
 
@@ -319,7 +352,8 @@ class Executor(ast.NodeVisitor):
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
 
 		self.add_to_snapshot(deftable.refset)
-		
+		self.deferred_annotations.compute()
+
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
 		position = (func_tree.lineno, func_tree.col_offset)
 		defkey = (self.module_meta.table, position)
@@ -332,11 +366,34 @@ class Executor(ast.NodeVisitor):
 		function_table = self.symbol.get_function(name)
 		function_def = function_table.merge_definition(FunctionDefinition(defkey))
 		function_def.tree = func_tree
-		function_def.parameters = FunctionUtils.collect_parameters(func_tree, self.resolver)
+		function_def.parameters = FunctionUtils.collect_parameters(
+			func_tree, 
+			self.resolver, 
+			self.deferred_annotations.on
+		)
+
+		for p in function_def.parameters.values():
+			if p.node:
+				self.deferred_annotations.string_lookup.update(
+					p.annotation.build_string_lookup()
+				)
+				self.deferred_annotations.annotation_lookup.update(
+					p.annotation.build_annotation_lookup()
+				)
 
 		if func_tree.returns:
-			arefset = self.resolver.resolve_value(func_tree.returns)
-			if arefset: function_def.return_annotation = arefset.ref()
+			node = func_tree.returns
+			if self.deferred_annotations.on:
+				node = ast.Constant(ast.unparse(func_tree.returns))
+			arefset = self.resolver.resolve_value(node)
+			if arefset: 
+				function_def.return_annotation = arefset.ref()
+				self.deferred_annotations.string_lookup.update(
+					function_def.return_annotation.build_string_lookup()
+				)
+				self.deferred_annotations.annotation_lookup.update(
+					function_def.return_annotation.build_annotation_lookup()
+				)
 
 		for k, v in function_def.parameters.items():
 			ndef = NameDefinition(v.defkey)
@@ -386,6 +443,7 @@ class Executor(ast.NodeVisitor):
 
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
+		self.deferred_annotations.compute()
 
 	def visit_Assign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
@@ -393,6 +451,8 @@ class Executor(ast.NodeVisitor):
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
+		
+		self.deferred_annotations.compute()
 	
 	def visit_AugAssign(self, node):
 		from typify.inferencing.desugar import Desugar

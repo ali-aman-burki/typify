@@ -22,7 +22,8 @@ class ParameterEntry:
 	is_kwarg: bool = False
 	is_kwonly: bool = False
 	is_posonly: bool = False
-
+	
+	node: ast.expr = None
 	annotation: Instance = None
 
 @dataclass
