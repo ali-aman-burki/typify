@@ -373,7 +373,7 @@ class Executor(ast.NodeVisitor):
 		)
 
 		for p in function_def.parameters.values():
-			if p.node:
+			if p.node and p.annotation:
 				self.deferred_annotations.string_lookup.update(
 					p.annotation.build_string_lookup()
 				)

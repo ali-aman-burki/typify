@@ -230,7 +230,7 @@ class FunctionUtils:
 				results = resolver.resolve_value(node)
 				if results: return results.ref()
 
-			return Instance(None)
+			return None
 
 		def register_arg(
 			arg: ast.arg,
