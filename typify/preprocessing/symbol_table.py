@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-import ast
+
 import json
 
 class _PathHolder:
@@ -173,8 +173,8 @@ class ClassDefinition(_LocatableSymbol):
 	def to_dict(self):
 		base_data = super().to_dict()
 		data = {
-			"bases": [(base.origin.fqn + ":" + str(id(base))) for base in self.bases],
-			"mro": [(base.origin.fqn + ":" + str(id(base))) for base in self.mro],
+			"bases": [base.origin.fqn for base in self.bases],
+			"mro": [base.origin.fqn for base in self.mro],
 		}
 		data.update(base_data)
 		return data
@@ -183,15 +183,6 @@ class FunctionDefinition(
 	_LocatableSymbol, 
 	_ReferenceHolder
 ):
-	def __init__(self, defkey: tuple[Module, tuple[int, int]]):
-		from typify.inferencing.commons import ParameterEntry
-		from typify.preprocessing.instance_utils import Instance
-
-		super().__init__(defkey)
-		self.tree: ast.FunctionDef | ast.AsyncFunctionDef = None
-		self.parameters: dict[str, ParameterEntry] = {}
-		self.return_annotation: Instance = None
-	
 	def to_dict(self):
 		base_data = super().to_dict()
 		data = {

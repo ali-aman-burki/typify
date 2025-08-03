@@ -45,6 +45,7 @@ class Instance:
 	def __init__(self, instantiator: ClassDefinition):
 		from typify.inferencing.generics.model import GenericConstruct
 		from typify.inferencing.expression import PackedExpr
+		from typify.inferencing.commons import ParameterEntry
 
 		self.instantiator: ClassDefinition = instantiator
 		self.names: dict[str, Name] = {}
@@ -52,6 +53,10 @@ class Instance:
 		self.packed_expr: PackedExpr = None
 		self.origin: ClassDefinition | FunctionDefinition = None
 		self.cval = None
+		
+		self.tree: ast.FunctionDef | ast.AsyncFunctionDef = None
+		self.parameters: dict[str, ParameterEntry] = {}
+		self.return_annotation: Instance = None
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	

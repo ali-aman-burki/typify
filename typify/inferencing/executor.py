@@ -107,8 +107,9 @@ class Executor(ast.NodeVisitor):
 			ndef.refset.update(refset)
 			namespace_name.set_definition(ndef)
 			merged = symbol_name.merge_definition(ndef)
-
-			annotation = self.symbol.parameters[argname].annotation
+			
+			fobject = GlobalContext.function_object_map[self.symbol]
+			annotation = fobject.parameters[argname].annotation
 
 			if annotation and caller:
 				GenericUtils.register_annotation(
@@ -119,23 +120,29 @@ class Executor(ast.NodeVisitor):
 				)
 
 			if self.module_meta.fslots:
-				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+				position = (fobject.tree.lineno, fobject.tree.col_offset)
 				self.module_meta.fslots[position][2][argname] = merged.refset
 
 	def execute(self) -> ReferenceSet: 
 		from typify.inferencing.generics.utils import GenericUtils
 		
-		if isinstance(self.namespace, CallFrame) and FunctionUtils.is_stub(self.symbol.tree):
-			if self.symbol.return_annotation and self.symbol.return_annotation.instantiator:
+		fobject = GlobalContext.function_object_map.get(self.symbol)
+		if isinstance(self.namespace, CallFrame) and FunctionUtils.is_stub(fobject.tree):
+			if fobject.return_annotation and fobject.return_annotation.instantiator:
 				concsubs = {}
 				if self.caller:
 					gencons = self.caller.genconstruct.get(self.symbol.get_enclosing_class_definition())
 					if gencons:
 						concsubs = gencons.concsubs
-				type_expr = AliasParser.annotation_to_typeexpr(self.symbol.return_annotation, concsubs)
+				type_expr = AliasParser.annotation_to_typeexpr(fobject.return_annotation, concsubs)
 				result = TypeUtils.instantiate_from_type_expr(type_expr)
 				self.returns.update(result)
 				self.symbol.refset.update(result)
+
+				if self.module_meta.fslots:
+					position = (fobject.tree.lineno, fobject.tree.col_offset)
+					self.module_meta.fslots[position][3] = self.symbol.refset
+				
 				return self.returns
 
 		self.visit(self.tree)
@@ -144,16 +151,16 @@ class Executor(ast.NodeVisitor):
 				self.returns.add(Singletons.get("None"))
 				self.symbol.refset.add(Singletons.get("None"))
 			
-			if self.symbol.return_annotation and self.symbol.return_annotation.instantiator and self.caller:
+			if fobject.return_annotation and fobject.return_annotation.instantiator and self.caller:
 				GenericUtils.register_annotation(
-					annotation=self.symbol.return_annotation,
+					annotation=fobject.return_annotation,
 					type_expr=self.returns.as_type(),
 					classdef=self.symbol.get_enclosing_class_definition(),
 					genconstruct=self.caller.genconstruct
 				)
 
 			if self.module_meta.fslots:
-				position = (self.symbol.tree.lineno, self.symbol.tree.col_offset)
+				position = (fobject.tree.lineno, fobject.tree.col_offset)
 				self.module_meta.fslots[position][3] = self.symbol.refset
 		
 		return self.returns
@@ -382,14 +389,25 @@ class Executor(ast.NodeVisitor):
 
 		function_table = self.symbol.get_function(name)
 		function_def = function_table.merge_definition(FunctionDefinition(defkey))
-		function_def.tree = func_tree
-		function_def.parameters = FunctionUtils.collect_parameters(
+
+		if not isinstance(self.namespace, CallFrame):
+			func_obj = GlobalContext.function_object_map.setdefault(
+				function_def,
+				TypeUtils.instantiate_with_args(Builtins.get_type("function"))
+			)
+		else:
+			func_obj = TypeUtils.instantiate_with_args(Builtins.get_type("function"))
+			GlobalContext.function_object_map[function_def] = func_obj
+		
+		func_obj.update_type_info(Builtins.get_type("function"))
+		func_obj.origin = function_def
+		func_obj.tree = func_tree
+		func_obj.parameters = FunctionUtils.collect_parameters(
 			func_tree, 
 			self.resolver, 
 			self.deferred_annotations.on
 		)
-
-		for p in function_def.parameters.values():
+		for p in func_obj.parameters.values():
 			if p.annotation:
 				self.deferred_annotations.string_lookup.update(
 					p.annotation.build_string_lookup()
@@ -404,35 +422,23 @@ class Executor(ast.NodeVisitor):
 				node = ast.Constant(ast.unparse(func_tree.returns))
 			arefset = self.resolver.resolve_value(node)
 			if arefset: 
-				function_def.return_annotation = arefset.ref()
+				func_obj.return_annotation = arefset.ref()
 			else:
-				function_def.return_annotation = Instance(None)
+				func_obj.return_annotation = Instance(None)
 
 			self.deferred_annotations.string_lookup.update(
-				function_def.return_annotation.build_string_lookup()
+				func_obj.return_annotation.build_string_lookup()
 			)
 			self.deferred_annotations.annotation_lookup.update(
-				function_def.return_annotation.build_annotation_lookup()
+				func_obj.return_annotation.build_annotation_lookup()
 			)
 
-		for k, v in function_def.parameters.items():
+		for k, v in func_obj.parameters.items():
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset.copy()
 			mdef = function_def.get_name(k).set_definition(ndef)
 			if self.module_meta.fslots:
 				self.module_meta.fslots[position][2][k] = mdef.refset
-
-		if not isinstance(self.namespace, CallFrame):
-			func_obj = GlobalContext.function_object_map.setdefault(
-				function_def,
-				TypeUtils.instantiate_with_args(Builtins.get_type("function"))
-			)
-		else:
-			func_obj = TypeUtils.instantiate_with_args(Builtins.get_type("function"))
-			GlobalContext.function_object_map[function_def] = func_obj
-		
-		func_obj.update_type_info(Builtins.get_type("function"))
-		func_obj.origin = function_def
 
 		deftable = NameDefinition(defkey)
 		deftable.refset.add(func_obj)

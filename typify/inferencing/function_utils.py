@@ -19,10 +19,7 @@ from typify.inferencing.call_stack import (
     CallStack,
     CallSignature,
 )
-from typify.preprocessing.symbol_table import (
-	FunctionDefinition, 
-	CallFrame,
-)
+from typify.preprocessing.symbol_table import CallFrame
 
 class FunctionUtils:
 
@@ -41,13 +38,14 @@ class FunctionUtils:
 	@staticmethod
 	def construct_executor(
 		caller: Instance,
+		fobject: Instance,
 		arguments: dict[str, ArgTuple], 
-		function_table: FunctionDefinition,
 		call_stack: CallStack
 	):
 		from typify.inferencing.executor import Executor
 		
-		tree = function_table.tree
+		function_table = fobject.origin
+		tree = fobject.tree
 		call_frame = CallFrame(f"frame@{function_table.parent.fqn}")
 		call_frame.parent = function_table.parent
 
@@ -72,14 +70,16 @@ class FunctionUtils:
 	def exec_function(
 		caller: Instance,
 		arguments: dict[str, ArgTuple], 
-		function_table: FunctionDefinition,
+		fobject: Instance,
 		call_stack: CallStack
 	) -> ReferenceSet:
 
+		function_table = fobject.origin
+
 		executor = FunctionUtils.construct_executor(
 			caller=caller,
+			fobject=fobject, 
 			arguments=arguments, 
-			function_table=function_table, 
 			call_stack=call_stack
 		)
 		sigkey = CallSignature(function_table, arguments)
@@ -111,10 +111,13 @@ class FunctionUtils:
 
 					for sig in traced:
 						logger.debug(f"🚀 Running: {repr(sig)}", 1)
+
+						sigfobject = GlobalContext.function_object_map[sig.function_table]
+
 						executor = FunctionUtils.construct_executor(
 							caller=caller,
+							fobject=sigfobject,
 							arguments=sig.arguments,
-							function_table=sig.function_table,
 							call_stack=call_stack
 						)
 
@@ -245,8 +248,7 @@ class FunctionUtils:
 			defkey = (resolver.module_meta.table, (arg.lineno, arg.col_offset))
 			
 			if default_value is not None:
-				for instance in resolver.resolve_value(default_value):
-					refset.add(instance)
+				refset.update(resolver.resolve_value(default_value))
 
 			entry = ParameterEntry(
 				name=name,
