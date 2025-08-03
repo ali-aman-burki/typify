@@ -45,19 +45,7 @@ class DeferredAnnotations:
 	annotation_lookup: dict[str, Instance] = field(default_factory=dict)
 	string_lookup: dict[Instance, str] = field(default_factory=dict)
 
-	def compute(self):
-		newlookup: dict[str, Instance] = {}
-		for k in self.annotation_lookup:
-			aststr = ast.Constant(k)
-			refset = self.resolver.resolve_value(aststr)
-			if refset:
-				ref = refset.ref()
-				ref.resolve_ignore_str(self.resolver)
-				newlookup[k] = ref
-
-		for k, v in self.string_lookup.items():
-			from_lookup = newlookup[v]
-			k.mutate_to(from_lookup)
+	def compute(self):...
 
 class Executor(ast.NodeVisitor):
 	def __init__(
@@ -283,7 +271,6 @@ class Executor(ast.NodeVisitor):
 				reference = self.namespace.get_name(name).lookup_definition(defkey).refset
 				self.add_to_snapshot(reference)
 	
-		self.deferred_annotations.compute()
 		self.generic_visit(node)
 
 	#TODO: add support for multiple possible candidates for a single base
@@ -376,7 +363,6 @@ class Executor(ast.NodeVisitor):
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
 
 		self.add_to_snapshot(deftable.refset)
-		self.deferred_annotations.compute()
 
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
 		position = (func_tree.lineno, func_tree.col_offset)
@@ -405,33 +391,12 @@ class Executor(ast.NodeVisitor):
 		func_obj.parameters = FunctionUtils.collect_parameters(
 			func_tree, 
 			self.resolver, 
-			self.deferred_annotations.on
 		)
-		for p in func_obj.parameters.values():
-			if p.annotation:
-				self.deferred_annotations.string_lookup.update(
-					p.annotation.build_string_lookup()
-				)
-				self.deferred_annotations.annotation_lookup.update(
-					p.annotation.build_annotation_lookup()
-				)
 
 		if func_tree.returns:
-			node = func_tree.returns
-			if self.deferred_annotations.on:
-				node = ast.Constant(ast.unparse(func_tree.returns))
-			arefset = self.resolver.resolve_value(node)
+			arefset = self.resolver.resolve_value(func_tree.returns)
 			if arefset: 
 				func_obj.return_annotation = arefset.ref()
-			else:
-				func_obj.return_annotation = Instance(None)
-
-			self.deferred_annotations.string_lookup.update(
-				func_obj.return_annotation.build_string_lookup()
-			)
-			self.deferred_annotations.annotation_lookup.update(
-				func_obj.return_annotation.build_annotation_lookup()
-			)
 
 		for k, v in func_obj.parameters.items():
 			ndef = NameDefinition(v.defkey)
@@ -474,7 +439,6 @@ class Executor(ast.NodeVisitor):
 
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
-		self.deferred_annotations.compute()
 
 	def visit_Assign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
@@ -483,7 +447,6 @@ class Executor(ast.NodeVisitor):
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
 		
-		self.deferred_annotations.compute()
 	
 	def visit_AugAssign(self, node):
 		from typify.inferencing.desugar import Desugar

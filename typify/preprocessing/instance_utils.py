@@ -60,68 +60,6 @@ class Instance:
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	
-	def mutate_to(self, another: Instance):
-		self.origin = another.origin
-		self.names = another.names
-		self.packed_expr = another.packed_expr
-		self.store = another.store
-		self.cval = another.cval
-		self.genconstruct = another.genconstruct
-
-		self.update_type_info(
-			another.instantiator, 
-			another.as_type().typeargs
-		)
-
-	def build_annotation_lookup(self) -> dict[str, Instance]:
-		from typify.inferencing.commons import Builtins, Typing, Checker
-
-		if self.instanceof(Builtins.get_type("str")):
-			return { self.cval: self }
-		elif Checker.is_generic_alias(self):
-			pexpr = self.packed_expr
-			if not Checker.match_origin(pexpr.base.origin, Typing.get_type("Literal")):
-				result = {}
-				for arg in pexpr.args:
-					result.update(arg.base.build_annotation_lookup())
-				return result
-		return {}
-
-	def resolve_ignore_str(self, resolver):
-		from typify.inferencing.commons import Builtins, Typing, Checker
-		from typify.inferencing.resolver import Resolver
-
-		resolver: Resolver = resolver
-
-		if self.instanceof(Builtins.get_type("str")):
-			node = ast.parse(self.cval, mode="eval").body
-			refset = resolver.resolve_value(node)
-			if refset:
-				ref = refset.ref()
-				self.mutate_to(ref)
-				self.resolve_ignore_str(resolver)
-		elif Checker.is_generic_alias(self):
-			pexpr = self.packed_expr
-			if not Checker.match_origin(pexpr.base.origin, Typing.get_type("Literal")):
-				for arg in pexpr.args:
-					arg.base.resolve_ignore_str(resolver)				
-
-	def build_string_lookup(self) -> dict[Instance, str]:
-		from typify.inferencing.commons import Builtins, Typing, Checker
-		
-		if self.instanceof(Builtins.get_type("str")):
-			return { self: self.cval }
-		elif Checker.is_generic_alias(self):
-			pexpr = self.packed_expr
-			if Checker.match_origin(pexpr.base.origin, Typing.get_type("Literal")):
-				return {}
-			result = {}
-			for arg in pexpr.args:
-				result.update(arg.base.build_string_lookup())
-			return result
-		else:
-			return {}
-
 	def instanceof(self, *typedefs: ClassDefinition | tuple[ClassDefinition, ...]) -> bool:
 		from typify.inferencing.commons import Checker
 

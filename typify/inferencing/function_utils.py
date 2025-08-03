@@ -219,7 +219,6 @@ class FunctionUtils:
 	def collect_parameters(
 		fdef: ast.FunctionDef | ast.AsyncFunctionDef, 
 		resolver: Resolver,
-		defer_annotations: bool
 	) -> dict[str, ParameterEntry]:
 		
 		args_node = fdef.args
@@ -227,12 +226,8 @@ class FunctionUtils:
 
 		def resolve_annotation(arg: ast.arg) -> Instance:
 			if arg.annotation:
-				node = arg.annotation
-				if defer_annotations:
-					node = ast.Constant(ast.unparse(arg.annotation))
-				results = resolver.resolve_value(node)
+				results = resolver.resolve_value(arg.annotation)
 				if results: return results.ref()
-				return Instance(None)
 
 			return None
 
