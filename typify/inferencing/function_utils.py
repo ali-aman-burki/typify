@@ -229,6 +229,7 @@ class FunctionUtils:
 					node = ast.Constant(ast.unparse(arg.annotation))
 				results = resolver.resolve_value(node)
 				if results: return results.ref()
+				return Instance(None)
 
 			return None
 

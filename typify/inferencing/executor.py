@@ -126,7 +126,7 @@ class Executor(ast.NodeVisitor):
 		from typify.inferencing.generics.utils import GenericUtils
 		
 		if isinstance(self.namespace, CallFrame) and FunctionUtils.is_stub(self.symbol.tree):
-			if self.symbol.return_annotation:
+			if self.symbol.return_annotation and self.symbol.return_annotation.instantiator:
 				concsubs = {}
 				if self.caller:
 					gencons = self.caller.genconstruct.get(self.symbol.get_enclosing_class_definition())
@@ -144,7 +144,7 @@ class Executor(ast.NodeVisitor):
 				self.returns.add(Singletons.get("None"))
 				self.symbol.refset.add(Singletons.get("None"))
 			
-			if self.symbol.return_annotation and self.caller:
+			if self.symbol.return_annotation and self.symbol.return_annotation.instantiator and self.caller:
 				GenericUtils.register_annotation(
 					annotation=self.symbol.return_annotation,
 					type_expr=self.returns.as_type(),
@@ -319,13 +319,30 @@ class Executor(ast.NodeVisitor):
 		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
 		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
 		
-		entering_namespace = GlobalContext.symbol_map.setdefault(
-			entering_symbol,
-			TypeUtils.instantiate_with_args(
+		inside_function = False
+		current = self.symbol
+
+		while current:
+			if isinstance(current, FunctionDefinition):
+				inside_function = True
+				break
+			current = current.parent
+
+		if not inside_function:
+			entering_namespace = GlobalContext.symbol_map.setdefault(
+				entering_symbol,
+				TypeUtils.instantiate_with_args(
+					Builtins.get_type("type"),
+					[TypeExpr(entering_symbol)]
+				)
+			)
+		else:
+			entering_namespace = TypeUtils.instantiate_with_args(
 				Builtins.get_type("type"),
 				[TypeExpr(entering_symbol)]
 			)
-		)
+			GlobalContext.symbol_map[entering_symbol] = entering_namespace
+		
 		entering_namespace.update_type_info(
 			Builtins.get_type("type"), 
 			[TypeExpr(entering_symbol)]
@@ -373,7 +390,7 @@ class Executor(ast.NodeVisitor):
 		)
 
 		for p in function_def.parameters.values():
-			if p.node and p.annotation:
+			if p.annotation:
 				self.deferred_annotations.string_lookup.update(
 					p.annotation.build_string_lookup()
 				)
@@ -388,12 +405,15 @@ class Executor(ast.NodeVisitor):
 			arefset = self.resolver.resolve_value(node)
 			if arefset: 
 				function_def.return_annotation = arefset.ref()
-				self.deferred_annotations.string_lookup.update(
-					function_def.return_annotation.build_string_lookup()
-				)
-				self.deferred_annotations.annotation_lookup.update(
-					function_def.return_annotation.build_annotation_lookup()
-				)
+			else:
+				function_def.return_annotation = Instance(None)
+
+			self.deferred_annotations.string_lookup.update(
+				function_def.return_annotation.build_string_lookup()
+			)
+			self.deferred_annotations.annotation_lookup.update(
+				function_def.return_annotation.build_annotation_lookup()
+			)
 
 		for k, v in function_def.parameters.items():
 			ndef = NameDefinition(v.defkey)
@@ -402,10 +422,15 @@ class Executor(ast.NodeVisitor):
 			if self.module_meta.fslots:
 				self.module_meta.fslots[position][2][k] = mdef.refset
 
-		func_obj = GlobalContext.function_object_map.setdefault(
-			function_def,
-			TypeUtils.instantiate_with_args(Builtins.get_type("function"))
-		)
+		if not isinstance(self.namespace, CallFrame):
+			func_obj = GlobalContext.function_object_map.setdefault(
+				function_def,
+				TypeUtils.instantiate_with_args(Builtins.get_type("function"))
+			)
+		else:
+			func_obj = TypeUtils.instantiate_with_args(Builtins.get_type("function"))
+			GlobalContext.function_object_map[function_def] = func_obj
+		
 		func_obj.update_type_info(Builtins.get_type("function"))
 		func_obj.origin = function_def
 

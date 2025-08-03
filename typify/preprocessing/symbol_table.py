@@ -41,16 +41,6 @@ class Symbol:
 		self.fqn: str = ""
 		self.parent: Symbol = None
 	
-	@staticmethod
-	def transfer_names(source_names: dict[str, Name], destination):
-		for name in source_names.values():
-			newname = Name(name.id)
-			for old_def in name.definitions.values():
-				newdef = NameDefinition((old_def.module, old_def.position))
-				newdef.refset.update(old_def.refset)
-				newname.merge_definition(newdef)
-			destination.names[name.id] = newname
-
 	def __repr__(self): return self.fqn if self.fqn else self.id
 	def __str__(self): return self.fqn if self.fqn else self.id
 
@@ -183,8 +173,8 @@ class ClassDefinition(_LocatableSymbol):
 	def to_dict(self):
 		base_data = super().to_dict()
 		data = {
-			"bases": [base.origin.fqn for base in self.bases],
-			"mro": [base.origin.fqn for base in self.mro],
+			"bases": [(base.origin.fqn + ":" + str(id(base))) for base in self.bases],
+			"mro": [(base.origin.fqn + ":" + str(id(base))) for base in self.mro],
 		}
 		data.update(base_data)
 		return data
