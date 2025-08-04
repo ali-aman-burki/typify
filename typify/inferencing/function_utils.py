@@ -224,13 +224,6 @@ class FunctionUtils:
 		args_node = fdef.args
 		parameters: dict[str, ParameterEntry] = {}
 
-		def resolve_annotation(arg: ast.arg) -> Instance:
-			if arg.annotation:
-				results = resolver.resolve_value(arg.annotation)
-				if results: return results.ref()
-
-			return None
-
 		def register_arg(
 			arg: ast.arg,
 			default_value: ast.expr = None,
@@ -251,8 +244,7 @@ class FunctionUtils:
 				defkey=defkey,
 				is_posonly=is_posonly,
 				is_kwonly=is_kwonly,
-				node=arg.annotation,
-				annotation=resolve_annotation(arg),
+				node=arg.annotation
 			)
 			parameters[name] = entry
 			return entry
@@ -278,8 +270,7 @@ class FunctionUtils:
 				refset=refset,
 				defkey=defkey,
 				is_vararg=True,
-				node=arg.annotation,
-				annotation=resolve_annotation(arg),
+				node=arg.annotation
 			)
 
 		for arg, default in zip(args_node.kwonlyargs, args_node.kw_defaults):
@@ -300,8 +291,7 @@ class FunctionUtils:
 				refset=refset,
 				defkey=defkey,
 				is_kwarg=True,
-				node=arg.annotation,
-				annotation=resolve_annotation(arg),
+				node=arg.annotation
 			)
 
 		return parameters

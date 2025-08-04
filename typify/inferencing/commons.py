@@ -12,7 +12,7 @@ from typify.preprocessing.symbol_table import (
     Module,
 )
 
-@dataclass
+@dataclass(eq=False)
 class ParameterEntry:
 	name: str
 	refset: ReferenceSet

@@ -1,3 +1,3 @@
 class _Feature:...
 
-annotations: _Feature = _Feature()
+annotations = _Feature()

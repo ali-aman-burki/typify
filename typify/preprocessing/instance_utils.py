@@ -60,6 +60,48 @@ class Instance:
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	
+	def resolve_fully(self, resolver):
+		from typify.inferencing.commons import Checker, Builtins
+		from typify.inferencing.resolver import Resolver
+
+		resolver: Resolver = resolver
+
+		if self.instanceof(Builtins.get_type("str")):
+			node = ast.parse(self.cval, mode='eval').body
+			refset = resolver.resolve_value(node)
+			if refset:
+				ref = refset.ref()
+				return ref.resolve_fully(resolver)
+		elif Checker.is_generic_alias(self):
+			for arg in self.packed_expr.args:
+				arg.base = arg.base.resolve_fully(resolver)
+			return self
+		return self
+
+	def collect_str_objects(self):
+		from typify.inferencing.commons import Checker, Builtins
+		
+		if self.instanceof(Builtins.get_type("str")):
+			return { self }
+		elif Checker.is_generic_alias(self):
+			result = set()
+			for arg in self.packed_expr.args:
+				result.update(arg.base.collect_str_objects())
+			return result
+		return set()
+	
+	def collect_str_holders(self):
+		from typify.inferencing.commons import Checker, Builtins
+		if Checker.is_generic_alias(self):
+			result = {}
+			for arg in self.packed_expr.args:
+				if arg.base.instanceof(Builtins.get_type("str")):
+					result[arg] = arg.base.cval
+				else:
+					result.update(arg.base.collect_str_holders())
+			return result
+		return {}
+
 	def instanceof(self, *typedefs: ClassDefinition | tuple[ClassDefinition, ...]) -> bool:
 		from typify.inferencing.commons import Checker
 

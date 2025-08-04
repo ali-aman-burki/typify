@@ -16,6 +16,7 @@ from typify.inferencing.typeutils import TypeUtils
 from typify.preprocessing.core import GlobalContext
 from typify.inferencing.expression import (
     TypeExpr, 
+	PackedExpr,
     AliasParser
 )
 from typify.inferencing.commons import (
@@ -23,7 +24,8 @@ from typify.inferencing.commons import (
 	Future,
 	Singletons,
 	ArgTuple,
-	Checker
+	Checker,
+	ParameterEntry
 )
 from typify.preprocessing.symbol_table import (
 	Module,
@@ -38,14 +40,34 @@ from typify.preprocessing.instance_utils import (
 	ReferenceSet
 )
 
+@dataclass(eq=False)
+class Varnotation:
+	annotation: Instance = None
+
 @dataclass
 class DeferredAnnotations:
 	resolver: Resolver
 	on: bool = False
-	annotation_lookup: dict[str, Instance] = field(default_factory=dict)
-	string_lookup: dict[Instance, str] = field(default_factory=dict)
+	strings: set[str] = field(default_factory=set)
+	holders: dict[ParameterEntry | Instance | PackedExpr | Varnotation, str] = field(default_factory=dict)
 
-	def compute(self):...
+	def compute(self):
+		lookup: dict[str, Instance] = {}
+
+		for string in self.strings:
+			node = ast.parse(string, mode='eval').body
+			refset = self.resolver.resolve_value(node)
+			if refset:
+				ref = refset.ref()
+				lookup[string] = ref.resolve_fully(self.resolver)
+		
+		for k, v in self.holders.items():
+			from_lookup = lookup.get(v)
+			if from_lookup:
+				if isinstance(k, Instance): k.return_annotation = from_lookup
+				elif isinstance(k, PackedExpr): k.base = from_lookup
+				elif isinstance(k, ParameterEntry): k.annotation = from_lookup
+				elif isinstance(k, Varnotation): k.annotation = from_lookup
 
 class Executor(ast.NodeVisitor):
 	def __init__(
@@ -270,7 +292,8 @@ class Executor(ast.NodeVisitor):
 				
 				reference = self.namespace.get_name(name).lookup_definition(defkey).refset
 				self.add_to_snapshot(reference)
-	
+
+		self.deferred_annotations.compute()
 		self.generic_visit(node)
 
 	#TODO: add support for multiple possible candidates for a single base
@@ -363,6 +386,42 @@ class Executor(ast.NodeVisitor):
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
 
 		self.add_to_snapshot(deftable.refset)
+		self.deferred_annotations.compute()
+
+	def _process_annotation(self, node: ast.Expr, obj: Instance | PackedExpr | ParameterEntry | Varnotation):
+		string = ""
+		if self.deferred_annotations.on:
+			if isinstance(node, ast.Constant):
+				if isinstance(node.value, str):
+					string = node.value
+					self.deferred_annotations.strings.add(string)
+			else:
+				string = ast.unparse(node)
+				self.deferred_annotations.strings.add(string)
+			
+			self.deferred_annotations.holders[obj] = string
+		else:
+			refset = self.resolver.resolve_value(node)
+			if refset:
+				ref = refset.ref()
+				if ref.instanceof(Builtins.get_type("str")):
+					self.deferred_annotations.strings.add(ref.cval)
+					self.deferred_annotations.holders[obj] = ref.cval
+				else:
+					if isinstance(obj, Instance):
+						obj.return_annotation = ref
+					elif isinstance(obj, PackedExpr):
+						obj.base = ref
+					elif isinstance(obj, ParameterEntry):
+						obj.annotation = ref
+					elif isinstance(obj, Varnotation):
+						obj.annotation = ref
+
+					strobjects = ref.collect_str_objects()
+					strholders = ref.collect_str_holders()
+					if strobjects:
+						self.deferred_annotations.strings.update([o.cval for o in strobjects])
+						self.deferred_annotations.holders.update(strholders)
 
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
 		position = (func_tree.lineno, func_tree.col_offset)
@@ -394,11 +453,12 @@ class Executor(ast.NodeVisitor):
 		)
 
 		if func_tree.returns:
-			arefset = self.resolver.resolve_value(func_tree.returns)
-			if arefset: 
-				func_obj.return_annotation = arefset.ref()
+			self._process_annotation(func_tree.returns, func_obj)
 
 		for k, v in func_obj.parameters.items():
+			if v.node:
+				self._process_annotation(v.node, v)
+
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset.copy()
 			mdef = function_def.get_name(k).set_definition(ndef)
@@ -411,6 +471,7 @@ class Executor(ast.NodeVisitor):
 		self.namespace.get_name(name).merge_definition(deftable)
 
 		self.add_to_snapshot(deftable.refset)
+		self.deferred_annotations.compute()
 	
 	def visit_AsyncFunctionDef(self, node):
 		self.visit_FunctionDef(node)
@@ -428,17 +489,26 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(resolved_value)
 
 		arefset = self.resolver.resolve_value(node.annotation)
-		if arefset and self.caller:
-			annotation = arefset.ref()
-			GenericUtils.register_annotation(
-				annotation=annotation,
-				type_expr=resolved_value.as_type(),
-				classdef=self.symbol.get_enclosing_class_definition(),
-				genconstruct=self.caller.genconstruct,
-			)
+		if arefset:
+			annotation = arefset.ref().resolve_fully(self.resolver)
+			if self.caller and not annotation.instanceof(Builtins.get_type("str")):
+				GenericUtils.register_annotation(
+					annotation=annotation,
+					type_expr=resolved_value.as_type(),
+					classdef=self.symbol.get_enclosing_class_definition(),
+					genconstruct=self.caller.genconstruct,
+				)
+
+		to_pass = ast.Constant(ast.unparse(node.annotation))
+		if isinstance(node.annotation, ast.Constant):
+			if isinstance(node.annotation.value, str):
+				to_pass = node.annotation
+			 
+		self._process_annotation(to_pass, Varnotation())
 
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_assignment(resolved_target, resolved_value)
+		self.deferred_annotations.compute()
 
 	def visit_Assign(self, node):
 		resolved_value = self.resolver.resolve_value(node.value)
@@ -446,6 +516,7 @@ class Executor(ast.NodeVisitor):
 		for target in node.targets:
 			resolved_target = self.resolver.resolve_target(target)
 			self.resolver.process_assignment(resolved_target, resolved_value)
+		self.deferred_annotations.compute()
 		
 	
 	def visit_AugAssign(self, node):
