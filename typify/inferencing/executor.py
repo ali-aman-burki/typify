@@ -241,10 +241,11 @@ class Executor(ast.NodeVisitor):
 		if node.names[0].name == "*":
 			if not object_chain: return
 			for name in object_chain[-1].names.values():
-				lat_def = NameDefinition(defkey)
-				lat_def.refset = name.get_plausible_refset().copy()
-				self.namespace.get_name(name.id).set_definition(lat_def)
-				self.add_to_snapshot(lat_def.refset)
+				if not name.id.startswith("_"):
+					lat_def = NameDefinition(defkey)
+					lat_def.refset = name.get_plausible_refset().copy()
+					self.namespace.get_name(name.id).set_definition(lat_def)
+					self.add_to_snapshot(lat_def.refset)
 		else:
 			for alias in node.names:
 				name = alias.asname if alias.asname else alias.name

@@ -95,7 +95,7 @@ class Desugar:
 	def resolve(node: ast.expr, resolver: Resolver):
 		from typify.preprocessing.instance_utils import ReferenceSet
 		from typify.inferencing.expression import AliasParser
-		from typify.inferencing.commons import Builtins, Checker
+		from typify.inferencing.commons import Checker
 		from typify.inferencing.call_dispatcher import CallDispatcher
 
 		if isinstance(node, ast.Subscript):

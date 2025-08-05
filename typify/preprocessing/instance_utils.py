@@ -120,6 +120,9 @@ class Instance:
 		if attr in self.names: return self.names[attr]
 		
 		if Checker.is_type(self):
+			for m in self.instantiator.mro:
+				if attr in m.names: return m.names[attr]
+
 			for m in self.origin.mro:
 				if attr in m.names: return m.names[attr]
 		else:

@@ -4,10 +4,10 @@ class TypeVarTuple: ...
 class NoReturn: ...
 class NewType: ...
 
-T = TypeVar('T')
-K = TypeVar('K')
-V = TypeVar('V')
-Ts = TypeVarTuple('Ts')
+_T = TypeVar('_T')
+_K = TypeVar('_K')
+_V = TypeVar('_V')
+_Ts = TypeVarTuple('_Ts')
 
 class _GenericAlias:
     def __init__(self, origin, args) -> None: ...
@@ -24,113 +24,113 @@ class Generic:
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 
-class Optional(Generic[T]): 
+class Optional(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Union(Generic[Unpack[Ts]]): 
+class Union(Generic[Unpack[_Ts]]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Literal(Generic[Unpack[Ts]]): 
+class Literal(Generic[Unpack[_Ts]]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Annotated(Generic[T, Unpack[Ts]]): 
+class Annotated(Generic[_T, Unpack[_Ts]]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Final(Generic[T]): 
+class Final(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class ClassVar(Generic[T]): 
+class ClassVar(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 
-class List(Generic[T]): 
-
-	@classmethod
-	def __class_getitem__(cls, item) -> _GenericAlias: ...
-	
-class Set(Generic[T]): 
+class List(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Dict(Generic[K, V]): 
+class Set(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Tuple(Generic[Unpack[Ts]]): 
+class Dict(Generic[_K, _V]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class FrozenSet(Generic[T]): 
+class Tuple(Generic[Unpack[_Ts]]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class DefaultDict(Generic[K, V]): 
+class FrozenSet(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Counter(Generic[T]): 
+class DefaultDict(Generic[_K, _V]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class ChainMap(Generic[K, V]): 
+class Counter(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Deque(Generic[T]): 
+class ChainMap(Generic[_K, _V]): 
+
+	@classmethod
+	def __class_getitem__(cls, item) -> _GenericAlias: ...
+	
+class Deque(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
 
-class Type(Generic[T]): 
+class Type(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Generator(Generic[T, V, K]): 
+class Generator(Generic[_T, _V, _K]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class AsyncGenerator(Generic[T, V]): 
+class AsyncGenerator(Generic[_T, _V]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Coroutine(Generic[T, V, K]): 
+class Coroutine(Generic[_T, _V, _K]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class Awaitable(Generic[T]): 
+class Awaitable(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class AsyncIterable(Generic[T]): 
+class AsyncIterable(Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
 	
-class AsyncIterator(AsyncIterable[T], Generic[T]): 
+class AsyncIterator(AsyncIterable[_T], Generic[_T]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _GenericAlias: ...
