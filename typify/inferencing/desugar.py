@@ -29,7 +29,7 @@ class Desugar:
 		ast.LtE: "__le__",
 		ast.Gt: "__gt__",
 		ast.GtE: "__ge__",
-}
+	}
 
 	@staticmethod
 	def to_dunder(expr: ast.expr | ast.AugAssign, use_reverse: bool = False) -> ast.Call:
