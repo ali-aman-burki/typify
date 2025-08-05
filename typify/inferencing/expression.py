@@ -100,7 +100,7 @@ class AliasParser:
 		elif Checker.is_typevar(annotation):
 			for k, v in concsubs.items():
 				if k.typevar == annotation:
-					if v: return v
+					return v
 			return TypeExpr(Typing.get_type("Any"))
 		elif Checker.is_type(annotation):
 			return TypeExpr(annotation.origin)

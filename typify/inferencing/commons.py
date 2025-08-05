@@ -73,9 +73,7 @@ class Checker:
 		return instance.instanceof(
 			Types.get_type("GenericAlias"),
 			Typing.get_type("_GenericAlias"),
-			Typing.get_type("_UnpackGenericAlias"),
-			Typing.get_type("_UnionGenericAlias"),
-			Typing.get_type("_LiteralGenericAlias")
+			Typing.get_type("_UnpackGenericAlias")
 		)
 	
 	@staticmethod
