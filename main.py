@@ -9,7 +9,10 @@ from typify.utils import Utils
 from typify.preprocessing.preloader import Preloader
 from typify.preprocessing.core import GlobalContext
 from typify.inferencing.inferencer import Inferencer
-from typify.logging import logger, LogLevel
+from typify.logging import (
+    logger, 
+    LogLevel
+)
 
 config_path = "typifyconfig.json"
 
@@ -53,7 +56,10 @@ log_levels = {
     "trace": LogLevel.TRACE,
 }
 logger.set_level(log_levels[args.log])
-logger.add_output(open(Path(output_dir) / "typify-log.log", "w", encoding="utf-8"))
+if logger.level != LogLevel.OFF:
+    logger.add_output(
+        open(Path(output_dir) / f"{config["outputs"]["log"]}.log", "w", encoding="utf-8")
+    )
 
 print(Utils.title)
 
@@ -75,6 +81,8 @@ for meta, deps in GlobalContext.cleaned_graph.items():
 
 Inferencer.infer()
 
-GlobalContext.libs[0].export_types(Path(output_dir) / "typify-types.json")
+GlobalContext.libs[0].export_types(
+    Path(output_dir) / f"{config["outputs"]["types"]}.json"
+)
 
 logger.close()

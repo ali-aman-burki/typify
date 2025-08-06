@@ -1,5 +1,10 @@
 {
-	"paths": [
+	"outputs": {
+        "log": "typify",
+        "types": "types"
+    },
+
+    "paths": [
 		"typify-defaults/stdlib/"
     ],
 
