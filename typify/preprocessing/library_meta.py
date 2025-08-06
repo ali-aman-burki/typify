@@ -1,17 +1,19 @@
+import json
+
 from pathlib import Path
 from collections import defaultdict
 
 from typify.preprocessing.symbol_table import (
-    Symbol,
+	Symbol,
 	Library,
-    Package,
-    Module,
+	Package,
+	Module,
 )
 from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.progbar import (
-    ProgressBar,
-    IndeterminateProgressBar
+	ProgressBar,
+	IndeterminateProgressBar
 )
 
 class LibraryMeta:
@@ -113,31 +115,36 @@ class LibraryMeta:
 		
 		progress_bar.done()
 
-	def export(
-			self, 
-			path: Path, 
-			prefix_ts: str, 
-			prefix_sy: str, 
-			symbols=True, 
-			typeslots=True
-		) -> None:
+	def export_symbols(self, output: Path):
+		progress = ProgressBar(
+			len(self.meta_map) + 1, 
+			prefix="Exporting Symbols",
+			progress_format="percent"
+		)
+		progress.display()
+		data = {}
+		for i, meta in enumerate(self.meta_map.values(), 1):
+			data[str(meta.src.resolve().as_posix())] = meta.table.to_dict()
+			progress.update(i)
 		
-		if symbols:
-			progress = ProgressBar(
-				len(self.meta_map), 
-				prefix=prefix_sy
-			)
-			progress.display()
-			for i, meta in enumerate(self.meta_map.values(), 1):
-				meta.export_symbols(self.src, path)
-				progress.update(i)
+		with output.open("w", encoding="utf-8") as f:
+			json.dump(data, f, indent='\t', ensure_ascii=False)
+		
+		progress.update(len(self.meta_map) + 1)
 
-		if typeslots:
-			progress = ProgressBar(
-				len(self.meta_map), 
-				prefix=prefix_ts
-			)
-			progress.display()
-			for i, meta in enumerate(self.meta_map.values(), 1):
-				meta.export_typeslots(self.src, path)
-				progress.update(i)
+	def export_types(self, output: Path):
+		progress = ProgressBar(
+			len(self.meta_map) + 1, 
+			prefix="Exporting Types",
+			progress_format="percent"
+		)
+		progress.display()
+		data = {}
+		for i, meta in enumerate(self.meta_map.values(), 1):
+			data[str(meta.src.resolve().as_posix())] = meta.typeslots()
+			progress.update(i)
+		
+		with output.open("w", encoding="utf-8") as f:
+			json.dump(data, f, indent='\t', ensure_ascii=False)
+		
+		progress.update(len(self.meta_map) + 1)

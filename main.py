@@ -53,7 +53,7 @@ log_levels = {
     "trace": LogLevel.TRACE,
 }
 logger.set_level(log_levels[args.log])
-logger.add_output(open(Path(output_dir) / "typify.log", "w", encoding="utf-8"))
+logger.add_output(open(Path(output_dir) / "typify-log.log", "w", encoding="utf-8"))
 
 print(Utils.title)
 
@@ -75,12 +75,6 @@ for meta, deps in GlobalContext.cleaned_graph.items():
 
 Inferencer.infer()
 
-GlobalContext.libs[0].export(
-    path=Path(output_dir), 
-    prefix_ts="Exporting types",
-    prefix_sy="Exporting symbols",
-    symbols=False, 
-    typeslots=True
-)
+GlobalContext.libs[0].export_types(Path(output_dir) / "typify-types.json")
 
 logger.close()

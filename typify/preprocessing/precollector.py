@@ -62,8 +62,7 @@ class PreCollector(ast.NodeVisitor):
 			ann = parameters.get(name, PreCollector.UNVISITED)
 			parts.append(f"**{name}: {ann}")
 
-		return f"{fqn}({', '.join(parts)}) -> {return_annotation}"
-
+		return f"def {fqn}({', '.join(parts)}) -> {return_annotation}: ..."
 	
 	@staticmethod
 	def collect_parameter_slots(fdef: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, str]:
