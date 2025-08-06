@@ -127,6 +127,7 @@ class LibraryMeta:
 			data[str(meta.src.resolve().as_posix())] = meta.table.to_dict()
 			progress.update(i)
 		
+		data = {k: data[k] for k in sorted(data)}
 		with output.open("w", encoding="utf-8") as f:
 			json.dump(data, f, indent='\t', ensure_ascii=False)
 		
@@ -144,6 +145,7 @@ class LibraryMeta:
 			data[str(meta.src.resolve().as_posix())] = meta.typeslots()
 			progress.update(i)
 		
+		data = {k: data[k] for k in sorted(data)}
 		with output.open("w", encoding="utf-8") as f:
 			json.dump(data, f, indent='\t', ensure_ascii=False)
 		
