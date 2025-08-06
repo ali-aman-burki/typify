@@ -1,17 +1,17 @@
 {
 	"outputs": {
-        "log": "typify",
-        "types": "types"
-    },
+		"log": "typify",
+		"types": "types"
+	},
 
-    "paths": [
+	"paths": [
 		"typify-defaults/stdlib/"
-    ],
+	],
 
-    "inference": {
-        "builtins": "typify-defaults/stdlib/builtins.pyi",
-        "typing": "typify-defaults/stdlib/typing.pyi",
-        "types": "typify-defaults/stdlib/types.pyi",
-        "__future__": "typify-defaults/stdlib/__future__.pyi"
-    }
+	"inference": {
+		"builtins": "typify-defaults/stdlib/builtins.pyi",
+		"typing": "typify-defaults/stdlib/typing.pyi",
+		"types": "typify-defaults/stdlib/types.pyi",
+		"__future__": "typify-defaults/stdlib/__future__.pyi"
+	}
 }
