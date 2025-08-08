@@ -64,7 +64,6 @@ class LibraryMeta:
 				path = path.parent
 			return True
 
-		# First pass: register packages and detect py.typed
 		for path in self.src.rglob("*"):
 			if path.is_dir():
 				if "__pycache__" in path.parts:
@@ -84,7 +83,6 @@ class LibraryMeta:
 				if table:
 					table.trust_annotations = True
 
-		# Add __init__ modules to package tables
 		for dir_path, package_table in package_map.items():
 			for ext in [".pyi", ".py"]:
 				init_path = dir_path / f"__init__{ext}"
@@ -93,9 +91,8 @@ class LibraryMeta:
 					package_table.set_module(meta.table, self.fqn_map)
 					self.meta_map[meta.table] = meta
 					progress_bar.set_suffix(f"Discovered: {len(self.meta_map)} modules")
-					break  # Prefer .pyi over .py
+					break
 
-		# Second pass: collect .py and .pyi candidates (excluding __init__)
 		module_candidates = defaultdict(dict)
 		for path in self.src.rglob("*"):
 			if path.suffix in {".py", ".pyi"} and not path.name.startswith("__init__.py"):
@@ -104,7 +101,6 @@ class LibraryMeta:
 					stem = path.stem
 					module_candidates[(parent, stem)][path.suffix] = path
 
-		# Final pass: resolve conflicts and create ModuleMetas
 		for (parent, stem), variants in module_candidates.items():
 			chosen_path = variants.get(".pyi") or variants.get(".py")
 			if not chosen_path:
@@ -154,9 +150,8 @@ class LibraryMeta:
 			data[str(meta.src.resolve().as_posix())] = meta.typeslots()
 			progress.update(i)
 		
-		# Sort by file path
 		sorted_data = OrderedDict()
-		sorted_data["project_path"] = str(self.src.as_posix())  # Inject at top
+		sorted_data["project_path"] = str(self.src.as_posix())
 		for k in sorted(data):
 			sorted_data[k] = data[k]
 		
