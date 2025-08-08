@@ -102,19 +102,34 @@ class PreCollector(ast.NodeVisitor):
 	def visit_AnnAssign(self, node):
 		fqn = ".".join(self.scope_stack)
 		position = (node.target.lineno, node.target.col_offset)
-		self.module_meta.vslots[position] = [ast.unparse(node.target), PreCollector.UNVISITED, fqn]
+		self.module_meta.vslots[position] = [
+			ast.unparse(node.target), 
+			PreCollector.UNVISITED, 
+			fqn, 
+			type(node).__name__
+		]
 
 	def visit_Assign(self, node):
 		fqn = ".".join(self.scope_stack)
 		for target in node.targets:
 			packs = PreCollector.collect_targets(target)
 			for k, v in packs.items():
-				self.module_meta.vslots[v] = [ast.unparse(k), PreCollector.UNVISITED, fqn]
+				self.module_meta.vslots[v] = [
+					ast.unparse(k), 
+					PreCollector.UNVISITED, 
+					fqn, 
+					type(node).__name__
+				]
 
 	def visit_AugAssign(self, node):
 		fqn = ".".join(self.scope_stack)
 		v = (node.target.lineno, node.target.col_offset)
-		self.module_meta.vslots[v] = [ast.unparse(node.target), PreCollector.UNVISITED, fqn]
+		self.module_meta.vslots[v] = [
+			ast.unparse(node.target), 
+			PreCollector.UNVISITED, 
+			fqn, 
+			type(node).__name__
+		]
 
 	def visit_ClassDef(self, node):
 		self.scope_stack.append(node.name)
