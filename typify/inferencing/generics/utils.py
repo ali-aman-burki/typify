@@ -333,10 +333,13 @@ class GenericUtils:
 	def collect_typevars(packed_expr: PackedExpr) -> list[Instance]:
 		result = []
 		if packed_expr.base.instanceof(
-			Typing.get_type("TypeVar"), 
-			Typing.get_type("TypeVarTuple")
+			Typing.get_type("TypeVar")
 		):
 			result.append(packed_expr.base)
+		elif packed_expr.base.instanceof(
+			Typing.get_type("_UnpackGenericAlias")
+		):
+			result.append(packed_expr.base.packed_expr.args[0].base)
 		
 		for arg in packed_expr.args:
 			result += GenericUtils.collect_typevars(arg)
