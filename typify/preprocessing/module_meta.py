@@ -31,11 +31,6 @@ class ModuleMeta:
 		dash = f"-{suffix}" if suffix else ""
 		return export_path / rel_path.parent / f"{self.table.id}{dash}.json"
 	
-	def export_symbols(self, working_directory: Path, export_path: Path):
-		output_path = self.mirror_export_path(working_directory, export_path, suffix="symbols")
-		output_path.parent.mkdir(parents=True, exist_ok=True)
-		self.table.export_to_json(output_path)
-
 	def typeslots(self):
 		from typify.preprocessing.instance_utils import ReferenceSet
 		from typify.preprocessing.precollector import PreCollector

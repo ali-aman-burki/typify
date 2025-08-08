@@ -1,7 +1,10 @@
 import json
 
 from pathlib import Path
-from collections import defaultdict
+from collections import (
+    defaultdict,
+    OrderedDict
+)
 
 from typify.preprocessing.symbol_table import (
 	Symbol,
@@ -122,14 +125,19 @@ class LibraryMeta:
 			progress_format="percent"
 		)
 		progress.display()
+		
 		data = {}
 		for i, meta in enumerate(self.meta_map.values(), 1):
 			data[str(meta.src.resolve().as_posix())] = meta.table.to_dict()
 			progress.update(i)
 		
-		data = {k: data[k] for k in sorted(data)}
+		sorted_data = OrderedDict()
+		sorted_data["project_path"] = str(self.src.as_posix())
+		for k in sorted(data):
+			sorted_data[k] = data[k]
+		
 		with output.open("w", encoding="utf-8") as f:
-			json.dump(data, f, indent='\t', ensure_ascii=False)
+			json.dump(sorted_data, f, indent='\t', ensure_ascii=False)
 		
 		progress.update(len(self.meta_map) + 1)
 
@@ -140,13 +148,19 @@ class LibraryMeta:
 			progress_format="percent"
 		)
 		progress.display()
+		
 		data = {}
 		for i, meta in enumerate(self.meta_map.values(), 1):
 			data[str(meta.src.resolve().as_posix())] = meta.typeslots()
 			progress.update(i)
 		
-		data = {k: data[k] for k in sorted(data)}
+		# Sort by file path
+		sorted_data = OrderedDict()
+		sorted_data["project_path"] = str(self.src.as_posix())  # Inject at top
+		for k in sorted(data):
+			sorted_data[k] = data[k]
+		
 		with output.open("w", encoding="utf-8") as f:
-			json.dump(data, f, indent='\t', ensure_ascii=False)
+			json.dump(sorted_data, f, indent='\t', ensure_ascii=False)
 		
 		progress.update(len(self.meta_map) + 1)
