@@ -117,6 +117,7 @@ class Resolver:
 		from typify.inferencing.call_dispatcher import CallDispatcher
 		from typify.inferencing.typeutils import TypeUtils
 		from typify.inferencing.desugar import Desugar
+		
 		if isinstance(node, ast.Constant):
 			type_name = type(node.value).__name__
 			singname = ast.unparse(node)
