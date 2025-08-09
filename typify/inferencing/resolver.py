@@ -4,6 +4,7 @@ import ast
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.call_stack import CallStack
 from typify.preprocessing.core import GlobalContext
+from typify.errors import safeguard
 from typify.inferencing.unpacking_utils import (
 	TargetEntry,
 	PackGroup
@@ -40,6 +41,7 @@ class Resolver:
 		self.namespace = namespace
 		self.call_stack = call_stack
 
+	@safeguard(lambda: None, "legb_lookup")	
 	def LEGB_lookup(self, name: str) -> Name:
 		current_symbol = self.symbol
 
@@ -58,6 +60,7 @@ class Resolver:
 
 		return Builtins.module().names.get(name, None)
 
+	@safeguard(lambda: PackGroup(groups=[], starred=False), "resolve_target")
 	def resolve_target(self, expr: ast.expr) -> PackGroup:
 		position = (expr.lineno, expr.col_offset)
 		defkey = (self.module_meta.table, position)
@@ -113,6 +116,7 @@ class Resolver:
 
 	#TODO: need support for comprehensions, generators 
 	#TODO: need support for literal types i.e Literal[...]
+	@safeguard(lambda: ReferenceSet(), "resolve_value")
 	def resolve_value(self, node: ast.Expr) -> ReferenceSet:
 		from typify.inferencing.call_dispatcher import CallDispatcher
 		from typify.inferencing.typeutils import TypeUtils
@@ -213,6 +217,7 @@ class Resolver:
 	
 	#TODO: in the future, remove hardcoded logic for tuple and generalize it based on generics
 	#TODO: add support for starred unpacking
+	@safeguard(lambda: None, "process_assignment")
 	def process_assignment(
 			self, 
 			resolved_target: PackGroup, 

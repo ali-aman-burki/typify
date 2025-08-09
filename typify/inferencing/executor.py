@@ -10,6 +10,7 @@ from typify.inferencing.mro import MROBuilder
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import TypeUtils
 from typify.preprocessing.core import GlobalContext
+from typify.errors import safeguard
 from typify.inferencing.annotation_utils import (
 	DeferredAnnotations,
 	Varnotation,
@@ -267,6 +268,7 @@ class Executor(ast.NodeVisitor):
 		self.generic_visit(node)
 
 	#TODO: add support for multiple possible candidates for a single base
+	@safeguard(lambda: None, "visit_classdef")
 	def visit_ClassDef(self, class_tree: ast.ClassDef):
 		from typify.inferencing.generics.utils import GenericUtils
 
@@ -358,6 +360,7 @@ class Executor(ast.NodeVisitor):
 		self.add_to_snapshot(deftable.refset)
 		self.deferred_annotations.compute(self.resolver)
 
+	@safeguard(lambda: None, "visit_classdef")
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
 		position = (func_tree.lineno, func_tree.col_offset)
 		defkey = (self.module_meta.table, position)
