@@ -135,8 +135,8 @@ class GenericUtils:
 							tindex += 1
 							break
 
-			elif Checker.match_origin(arg.base.origin, Typing.get_type("Unpack")):
-				tvt = arg.args[0].base
+			elif arg.base.instanceof(Typing.get_type("_UnpackGenericAlias")):
+				tvt = arg.base.packed_expr.args[0].base
 				gencons = genconstruct.get(classdef)
 				for p in gencons.subs:
 					if p.typevar == tvt:
@@ -160,7 +160,6 @@ class GenericUtils:
 				tindex += 1
 
 		return result
-
 
 	@staticmethod
 	def apply_substitution_to_class_args(

@@ -31,14 +31,16 @@ class Inferencer:
 		pass_counts: dict[str, int] = {}
 
 		project_only_modules: set[ModuleMeta] = set(libs[0].meta_map.values())
-		total_project_modules = len(project_only_modules)
+		inference_only_modules: set[ModuleMeta] = set(GlobalContext.inference.values())
+		all_tracked_modules: set[ModuleMeta] = project_only_modules | inference_only_modules
 
-		progress = ProgressBar(
-			total=total_project_modules,
-			prefix="Performing Inference:"
+		combined_progress = ProgressBar(
+			total=len(all_tracked_modules),
+			prefix="Performing Inference:",
+			progress_format="percent"
 		)
-		progress.display()
-		shown_in_progress: set[ModuleMeta] = set()
+		combined_progress.display()
+		shown_in_combined: set[ModuleMeta] = set()
 
 		for src, targets in cleaned_graph.items():
 			for tgt in targets:
@@ -47,8 +49,8 @@ class Inferencer:
 		logger.debug("", header=False)
 
 		for sequence in sequences:
-			if project_only_modules.issubset(shown_in_progress):
-				if not any(meta in project_only_modules for meta in sequence):
+			if all_tracked_modules.issubset(shown_in_combined):
+				if not any(meta in all_tracked_modules for meta in sequence):
 					continue
 
 			is_single = len(sequence) == 1
@@ -87,10 +89,9 @@ class Inferencer:
 				pass_counts[meta.table.fqn] = 1
 				processed.append(meta)
 
-				if meta in project_only_modules and meta not in shown_in_progress:
-					progress.update()
-					shown_in_progress.add(meta)
-
+				if meta in all_tracked_modules and meta not in shown_in_combined:
+					combined_progress.update()
+					shown_in_combined.add(meta)
 
 				sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 				continue
@@ -106,7 +107,6 @@ class Inferencer:
 				new_snapshot = run_pass(meta)
 				if new_snapshot != snapshots[meta]:
 					snapshots[meta] = new_snapshot
-
 					for dependent in reverse_deps.get(meta, set()):
 						if dependent in sequence and dependent not in in_worklist:
 							worklist.append(dependent)
@@ -115,9 +115,9 @@ class Inferencer:
 				sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 				processed.append(meta)
 
-				if meta in project_only_modules and meta not in shown_in_progress:
-					progress.update()
-					shown_in_progress.add(meta)
+				if meta in all_tracked_modules and meta not in shown_in_combined:
+					combined_progress.update()
+					shown_in_combined.add(meta)
 
 			for meta in sequence:
 				pass_counts[meta.table.fqn] = passes[meta]

@@ -105,8 +105,8 @@ class Desugar:
 				if Checker.is_type(base):
 					processed_node = Desugar.subscript(node, True)
 					dispatcher = CallDispatcher(resolver, processed_node)
-					
 					genset = dispatcher.dispatch()
+
 					if genset:
 						genref = genset.ref()
 						result.add(genref)

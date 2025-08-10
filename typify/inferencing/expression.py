@@ -94,9 +94,8 @@ class AliasParser:
 		from typify.inferencing.generics.model import Placeholder
 		
 		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = concsubs
-		
 		if Checker.is_generic_alias(annotation):
-			return AliasParser.resolve_type_expr(annotation.packed_expr, concsubs)
+			return AliasParser.resolve_to_type_expr(annotation.packed_expr, concsubs)
 		elif Checker.is_typevar(annotation):
 			for k, v in concsubs.items():
 				if k.typevar == annotation:
@@ -110,7 +109,7 @@ class AliasParser:
 			return TypeExpr(Typing.get_type("Any"))
 
 	@staticmethod
-	def resolve_type_expr(
+	def resolve_to_type_expr(
 		packed_expr: PackedExpr, 
 		concsubs: dict
 	) -> TypeExpr | list[TypeExpr]:
@@ -118,22 +117,22 @@ class AliasParser:
 		from typify.inferencing.generics.model import Placeholder
 		
 		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = concsubs
-
-		if Checker.is_type(packed_expr.base):
+		if packed_expr.base.instanceof(Typing.get_type("_UnpackGenericAlias")):
+			tvt = packed_expr.base.packed_expr.args[0].base
+			for k, v in concsubs.items():
+				if k.typevar == tvt:
+					return v
+			return []
+		elif Checker.is_generic_alias(packed_expr.base):
+			base = packed_expr.base.packed_expr.base.origin
+			args = []
+			for arg in packed_expr.base.packed_expr.args:
+				args.append(AliasParser.resolve_to_type_expr(arg, concsubs))
+			return TypeExpr(base, args)
+		elif Checker.is_type(packed_expr.base):
 			targs: list[TypeExpr] = []
-
-			if Checker.match_origin(
-				packed_expr.base.origin, 
-				Typing.get_type("Unpack")
-			):
-				tvt = packed_expr.args[0].base
-				for k, v in concsubs.items():
-					if k.typevar == tvt:
-						return v
-				return []
-
 			for parg in packed_expr.args:
-				result = AliasParser.resolve_type_expr(parg, concsubs)
+				result = AliasParser.resolve_to_type_expr(parg, concsubs)
 				if isinstance(result, list):
 					targs.extend(result)
 				else:

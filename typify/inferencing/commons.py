@@ -77,6 +77,10 @@ class Checker:
 		)
 	
 	@staticmethod
+	def is_union_type(instance: Instance):
+		return instance.instanceof(Types.get_type("UnionType"))
+	
+	@staticmethod
 	def is_type(instance: Instance):
 		return instance.instanceof(
 			Builtins.get_type("type")

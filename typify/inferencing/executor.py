@@ -162,9 +162,17 @@ class Executor(ast.NodeVisitor):
 
 	def visit_Return(self, node):
 		resolved = self.resolver.resolve_value(node.value)
-		self.add_to_snapshot(resolved)
-		self.symbol.refset.update(resolved)
-		self.returns.update(resolved)
+		new = ReferenceSet()
+		for r in resolved:
+			if not any(repr(r) == repr(n) for n in self.symbol.refset):
+				new.add(r)
+			if not any(repr(r) == repr(n) for n in self.returns):
+				new.add(r)
+
+		self.symbol.refset.update(new)
+		self.returns.update(new)
+
+		self.add_to_snapshot(self.returns)
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
