@@ -32,6 +32,32 @@ class Desugar:
 	}
 
 	@staticmethod
+	def slice_to_ast_call(s: ast.Slice) -> ast.Call:
+		def n(x): return x if x is not None else ast.Constant(value=None)
+		return ast.Call(
+			func=ast.Name(id="slice", ctx=ast.Load()),
+			args=[n(s.lower), n(s.upper), n(s.step)],
+			keywords=[],
+		)
+
+	@staticmethod
+	def key_expr_for_subscript(sub: ast.Subscript) -> ast.expr:
+		s = sub.slice
+		if isinstance(s, ast.Slice):
+			return Desugar.slice_to_ast_call(s)
+		if isinstance(s, ast.Tuple):
+			return ast.Tuple(elts=s.elts, ctx=ast.Load())
+		return s
+
+	@staticmethod
+	def setitem_call(target: ast.Subscript, value_expr: ast.expr) -> ast.Call:
+		return ast.Call(
+			func=ast.Attribute(value=target.value, attr="__setitem__", ctx=ast.Load()),
+			args=[Desugar.key_expr_for_subscript(target), value_expr],
+			keywords=[],
+    	)
+
+	@staticmethod
 	def to_dunder(expr: ast.expr | ast.AugAssign, use_reverse: bool = False) -> ast.Call:
 		if isinstance(expr, ast.BinOp):
 			op_type = type(expr.op)

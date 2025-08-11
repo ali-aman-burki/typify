@@ -103,12 +103,8 @@ class Instance:
 		return {}
 
 	def instanceof(self, *typedefs: ClassDefinition | tuple[ClassDefinition, ...]) -> bool:
-		from typify.inferencing.commons import Checker
-
-		if len(typedefs) == 1 and isinstance(typedefs[0], tuple):
-			typedefs = typedefs[0]
-
-		return any(Checker.match_origin(self.instantiator, td) for td in typedefs)
+		typedefs = typedefs[0] if len(typedefs) == 1 and isinstance(typedefs[0], tuple) else typedefs
+		return any(self.instantiator and self.instantiator.mro[0] in td.mro for td in typedefs)
 
 	def attribute_lookup(
 			self, 

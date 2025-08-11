@@ -212,13 +212,59 @@ class Resolver:
 				if namet:
 					result.update(namet.get_plausible_refset())
 			return result if result else ReferenceSet()
+		elif isinstance(node, ast.IfExp):
+			body_refs = self.resolve_value(node.body)
+			orelse_refs = self.resolve_value(node.orelse)
+
+			result = ReferenceSet()
+			result.update(body_refs)
+			result.update(orelse_refs)
+			
+			return result
 		else:
 			return Desugar.resolve(node, self)
+	
+	def assign(
+			self, 
+			target: ast.expr, 
+			value: ast.expr,
+			executor
+		) -> None:
+
+		from typify.inferencing.desugar import Desugar
+		from typify.inferencing.executor import Executor
+
+		executor: Executor = executor
+
+		if isinstance(target, ast.Subscript):
+			call = Desugar.setitem_call(target, value)
+			refset = self.resolve_value(call)
+			executor.add_to_snapshot(refset)
+			return
+
+		if isinstance(target, (ast.Tuple, ast.List)) and isinstance(value, (ast.Tuple, ast.List)):
+			if len(target.elts) == len(value.elts):
+				for t_i, v_i in zip(target.elts, value.elts):
+					self.assign(t_i, v_i, executor)
+				return
+
+			resolved_target = self.resolve_target(target)
+			resolved_value  = self.resolve_value(value)
+			
+			self.process_name_binding(resolved_target, resolved_value)
+			executor.add_to_snapshot(resolved_value)
+			return
+
+		resolved_target = self.resolve_target(target)
+		resolved_value  = self.resolve_value(value)
+		
+		executor.add_to_snapshot(resolved_value)
+		self.process_name_binding(resolved_target, resolved_value)
 	
 	#TODO: in the future, remove hardcoded logic for tuple and generalize it based on generics
 	#TODO: add support for starred unpacking
 	@safeguard(lambda: None, "process_assignment")
-	def process_assignment(
+	def process_name_binding(
 			self, 
 			resolved_target: PackGroup, 
 			resolved_value: ReferenceSet
@@ -243,7 +289,7 @@ class Resolver:
 								next_instances = ref.store[i]
 							elif len(reftype.typeargs) > i:
 								next_instances = TypeUtils.instantiate_from_type_expr(reftype.typeargs[i])
-						self.process_assignment(group, next_instances)
+						self.process_name_binding(group, next_instances)
 				else:
 					for target_entry in group:
 						target_entry.definition.refset.add(ref)

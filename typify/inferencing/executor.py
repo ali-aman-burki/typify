@@ -468,17 +468,14 @@ class Executor(ast.NodeVisitor):
 		)
 
 		resolved_target = self.resolver.resolve_target(node.target)
-		self.resolver.process_assignment(resolved_target, resolved_value)
+		self.resolver.process_name_binding(resolved_target, resolved_value)
 		self.deferred_annotations.compute(self.resolver)
 
 	def visit_Assign(self, node):
-		resolved_value = self.resolver.resolve_value(node.value)
-		self.add_to_snapshot(resolved_value)
-		for target in node.targets:
-			resolved_target = self.resolver.resolve_target(target)
-			self.resolver.process_assignment(resolved_target, resolved_value)
+		value_expr = node.value
+		for tgt in node.targets:
+			self.resolver.assign(tgt, value_expr, self)
 		self.deferred_annotations.compute(self.resolver)
-		
 	
 	def visit_AugAssign(self, node):
 		from typify.inferencing.desugar import Desugar
@@ -503,4 +500,4 @@ class Executor(ast.NodeVisitor):
 			self.visit_Assign(toAssign)
 		else:
 			resolved_target = self.resolver.resolve_target(node.target)
-			self.resolver.process_assignment(resolved_target, refset)
+			self.resolver.process_name_binding(resolved_target, refset)
