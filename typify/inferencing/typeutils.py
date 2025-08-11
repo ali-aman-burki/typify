@@ -25,7 +25,7 @@ class TypeUtils:
 	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> ReferenceSet:
 		if Checker.match_origin(unified_type_expr.base, Typing.get_type("Union")):
 			result = ReferenceSet()
-			for typeexpr in unified_type_expr.typeargs:
+			for typeexpr in unified_type_expr.args:
 				result.update(TypeUtils.instantiate_from_type_expr(typeexpr))
 			return result
 		elif Checker.match_origin(unified_type_expr.base, Typing.get_type("Any")):
@@ -33,7 +33,7 @@ class TypeUtils:
 		else:
 			if not unified_type_expr.base: return ReferenceSet()
 
-			instance = TypeUtils.instantiate_with_args(unified_type_expr.base, unified_type_expr.typeargs)
+			instance = TypeUtils.instantiate_with_args(unified_type_expr.base, unified_type_expr.args)
 			init_method_name = instance.attribute_lookup("__init__")
 			function_def = init_method_name.get_latest_definition().refset.ref()
 			
@@ -51,7 +51,7 @@ class TypeUtils:
 			) -> None:
 			for t in types:
 				if t.base == union_def:
-					flatten_recursive(t.typeargs, seen)
+					flatten_recursive(t.args, seen)
 				else:
 					seen[t] = None
 

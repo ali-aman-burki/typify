@@ -64,7 +64,7 @@ class GenericUtils:
 		if packed_is_union and type_is_union:
 			matches: list[dict[Placeholder, TypeExpr | list[TypeExpr]]] = []
 			for packed_branch in packed_expr.args:
-				for type_branch in type_expr.typeargs:
+				for type_branch in type_expr.args:
 					if Checker.match_origin(packed_branch.base.origin, type_branch.base):
 						subst = GenericUtils.build_substitution_map(
 							packed_branch, 
@@ -99,7 +99,7 @@ class GenericUtils:
 			return result
 
 		if type_is_union:
-			for branch in type_expr.typeargs:
+			for branch in type_expr.args:
 				if Checker.match_origin(packed_expr.base.origin, branch.base):
 					new_result = GenericUtils.build_substitution_map(
 						packed_expr, 
@@ -116,7 +116,7 @@ class GenericUtils:
 			return result
 
 		lenpacked = len(packed_expr.args)
-		lentx = len(type_expr.typeargs)
+		lentx = len(type_expr.args)
 		tindex = 0
 
 		for i in range(lenpacked):
@@ -124,7 +124,7 @@ class GenericUtils:
 				break
 
 			arg = packed_expr.args[i]
-			tx_arg = type_expr.typeargs[tindex]
+			tx_arg = type_expr.args[tindex]
 
 			if Checker.is_typevar(arg.base):
 				gencons = genconstruct.get(classdef)
@@ -143,7 +143,7 @@ class GenericUtils:
 						endcut = lenpacked - i
 						remaining = lentx - tindex - (endcut - 1)
 						if remaining >= 0:
-							slice_ = type_expr.typeargs[tindex : tindex + remaining]
+							slice_ = type_expr.args[tindex : tindex + remaining]
 							result[p] = p.update_type(result, slice_)
 							tindex += len(result[p])
 						break

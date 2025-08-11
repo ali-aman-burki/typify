@@ -283,12 +283,12 @@ class Resolver:
 						Builtins.get_type("set"),
 						Builtins.get_type("dict"),
 					):
-						next_instances = TypeUtils.instantiate_from_type_expr(reftype.typeargs[0])
+						next_instances = TypeUtils.instantiate_from_type_expr(reftype.args[0])
 						if ref.instanceof(Builtins.get_type("tuple")):
 							if len(ref.store) > i:
 								next_instances = ref.store[i]
-							elif len(reftype.typeargs) > i:
-								next_instances = TypeUtils.instantiate_from_type_expr(reftype.typeargs[i])
+							elif len(reftype.args) > i:
+								next_instances = TypeUtils.instantiate_from_type_expr(reftype.args[i])
 						self.process_name_binding(group, next_instances)
 				else:
 					for target_entry in group:

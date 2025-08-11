@@ -41,15 +41,15 @@ class TypeExpr:
 	def __init__(
 			self, 
 			base: ClassDefinition, 
-			typeargs: list[TypeExpr] = None
+			args: list[TypeExpr] = None
 		):
 		self.base = base
-		self.typeargs = typeargs or []
+		self.args = args or []
 
 	def strip(self) -> TypeExpr:
 		from typify.inferencing.commons import Checker, Typing
 
-		new_args = [arg.strip() for arg in self.typeargs]
+		new_args = [arg.strip() for arg in self.args]
 
 		if Checker.match_origin(self.base, Typing.get_type("Union")):
 			new_args = [
@@ -67,17 +67,17 @@ class TypeExpr:
 	def __eq__(self, other: TypeExpr):
 		if not isinstance(other, TypeExpr):
 			return NotImplemented
-		if self.base != other.base or len(self.typeargs) != len(other.typeargs):
+		if self.base != other.base or len(self.args) != len(other.args):
 			return False
-		return all(a == b for a, b in zip(self.typeargs, other.typeargs))
+		return all(a == b for a, b in zip(self.args, other.args))
 
 	def __hash__(self):
-		return hash((self.base, tuple(self.typeargs)))
+		return hash((self.base, tuple(self.args)))
 
 	def __repr__(self):
 		fqn = self.base.parent.id if self.base else PreCollector.UNVISITED
 		strs = []
-		for typeexpr in self.typeargs:
+		for typeexpr in self.args:
 			strs.append(repr(typeexpr))
 		joined = ", ".join(strs)
 		joined = f"[{joined}]" if joined else joined
