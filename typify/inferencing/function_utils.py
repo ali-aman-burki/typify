@@ -9,7 +9,8 @@ from typify.inferencing.commons import (
 	Typing, 
 	Builtins,
 	ParameterEntry,
-	ArgTuple
+	ArgTuple,
+	ResolvedArg
 )
 from typify.preprocessing.instance_utils import (
     ReferenceSet,
@@ -147,70 +148,80 @@ class FunctionUtils:
 			return signature.returns
 	
 	@staticmethod
+	def _pre_resolve_call_arguments(
+		call_node: ast.Call,
+		resolver: "Resolver",
+	) -> tuple[list[ResolvedArg], dict[str, ResolvedArg]]:
+
+		pos: list[ResolvedArg] = []
+		for arg_node in call_node.args:
+			vals = resolver.resolve_value(arg_node)
+			rs = ReferenceSet()
+			for inst in vals:
+				rs.add(inst)
+			pos.append(ResolvedArg(values=vals, refset=rs))
+
+		kw: dict[str, ResolvedArg] = {}
+		for kw_node in call_node.keywords:
+			if kw_node.arg is None:
+				continue
+			vals = resolver.resolve_value(kw_node.value)
+			rs = ReferenceSet()
+			for inst in vals:
+				rs.add(inst)
+			kw[kw_node.arg] = ResolvedArg(values=vals, refset=rs)
+
+		return pos, kw
+
+	@staticmethod
 	def map_call_arguments(
 		call_node: ast.Call,
 		parameters: dict[str, ParameterEntry],
 		resolver: Resolver,
 	) -> dict[str, ArgTuple]:
+		resolved_args: dict[str, "ArgTuple"] = {}
 
-		resolved_args: dict[str, ArgTuple] = {}
+		pos_args, kw_args = FunctionUtils._pre_resolve_call_arguments(call_node, resolver)
+
 		vararg_param = next((p for p in parameters.values() if p.is_vararg), None)
 
+		provided_kw_names = set(kw_args.keys())
 		positional_param_entries = [
 			p for p in parameters.values()
 			if not (p.is_vararg or p.is_kwarg or p.is_kwonly)
-			and p.name not in {kw.arg for kw in call_node.keywords if kw.arg is not None}
+			and p.name not in provided_kw_names
 		]
 
-		for i, arg_node in enumerate(call_node.args[:len(positional_param_entries)]):
-			name = positional_param_entries[i].name
-			refset = ReferenceSet()
-			defkey = positional_param_entries[i].defkey
+		n_bindable = min(len(positional_param_entries), len(pos_args))
+		for i in range(n_bindable):
+			pentry = positional_param_entries[i]
+			resolved_args[pentry.name] = ArgTuple(pos_args[i].refset, pentry.defkey)
 
-			for instance in resolver.resolve_value(arg_node):
-				refset.add(instance)
-
-			resolved_args[name] = ArgTuple(refset, defkey)
-
-		extra_args = call_node.args[len(positional_param_entries):]
-
-		if vararg_param and extra_args:
-			name = vararg_param.name
-			refset = ReferenceSet()
-			defkey = vararg_param.defkey
-
-			store = []
+		extra_pos = pos_args[n_bindable:]
+		if vararg_param and extra_pos:
 			typeargs = []
-
-			for elt in extra_args:
-				resolved = resolver.resolve_value(elt)
-				unified = TypeUtils.unify(resolved)
+			store = []
+			for resolved in extra_pos:
+				unified = TypeUtils.unify(resolved.values)
 				typeargs.append(unified)
-				store.append(resolved)
+				store.append(resolved.values)
 
-			instance = TypeUtils.instantiate_with_args(Builtins.get_type("tuple"), typeargs)
+			tup_type = Builtins.get_type("tuple")
+			instance = TypeUtils.instantiate_with_args(tup_type, typeargs)
 			instance.store = store
-			refset.add(instance)
 
-			resolved_args[name] = ArgTuple(refset, defkey)
+			rs = ReferenceSet()
+			rs.add(instance)
+			resolved_args[vararg_param.name] = ArgTuple(rs, vararg_param.defkey)
 
-		for kw in call_node.keywords:
-			if kw.arg is None:
-				continue
-			if kw.arg in parameters:
-				kwentry = parameters[kw.arg]
-				name = kw.arg
-				refset = ReferenceSet()
-				defkey = kwentry.defkey
-				
-				for instance in resolver.resolve_value(kw.value):
-					refset.add(instance)
+		for name, res in kw_args.items():
+			if name in parameters:
+				pentry = parameters[name]
+				resolved_args[name] = ArgTuple(res.refset, pentry.defkey)
 
-				resolved_args[name] = ArgTuple(refset, defkey)
-
-		for pname, param_entry in parameters.items():
+		for pname, pentry in parameters.items():
 			if pname not in resolved_args:
-				resolved_args[pname] = ArgTuple(param_entry.refset, param_entry.defkey)
+				resolved_args[pname] = ArgTuple(pentry.refset, pentry.defkey)
 
 		return resolved_args
 

@@ -12,6 +12,11 @@ from typify.preprocessing.symbol_table import (
     Module,
 )
 
+@dataclass
+class ResolvedArg:
+    values: object
+    refset: ReferenceSet
+
 @dataclass(eq=False)
 class ParameterEntry:
 	name: str
