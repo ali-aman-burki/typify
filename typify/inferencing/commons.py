@@ -80,16 +80,22 @@ class Checker:
 		return c1 and c2 and c1.mro[0] in c2.mro
 
 	@staticmethod
-	def is_generic_alias(instance: Instance):
+	def is_alias(instance: Instance):
 		return instance.instanceof(
+			Types.get_type("UnionType"),
 			Types.get_type("GenericAlias"),
 			Typing.get_type("_GenericAlias"),
-			Typing.get_type("_UnpackGenericAlias")
+			Typing.get_type("_UnpackGenericAlias"),
+			Typing.get_type("_UnionGenericAlias")
 		)
 	
 	@staticmethod
-	def is_union_type(instance: Instance):
-		return instance.instanceof(Types.get_type("UnionType"))
+	def is_unionable(instance: Instance):
+		return (
+			Checker.is_type(instance) or
+			Checker.is_alias(instance) or
+			Checker.is_typevar(instance)
+		) 
 	
 	@staticmethod
 	def is_type(instance: Instance):

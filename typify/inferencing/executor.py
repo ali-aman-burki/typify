@@ -322,7 +322,7 @@ class Executor(ast.NodeVisitor):
 				base_inst = base_inst_set.ref()
 				if base_inst.instanceof(Builtins.get_type("NoneType")): continue
 
-				if Checker.is_generic_alias(base_inst):
+				if Checker.is_alias(base_inst):
 					entering_symbol.genbases.append(base_inst)
 					base_inst = base_inst.packed_expr.base
 				

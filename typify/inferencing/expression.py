@@ -115,7 +115,7 @@ class AliasParser:
 		from typify.inferencing.generics.model import Placeholder
 		
 		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = AliasParser.filter_concsubs(concsubs)
-		if Checker.is_generic_alias(annotation):
+		if Checker.is_alias(annotation):
 			return AliasParser.resolve_to_type_expr(annotation.packed_expr, concsubs)
 		elif Checker.is_typevar(annotation):
 			for k, v in concsubs.items():
@@ -144,14 +144,11 @@ class AliasParser:
 				if k.typevar == tvt:
 					if v != None: return v
 			return []
-		elif Checker.is_generic_alias(packed_expr.base):
+		elif Checker.is_alias(packed_expr.base):
 			base = packed_expr.base.packed_expr.base.origin
 			args = []
 			for arg in packed_expr.base.packed_expr.args:
-				r = AliasParser.resolve_to_type_expr(arg, concsubs)
-				if not r:
-					print(packed_expr.base.packed_expr)
-				args.append(r)
+				args.append(AliasParser.resolve_to_type_expr(arg, concsubs))
 			return TypeExpr(base, args)
 		elif Checker.is_type(packed_expr.base):
 			targs: list[TypeExpr] = []

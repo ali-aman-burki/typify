@@ -32,6 +32,16 @@ class Desugar:
 	}
 
 	@staticmethod
+	def unpack_bitor(node: ast.AST):
+		if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+			return Desugar.unpack_bitor(node.left) + Desugar.unpack_bitor(node.right)
+		elif isinstance(node, ast.BinOp):
+			return []
+		else:
+			return [node]
+
+
+	@staticmethod
 	def slice_to_ast_call(s: ast.Slice) -> ast.Call:
 		def n(x): return x if x is not None else ast.Constant(value=None)
 		return ast.Call(
@@ -101,7 +111,6 @@ class Desugar:
 		else:
 			raise TypeError(f"Unsupported expr type: {type(expr)}")
 
-
 	@staticmethod
 	def subscript(node: ast.Subscript, use_class_getitem: bool) -> ast.Call:
 		if not isinstance(node, ast.Subscript):
@@ -120,8 +129,9 @@ class Desugar:
 	@staticmethod
 	def resolve(node: ast.expr, resolver: Resolver):
 		from typify.preprocessing.instance_utils import ReferenceSet
-		from typify.inferencing.expression import AliasParser
-		from typify.inferencing.commons import Checker
+		from typify.inferencing.typeutils import TypeUtils
+		from typify.inferencing.expression import AliasParser, TypeExpr, PackedExpr
+		from typify.inferencing.commons import Checker, Typing, Types
 		from typify.inferencing.call_dispatcher import CallDispatcher
 
 		if isinstance(node, ast.Subscript):
@@ -136,7 +146,7 @@ class Desugar:
 					if genset:
 						genref = genset.ref()
 						result.add(genref)
-						if Checker.is_generic_alias(genref):
+						if Checker.is_alias(genref):
 							AliasParser.attach(
 								resolver, 
 								node, 
@@ -152,6 +162,26 @@ class Desugar:
 			return result
 		
 		elif isinstance(node, ast.BinOp):
+			op_nodes = Desugar.unpack_bitor(node)
+			if op_nodes:
+				firstset = resolver.resolve_value(op_nodes[0])
+				if firstset:
+					firstref = firstset.ref()
+					if Checker.is_unionable(firstref):
+						base = Typing.get_type("Union").mro[0]
+						args = [PackedExpr(firstref)]
+						for op_node in op_nodes[1:]:
+							opset = resolver.resolve_value(op_node)
+							if opset:
+								args.append(PackedExpr(opset.ref()))
+						
+						res = TypeUtils.instantiate_from_type_expr(
+							TypeExpr(Types.get_type("UnionType"))
+						).ref()
+
+						res.packed_expr = PackedExpr(base, args)
+						return ReferenceSet(res)
+
 			desugared = Desugar.to_dunder(node)
 			dispatcher = CallDispatcher(resolver, desugared)
 			refset = dispatcher.dispatch()

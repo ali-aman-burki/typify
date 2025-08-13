@@ -33,7 +33,7 @@ class GenericUtils:
 							type_expr, 
 							genconstruct
 						)
-		elif Checker.is_generic_alias(annotation):
+		elif Checker.is_alias(annotation):
 			subst = GenericUtils.build_substitution_map(
 				annotation.packed_expr, 
 				type_expr,
@@ -59,7 +59,7 @@ class GenericUtils:
 			return {
 				ph: ph.update_type(subs_cache, type_expr)
 			}
-		elif Checker.is_generic_alias(annotation):
+		elif Checker.is_alias(annotation):
 			return GenericUtils.build_ownerless_substitution_map(
 				annotation.packed_expr,
 				type_expr

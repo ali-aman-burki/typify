@@ -73,7 +73,7 @@ class Instance:
 			if refset:
 				ref = refset.ref()
 				return ref.resolve_fully(resolver)
-		elif Checker.is_generic_alias(self):
+		elif Checker.is_alias(self):
 			for arg in self.packed_expr.args:
 				arg.base = arg.base.resolve_fully(resolver)
 			return self
@@ -84,7 +84,7 @@ class Instance:
 		
 		if self.instanceof(Builtins.get_type("str")):
 			return { self }
-		elif Checker.is_generic_alias(self):
+		elif Checker.is_alias(self):
 			result = set()
 			for arg in self.packed_expr.args:
 				result.update(arg.base.collect_str_objects())
@@ -93,7 +93,7 @@ class Instance:
 	
 	def collect_str_holders(self):
 		from typify.inferencing.commons import Checker, Builtins
-		if Checker.is_generic_alias(self):
+		if Checker.is_alias(self):
 			result = {}
 			for arg in self.packed_expr.args:
 				if arg.base.instanceof(Builtins.get_type("str")):
