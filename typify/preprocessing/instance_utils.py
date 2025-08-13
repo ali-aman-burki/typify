@@ -39,7 +39,7 @@ class ReferenceSet:
 	
 	def as_type(self):
 		from typify.inferencing.typeutils import TypeUtils
-		return TypeUtils.unify_from_exprs([ref.as_type() for ref in self.references])
+		return TypeUtils.unify(self)
 
 class Instance:
 	def __init__(self, instantiator: ClassDefinition):

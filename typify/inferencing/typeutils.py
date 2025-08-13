@@ -21,6 +21,7 @@ class TypeUtils:
 			type_exprs.append(ref.as_type())
 		return TypeUtils.unify_from_exprs(type_exprs)
 
+	#TODO: call __init__ so attributes of the instance are available
 	@staticmethod
 	def instantiate_from_type_expr(unified_type_expr: TypeExpr) -> ReferenceSet:
 		if Checker.match_origin(unified_type_expr.base, Typing.get_type("Union")):
@@ -33,22 +34,23 @@ class TypeUtils:
 		else:
 			if not unified_type_expr.base: return ReferenceSet()
 
-			instance = TypeUtils.instantiate_with_args(unified_type_expr.base, unified_type_expr.args)
-			init_method_name = instance.attribute_lookup("__init__")
-			function_def = init_method_name.get_latest_definition().refset.ref()
-			
+			instance = TypeUtils.instantiate_with_args(
+				unified_type_expr.base, 
+				unified_type_expr.args
+			)
 			return ReferenceSet(instance)
 
 	@staticmethod
 	def unify_from_exprs(typeargs: list[TypeExpr] = None) -> TypeExpr:
-		typeargs = typeargs or []
-		typeargs = [item for item in typeargs if item.base is not None]
+		normed = []
+		if typeargs:
+			for item in typeargs:
+				if item and item.base is not None:
+					normed.append(item.strip())
+
 		union_def = Typing.get_type("Union")
 
-		def flatten_recursive(
-				types: list[TypeExpr], 
-				seen: dict[TypeExpr, None]
-			) -> None:
+		def flatten_recursive(types: list[TypeExpr], seen: dict[TypeExpr, None]) -> None:
 			for t in types:
 				if t.base == union_def:
 					flatten_recursive(t.args, seen)
@@ -56,7 +58,7 @@ class TypeUtils:
 					seen[t] = None
 
 		seen: dict[TypeExpr, None] = {}
-		flatten_recursive(typeargs, seen)
+		flatten_recursive(normed, seen)
 
 		unique = list(seen.keys())
 
@@ -64,7 +66,6 @@ class TypeUtils:
 			return TypeExpr(Typing.get_type("Any"))
 		if len(unique) == 1:
 			return unique[0]
-
 		return TypeExpr(union_def, unique)
 
 	@staticmethod
