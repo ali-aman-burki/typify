@@ -74,6 +74,10 @@ class Executor(ast.NodeVisitor):
 		)
 
 		self.deferred_annotations = deferred_annotations or DeferredAnnotations()
+			
+		fobject = GlobalContext.function_object_map.get(self.symbol)
+		if fobject:
+			fobject.concsubs = {}
 
 		for argname in arguments:
 			argtuple = arguments[argname]
@@ -87,21 +91,43 @@ class Executor(ast.NodeVisitor):
 			ndef.refset.update(refset)
 			namespace_name.set_definition(ndef)
 			merged = symbol_name.merge_definition(ndef)
-			
-			fobject = GlobalContext.function_object_map[self.symbol]
 			annotation = fobject.parameters[argname].annotation
 
-			if annotation and caller:
-				GenericUtils.register_annotation(
-					annotation=annotation,
-					type_expr=refset.as_type(),
-					classdef=self.symbol.get_enclosing_class_definition(),
-					genconstruct=caller.genconstruct,
+			if annotation:
+				fobject.concsubs.update(
+					GenericUtils.build_ownerless_concsubs(
+						annotation,
+						refset.as_type(),
+						fobject.concsubs
+					)
 				)
+				if caller:
+					GenericUtils.register_annotation(
+						annotation=annotation,
+						type_expr=refset.as_type(),
+						classdef=self.symbol.get_enclosing_class_definition(),
+						genconstruct=caller.genconstruct,
+					)
 
 			if self.module_meta.fslots:
 				position = (fobject.tree.lineno, fobject.tree.col_offset)
 				self.module_meta.fslots[position][2][argname] = merged.refset
+		
+		enclosing = None
+		enclosing_concsubs = {}
+		self.concsubs = {}
+		
+		current = self.symbol.parent
+		while current and not isinstance(current, Module):
+			if isinstance(current, FunctionDefinition):
+				enclosing = GlobalContext.function_object_map.get(current)
+				if enclosing: enclosing_concsubs = enclosing.concsubs
+				break
+			current = current.parent
+
+		if fobject:
+			self.concsubs = fobject.concsubs = enclosing_concsubs | fobject.concsubs
+
 
 	def execute(self) -> ReferenceSet: 
 		from typify.inferencing.generics.utils import GenericUtils
@@ -109,12 +135,11 @@ class Executor(ast.NodeVisitor):
 		fobject = GlobalContext.function_object_map.get(self.symbol)
 		if isinstance(self.namespace, CallFrame) and FunctionUtils.is_stub(fobject.tree):
 			if fobject.return_annotation and fobject.return_annotation.instantiator:
-				concsubs = {}
 				if self.caller:
 					gencons = self.caller.genconstruct.get(self.symbol.get_enclosing_class_definition())
 					if gencons:
-						concsubs = gencons.concsubs
-				type_expr = AliasParser.annotation_to_typeexpr(fobject.return_annotation, concsubs)
+						self.concsubs.update(gencons.concsubs)
+				type_expr = AliasParser.annotation_to_typeexpr(fobject.return_annotation, self.concsubs)
 				result = TypeUtils.instantiate_from_type_expr(type_expr)
 				self.returns.update(result)
 				self.symbol.refset.update(result)

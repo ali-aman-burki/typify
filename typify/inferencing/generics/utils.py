@@ -46,7 +46,118 @@ class GenericUtils:
 					value, 
 					genconstruct
 				)
-					
+
+	@staticmethod
+	def build_ownerless_concsubs(
+		annotation: Instance,
+		type_expr: TypeExpr,
+		subs_cache: dict[Placeholder, TypeExpr | list[TypeExpr]]
+	) -> dict[Placeholder, TypeExpr | list[TypeExpr]]:
+		
+		if Checker.is_typevar(annotation):
+			ph = Placeholder(None, annotation)
+			return {
+				ph: ph.update_type(subs_cache, type_expr)
+			}
+		elif Checker.is_generic_alias(annotation):
+			return GenericUtils.build_ownerless_substitution_map(
+				annotation.packed_expr,
+				type_expr
+			)
+		else:
+			return {}
+	
+	@staticmethod
+	def build_ownerless_substitution_map(
+		packed_expr: PackedExpr,
+		type_expr: TypeExpr,
+	) -> dict[Placeholder, TypeExpr | list[TypeExpr]]:
+
+		placeholder_cache: dict[object, Placeholder] = {}
+
+		def get_ph(tvar) -> Placeholder:
+			ph = placeholder_cache.get(tvar)
+			if ph is None:
+				ph = Placeholder(None, tvar)
+				placeholder_cache[tvar] = ph
+			return ph
+
+		def merge_into(target: dict[Placeholder, TypeExpr | list[TypeExpr]],
+					newmap: dict[Placeholder, TypeExpr | list[TypeExpr]]):
+			for p, v in newmap.items():
+				target[p] = p.update_type(target, v)
+
+		def _build(px: PackedExpr, tx: TypeExpr,
+				acc: dict[Placeholder, TypeExpr | list[TypeExpr]]):
+			packed_is_union = Checker.match_origin(px.base.origin, Typing.get_type("Union"))
+			type_is_union = Checker.match_origin(tx.base, Typing.get_type("Union"))
+			packed_is_typevar = Checker.is_typevar(px.base)
+
+			if packed_is_union and type_is_union:
+				for p_branch in px.args:
+					for t_branch in tx.args:
+						tmp: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
+						_build(p_branch, t_branch, tmp)
+						merge_into(acc, tmp)
+				return
+
+			if packed_is_union:
+				for branch in px.args:
+					tmp: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
+					_build(branch, tx, tmp)
+					merge_into(acc, tmp)
+				return
+
+			if type_is_union:
+				for branch in tx.args:
+					tmp: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
+					_build(px, branch, tmp)
+					merge_into(acc, tmp)
+				return
+
+			if packed_is_typevar:
+				ph = get_ph(px.base)
+				acc[ph] = ph.update_type(acc, tx)
+				return
+
+			lenpacked = len(px.args)
+			lentx = len(tx.args)
+			tindex = 0
+
+			for i in range(lenpacked):
+				if tindex >= lentx:
+					break
+
+				arg = px.args[i]
+				tx_arg = tx.args[tindex]
+
+				if Checker.is_typevar(arg.base):
+					ph = get_ph(arg.base)
+					acc[ph] = ph.update_type(acc, tx_arg)
+					tindex += 1
+
+				elif arg.base.instanceof(Typing.get_type("_UnpackGenericAlias")):
+					tvt = arg.base.packed_expr.args[0].base
+					ph = get_ph(tvt)
+
+					endcut = lenpacked - i
+					remaining = lentx - tindex - (endcut - 1)
+
+					if remaining >= 0:
+						slice_ = tx.args[tindex : tindex + remaining]
+						acc[ph] = ph.update_type(acc, slice_)
+						tindex += len(slice_)
+
+				else:
+					tmp: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
+					_build(arg, tx_arg, tmp)
+					merge_into(acc, tmp)
+					tindex += 1
+
+		result: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
+		_build(packed_expr, type_expr, result)
+		return result
+
 	@staticmethod
 	def build_substitution_map(
 		packed_expr: PackedExpr,
@@ -57,22 +168,21 @@ class GenericUtils:
 
 		result: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
 
-		TypingUnion = Typing.get_type("Union")
-		packed_is_union = Checker.match_origin(packed_expr.base.origin, TypingUnion)
-		type_is_union = Checker.match_origin(type_expr.base, TypingUnion)
+		packed_is_union = Checker.match_origin(packed_expr.base.origin, Typing.get_type("Union"))
+		type_is_union = Checker.match_origin(type_expr.base, Typing.get_type("Union"))
+		packed_is_typevar = Checker.is_typevar(packed_expr.base)
 
 		if packed_is_union and type_is_union:
 			matches: list[dict[Placeholder, TypeExpr | list[TypeExpr]]] = []
 			for packed_branch in packed_expr.args:
 				for type_branch in type_expr.args:
-					if Checker.match_origin(packed_branch.base.origin, type_branch.base):
-						subst = GenericUtils.build_substitution_map(
-							packed_branch, 
-							type_branch,
-							classdef, 
-							genconstruct 
-						)
-						matches.append(subst)
+					subst = GenericUtils.build_substitution_map(
+						packed_branch, 
+						type_branch,
+						classdef, 
+						genconstruct 
+					)
+					matches.append(subst)
 
 			for subst in matches:
 				for p, v in subst.items():
@@ -83,14 +193,13 @@ class GenericUtils:
 		if packed_is_union:
 			matches = []
 			for branch in packed_expr.args:
-				if Checker.match_origin(branch.base.origin, type_expr.base):
-					subst = GenericUtils.build_substitution_map(
-						branch, 
-						type_expr,
-						classdef, 
-						genconstruct
-					)
-					matches.append(subst)
+				subst = GenericUtils.build_substitution_map(
+					branch, 
+					type_expr,
+					classdef, 
+					genconstruct
+				)
+				matches.append(subst)
 
 			for subst in matches:
 				for p, v in subst.items():
@@ -100,21 +209,26 @@ class GenericUtils:
 
 		if type_is_union:
 			for branch in type_expr.args:
-				if Checker.match_origin(packed_expr.base.origin, branch.base):
-					new_result = GenericUtils.build_substitution_map(
-						packed_expr, 
-						branch,
-						classdef, 
-						genconstruct 
-					)
-					for p, v in new_result.items():
-						result[p] = p.update_type(result, v)
+				new_result = GenericUtils.build_substitution_map(
+					packed_expr, 
+					branch,
+					classdef, 
+					genconstruct 
+				)
+				for p, v in new_result.items():
+					result[p] = p.update_type(result, v)
 
 			return result
 
-		if not Checker.match_origin(packed_expr.base.origin, type_expr.base):
+		if packed_is_typevar:
+			gencons = genconstruct.get(classdef)
+			if gencons:
+				for p in gencons.subs:
+					if p.typevar == packed_expr.base:
+						result[p] = p.update_type(result, type_expr)
+						break
 			return result
-
+	
 		lenpacked = len(packed_expr.args)
 		lentx = len(type_expr.args)
 		tindex = 0

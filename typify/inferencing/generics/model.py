@@ -55,7 +55,8 @@ class Placeholder:
             return incoming
 
     def __str__(self):
-        return f"{self.owner.parent.id}.{self.typevar.instantiator.parent.id}"
+        ownerid = f"{self.owner.parent.id}." if self.owner else ""
+        return f"{ownerid}{self.typevar.instantiator.parent.id}"
 
     def __repr__(self):
         return str(self)

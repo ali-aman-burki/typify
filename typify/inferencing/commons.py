@@ -74,6 +74,12 @@ class Checker:
 		return lhs and lhs == rhs
 	
 	@staticmethod
+	def is_subclass(c1: ClassDefinition, c2: ClassDefinition | tuple[ClassDefinition, ...]):
+		if isinstance(c2, tuple):
+			return any(c1 and c2 and c1.mro[0] in cls.mro for cls in c2)
+		return c1 and c2 and c1.mro[0] in c2.mro
+
+	@staticmethod
 	def is_generic_alias(instance: Instance):
 		return instance.instanceof(
 			Types.get_type("GenericAlias"),

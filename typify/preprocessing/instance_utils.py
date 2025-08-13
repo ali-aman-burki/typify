@@ -43,8 +43,8 @@ class ReferenceSet:
 
 class Instance:
 	def __init__(self, instantiator: ClassDefinition):
-		from typify.inferencing.generics.model import GenericConstruct
-		from typify.inferencing.expression import PackedExpr
+		from typify.inferencing.generics.model import GenericConstruct, Placeholder
+		from typify.inferencing.expression import PackedExpr, TypeExpr
 		from typify.inferencing.commons import ParameterEntry
 
 		self.instantiator: ClassDefinition = instantiator
@@ -57,6 +57,7 @@ class Instance:
 		self.tree: ast.FunctionDef | ast.AsyncFunctionDef = None
 		self.parameters: dict[str, ParameterEntry] = {}
 		self.return_annotation: Instance = None
+		self.concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = {}
 
 		self.genconstruct: dict[ClassDefinition, GenericConstruct] = {}
 	

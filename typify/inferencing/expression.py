@@ -86,6 +86,27 @@ class TypeExpr:
 class AliasParser:
 
 	@staticmethod
+	def filter_concsubs(concsubs: dict):
+		from typify.inferencing.generics.model import Placeholder
+
+		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = concsubs
+
+		typevars_with_owner = {
+			key.typevar
+			for key in concsubs
+			if key.owner is not None
+		}
+
+		new_concsubs = {
+			key: value
+			for key, value in concsubs.items()
+			if not (key.typevar in typevars_with_owner and key.owner is None)
+		}
+
+		return new_concsubs
+
+
+	@staticmethod
 	def annotation_to_typeexpr(
 		annotation: Instance, 
 		concsubs: dict
@@ -93,13 +114,13 @@ class AliasParser:
 		
 		from typify.inferencing.generics.model import Placeholder
 		
-		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = concsubs
+		concsubs: dict[Placeholder, TypeExpr | list[TypeExpr]] = AliasParser.filter_concsubs(concsubs)
 		if Checker.is_generic_alias(annotation):
 			return AliasParser.resolve_to_type_expr(annotation.packed_expr, concsubs)
 		elif Checker.is_typevar(annotation):
 			for k, v in concsubs.items():
 				if k.typevar == annotation:
-					if v: return v
+					if v != None: return v
 			return TypeExpr(Typing.get_type("Any"))
 		elif Checker.is_type(annotation):
 			return TypeExpr(annotation.origin)
@@ -121,13 +142,16 @@ class AliasParser:
 			tvt = packed_expr.base.packed_expr.args[0].base
 			for k, v in concsubs.items():
 				if k.typevar == tvt:
-					return v
+					if v != None: return v
 			return []
 		elif Checker.is_generic_alias(packed_expr.base):
 			base = packed_expr.base.packed_expr.base.origin
 			args = []
 			for arg in packed_expr.base.packed_expr.args:
-				args.append(AliasParser.resolve_to_type_expr(arg, concsubs))
+				r = AliasParser.resolve_to_type_expr(arg, concsubs)
+				if not r:
+					print(packed_expr.base.packed_expr)
+				args.append(r)
 			return TypeExpr(base, args)
 		elif Checker.is_type(packed_expr.base):
 			targs: list[TypeExpr] = []
@@ -142,7 +166,7 @@ class AliasParser:
 			tv = packed_expr.base
 			for k, v in concsubs.items():
 				if k.typevar == tv:
-					return v
+					if v != None: return v
 			return TypeExpr(Typing.get_type("Any"))
 		elif packed_expr.base.instanceof(Builtins.get_type("NoneType")):
 			return TypeExpr(Builtins.get_type("NoneType"))
