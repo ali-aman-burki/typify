@@ -92,19 +92,24 @@ class Executor(ast.NodeVisitor):
 			namespace_name.set_definition(ndef)
 			merged = symbol_name.merge_definition(ndef)
 			annotation = fobject.parameters[argname].annotation
+			is_vararg = fobject.parameters[argname].is_vararg
 
 			if annotation:
+				type_to_use = refset.as_type()
+				if is_vararg:
+					type_to_use = TypeUtils.unify_from_exprs(type_to_use.args)
+
 				fobject.concsubs.update(
 					GenericUtils.build_ownerless_concsubs(
 						annotation,
-						refset.as_type(),
+						type_to_use,
 						fobject.concsubs
 					)
 				)
 				if caller:
 					GenericUtils.register_annotation(
 						annotation=annotation,
-						type_expr=refset.as_type(),
+						type_expr=type_to_use,
 						classdef=self.symbol.get_enclosing_class_definition(),
 						genconstruct=caller.genconstruct,
 					)
@@ -139,7 +144,9 @@ class Executor(ast.NodeVisitor):
 					gencons = self.caller.genconstruct.get(self.symbol.get_enclosing_class_definition())
 					if gencons:
 						self.concsubs.update(gencons.concsubs)
-				type_expr = AliasParser.annotation_to_typeexpr(fobject.return_annotation, self.concsubs)
+				type_expr = TypeUtils.unify_from_exprs(
+					[AliasParser.annotation_to_typeexpr(fobject.return_annotation, self.concsubs)]
+				)
 				result = TypeUtils.instantiate_from_type_expr(type_expr)
 				self.returns.update(result)
 				self.symbol.refset.update(result)

@@ -52,10 +52,11 @@ class TypeExpr:
 		new_args = [arg.strip() for arg in self.args]
 
 		if Checker.match_origin(self.base, Typing.get_type("Union")):
-			new_args = [
-				arg for arg in new_args
-				if not Checker.match_origin(arg.base, Typing.get_type("Any"))
-			]
+			processed = []
+			for arg in new_args:
+				if arg not in processed:
+					processed.append(arg)
+			new_args = processed
 			if not new_args:
 				return TypeExpr(Typing.get_type("Any"))
 			if len(new_args) == 1:

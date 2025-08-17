@@ -41,32 +41,57 @@ class TypeUtils:
 			return ReferenceSet(instance)
 
 	@staticmethod
-	def unify_from_exprs(typeargs: list[TypeExpr] = None) -> TypeExpr:
-		normed = []
-		if typeargs:
-			for item in typeargs:
-				if item and item.base is not None:
-					normed.append(item.strip())
-
+	def unify_from_exprs(type_exprs: list[TypeExpr] | None = None) -> TypeExpr:
 		union_def = Typing.get_type("Union")
+		any_def   = Typing.get_type("Any")
 
-		def flatten_recursive(types: list[TypeExpr], seen: dict[TypeExpr, None]) -> None:
-			for t in types:
-				if t.base == union_def:
-					flatten_recursive(t.args, seen)
-				else:
-					seen[t] = None
+		if not type_exprs:
+			return TypeExpr(any_def)
 
-		seen: dict[TypeExpr, None] = {}
-		flatten_recursive(normed, seen)
+		normed = [t.strip() for t in type_exprs if t and t.base is not None]
 
-		unique = list(seen.keys())
+		def check_append(dst: list[TypeExpr], item: TypeExpr, dedup: bool = False) -> None:
+			dst.append(item)
 
-		if not unique:
-			return TypeExpr(Typing.get_type("Any"))
-		if len(unique) == 1:
-			return unique[0]
-		return TypeExpr(union_def, unique)
+		def unify_one(t: TypeExpr) -> TypeExpr:
+			t = t.strip()
+			if t.base == union_def:
+				flat: list[TypeExpr] = []
+				for a in t.args:
+					ua = unify_one(a)
+					if ua.base == union_def:
+						for x in ua.args:
+							check_append(flat, x, True)
+					else:
+						check_append(flat, ua)
+
+				if not flat:
+					return TypeExpr(any_def)
+				if len(flat) == 1:
+					return flat[0]
+				return TypeExpr(union_def, flat).strip()
+			else:
+				newargs: list[TypeExpr] = []
+				for a in t.args:
+					ua = unify_one(a)
+					check_append(newargs, ua)
+				return TypeExpr(t.base, newargs).strip()
+
+		parts: list[TypeExpr] = []
+		for t in normed:
+			ut = unify_one(t)
+			if ut.base == union_def:
+				for x in ut.args:
+					check_append(parts, x, True)
+			else:
+				check_append(parts, ut)
+
+		if not parts:
+			return TypeExpr(any_def)
+		if len(parts) == 1:
+			return parts[0]
+		return TypeExpr(union_def, parts).strip()
+
 
 	@staticmethod
 	def unify(refset: ReferenceSet):
