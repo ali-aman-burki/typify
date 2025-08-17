@@ -1,85 +1,109 @@
 import sys
+import warnings
+from typify.utils import ANSIColors
 
 class LogLevel:
-	OFF = 0
-	INFO = 1
-	DEBUG = 2
-	TRACE = 3
+    TRACE = 10
+    DEBUG = 20
+    INFO = 30
+    WARNING = 40
+    ERROR = 50
+    OFF = 60
 
-class AnsiColor:
-	RESET = "\033[0m"
-	INFO = "\033[38;5;250m"
-	DEBUG = "\033[38;5;108m"
-	TRACE = "\033[38;5;179m"
-	ERROR = "\033[38;5;160m"
-	WARN = "\033[38;5;179m"
+LEVEL_COLORS = {
+    "TRACE":   ANSIColors.CYAN,
+    "DEBUG":   ANSIColors.BLUE,
+    "INFO":    ANSIColors.GREEN,
+    "WARNING": ANSIColors.BRIGHT_YELLOW,
+    "ERROR":   ANSIColors.BRIGHT_RED,
+}
 
 class Logger:
-	def __init__(self, level=LogLevel.OFF):
-		self.level = level
-		self.outputs = []
-	
-	def set_level(self, level: int):
-		self.level = level
+    def __init__(self, level: int = LogLevel.INFO):
+        self.level = level
+        self.outputs = []
+        self._orig_showwarning = None
 
-	def add_output(self, stream):
-		self.outputs.append(stream)
+    def set_level(self, level: int):
+        self.level = level
 
-	def to_terminal(self, msg: str):
-		print(msg)
+    def add_output(self, stream):
+        """Register a stream (stdout, stderr, file, buffer, etc.) to receive logs."""
+        self.outputs.append(stream)
 
-	def _log(self, level_name: str, msg: str, color: str, min_level: int, trail: int, header: bool):
-		if self.level >= min_level:
-			prefix = f"[{level_name}] " if header else ""
-			color_msg = f"{color}{prefix}{msg}{AnsiColor.RESET}"
-			plain_msg = f"{prefix}{msg}"
+    def _emit(self, level_name: str, msg: str, severity: int, trail: int, header: bool):
+        if severity < self.level:
+            return
 
-			for out in self.outputs:
-				if out == sys.stdout:
-					print("\n" * trail, end="", file=out)
-					print(color_msg, file=out)
-				else:
-					out.write("\n" * trail + plain_msg + "\n")
-					out.flush()
+        prefix = f"[{level_name}] " if header else ""
+        plain_msg = f"{prefix}{msg}"
+        color = LEVEL_COLORS.get(level_name, ANSIColors.WHITE)
+        color_msg = f"{color}{plain_msg}{ANSIColors.RESET}"
 
-	def info(self, msg: str, trail: int = 0, header: bool = True):
-		self._log("INFO", msg, AnsiColor.INFO, LogLevel.INFO, trail, header)
+        for out in self.outputs:
+            if out in (sys.stdout, sys.stderr):
+                print("\n" * trail, end="", file=out)
+                print(color_msg, file=out)
+            else:
+                out.write("\n" * trail + plain_msg + "\n")
+                out.flush()
 
-	def debug(self, msg: str, trail: int = 0, header: bool = True):
-		self._log("DEBUG", msg, AnsiColor.DEBUG, LogLevel.DEBUG, trail, header)
+    def trace(self, msg: str, trail: int = 0, header: bool = True):
+        self._emit("TRACE", msg, LogLevel.TRACE, trail, header)
 
-	def trace(self, msg: str, trail: int = 0, header: bool = True):
-		self._log("TRACE", msg, AnsiColor.TRACE, LogLevel.TRACE, trail, header)
+    def debug(self, msg: str, trail: int = 0, header: bool = True):
+        self._emit("DEBUG", msg, LogLevel.DEBUG, trail, header)
 
-	def error(self, msg: str, trail: int = 0, header: bool = True):
-		prefix = "[ERROR] " if header else ""
-		color_msg = f"{AnsiColor.ERROR}{prefix}{msg}{AnsiColor.RESET}"
-		plain_msg = f"{prefix}{msg}"
+    def info(self, msg: str, trail: int = 0, header: bool = True):
+        self._emit("INFO", msg, LogLevel.INFO, trail, header)
 
-		for out in self.outputs:
-			if out == sys.stdout or out == sys.stderr:
-				print("\n" * trail, end="", file=out)
-				print(color_msg, file=out)
-			else:
-				out.write("\n" * trail + plain_msg + "\n")
-				out.flush()
-	
-	def warn(self, msg: str, trail: int = 0, header: bool = True):
-		prefix = "[WARN] " if header else ""
-		color_msg = f"{AnsiColor.WARN}{prefix}{msg}{AnsiColor.RESET}"
-		plain_msg = f"{prefix}{msg}"
+    def warning(self, msg: str, trail: int = 0, header: bool = True):
+        self._emit("WARNING", msg, LogLevel.WARNING, trail, header)
 
-		for out in self.outputs:
-			if out == sys.stdout or out == sys.stderr:
-				print("\n" * trail, end="", file=out)
-				print(color_msg, file=out)
-			else:
-				out.write("\n" * trail + plain_msg + "\n")
-				out.flush()
+    # Back-compat alias
+    def warn(self, msg: str, trail: int = 0, header: bool = True):
+        self.warning(msg, trail=trail, header=header)
 
-	def close(self):
-		for out in self.outputs:
-			if out not in (sys.stdout, sys.stderr):
-				out.close()
+    def error(self, msg: str, trail: int = 0, header: bool = True):
+        self._emit("ERROR", msg, LogLevel.ERROR, trail, header)
 
-logger = Logger(level=LogLevel.DEBUG)
+    def capture_warnings(self, enable: bool = True, include_category: bool = True, include_location: bool = True):
+        """
+        Route Python `warnings.warn(...)` through Logger.warning() with a clear origin tag.
+        Example line:
+        [WARNING] (via Python warnings) DeprecationWarning: thing is deprecated [path/file.py:123]
+        """
+        if enable and self._orig_showwarning is None:
+            self._orig_showwarning = warnings.showwarning
+
+            def _showwarning(message, category, filename, lineno, file=None, line=None):
+                parts = ["(via Python warnings)"]
+                if include_category and category:
+                    parts.append(f"{category.__name__}:")
+                parts.append(str(message).rstrip("\n"))
+                if include_location and filename and lineno:
+                    parts.append(f"[{filename}:{lineno}]")
+                formatted = " ".join(parts)
+                self.warning(formatted, header=True)
+
+            warnings.showwarning = _showwarning
+            warnings.simplefilter("default")  # ensure they aren’t globally suppressed
+
+        elif not enable and self._orig_showwarning is not None:
+            warnings.showwarning = self._orig_showwarning
+            self._orig_showwarning = None
+
+    def close(self):
+        if self._orig_showwarning is not None:
+            warnings.showwarning = self._orig_showwarning
+            self._orig_showwarning = None
+
+        for out in self.outputs:
+            if out not in (sys.stdout, sys.stderr):
+                try:
+                    out.close()
+                except Exception:
+                    pass
+
+logger = Logger(level=LogLevel.DEBUG) 
+logger.capture_warnings(True)
