@@ -50,9 +50,6 @@ class TypeUtils:
 
 		normed = [t.strip() for t in type_exprs if t and t.base is not None]
 
-		def check_append(dst: list[TypeExpr], item: TypeExpr, dedup: bool = False) -> None:
-			dst.append(item)
-
 		def unify_one(t: TypeExpr) -> TypeExpr:
 			t = t.strip()
 			if t.base == union_def:
@@ -61,9 +58,12 @@ class TypeUtils:
 					ua = unify_one(a)
 					if ua.base == union_def:
 						for x in ua.args:
-							check_append(flat, x, True)
+							flat.append(x)
 					else:
-						check_append(flat, ua)
+						flat.append(ua)
+
+				if any(x.base != any_def for x in flat) and any(x.base == any_def for x in flat):
+					flat = [x for x in flat if x.base != any_def]
 
 				if not flat:
 					return TypeExpr(any_def)
@@ -74,7 +74,7 @@ class TypeUtils:
 				newargs: list[TypeExpr] = []
 				for a in t.args:
 					ua = unify_one(a)
-					check_append(newargs, ua)
+					newargs.append(ua)
 				return TypeExpr(t.base, newargs).strip()
 
 		parts: list[TypeExpr] = []
@@ -82,16 +82,18 @@ class TypeUtils:
 			ut = unify_one(t)
 			if ut.base == union_def:
 				for x in ut.args:
-					check_append(parts, x, True)
+					parts.append(x)
 			else:
-				check_append(parts, ut)
+				parts.append(ut)
+
+		if any(x.base != any_def for x in parts) and any(x.base == any_def for x in parts):
+			parts = [x for x in parts if x.base != any_def]
 
 		if not parts:
 			return TypeExpr(any_def)
 		if len(parts) == 1:
 			return parts[0]
 		return TypeExpr(union_def, parts).strip()
-
 
 	@staticmethod
 	def unify(refset: ReferenceSet):

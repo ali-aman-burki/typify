@@ -29,8 +29,8 @@ parser.add_argument(
 parser.add_argument(
     "-l", 
     "--log", 
-    choices=["off", "info", "debug", "trace"], 
-    default="info", 
+    choices=["off", "info", "debug", "trace", "error", "warning"], 
+    default="off", 
     help="Set the logging level."
 )
 
@@ -54,6 +54,8 @@ log_levels = {
     "info": LogLevel.INFO,
     "debug": LogLevel.DEBUG,
     "trace": LogLevel.TRACE,
+    "error": LogLevel.ERROR,
+    "warning": LogLevel.WARNING,
 }
 logger.set_level(log_levels[args.log])
 if logger.level != LogLevel.OFF:
