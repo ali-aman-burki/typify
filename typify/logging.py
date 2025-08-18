@@ -11,11 +11,11 @@ class LogLevel:
     OFF = 60
 
 LEVEL_COLORS = {
-    "TRACE":   ANSIColors.CYAN,
-    "DEBUG":   ANSIColors.BLUE,
-    "INFO":    ANSIColors.GREEN,
+    "TRACE": ANSIColors.CYAN,
+    "DEBUG": ANSIColors.BLUE,
+    "INFO": ANSIColors.GREEN,
     "WARNING": ANSIColors.BRIGHT_YELLOW,
-    "ERROR":   ANSIColors.BRIGHT_RED,
+    "ERROR": ANSIColors.BRIGHT_RED,
 }
 
 class Logger:
