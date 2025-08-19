@@ -78,6 +78,11 @@ class TypeExpr:
 		return all(a == b for a, b in zip(self.args, other.args))
 
 	def __hash__(self):
+		is_union = Checker.match_origin(self.base, Typing.get_type("Union"))
+
+		if is_union:
+			return hash((self.base, frozenset(self.args)))
+
 		return hash((self.base, tuple(self.args)))
 
 	def __repr__(self):
