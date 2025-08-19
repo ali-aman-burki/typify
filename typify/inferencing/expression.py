@@ -47,8 +47,6 @@ class TypeExpr:
 		self.args = args or []
 
 	def strip(self) -> TypeExpr:
-		from typify.inferencing.commons import Checker, Typing
-
 		new_args = [arg.strip() for arg in self.args]
 
 		if Checker.match_origin(self.base, Typing.get_type("Union")):
@@ -68,7 +66,14 @@ class TypeExpr:
 	def __eq__(self, other: TypeExpr):
 		if not isinstance(other, TypeExpr):
 			return NotImplemented
-		if self.base != other.base or len(self.args) != len(other.args):
+
+		if self.base != other.base:
+			return False
+
+		if Checker.match_origin(self.base, Typing.get_type("Union")):
+			return set(self.args) == set(other.args)
+
+		if len(self.args) != len(other.args):
 			return False
 		return all(a == b for a, b in zip(self.args, other.args))
 
