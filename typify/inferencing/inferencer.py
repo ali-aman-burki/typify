@@ -59,10 +59,10 @@ class Inferencer:
 				if is_single else False
 			)
 
-			snapshots: dict[ModuleMeta, list[set[str]]] = {meta: [] for meta in sequence}
+			snapshots: dict[ModuleMeta, list[set]] = {meta: [] for meta in sequence}
 			passes: dict[ModuleMeta, int] = {meta: 0 for meta in sequence}
 
-			def run_pass(meta: ModuleMeta) -> list[set[str]]:
+			def run_pass(meta: ModuleMeta) -> list[set]:
 				snapshot_log: list[ReferenceSet] = []
 				sysmodules.setdefault(
 					meta.table.fqn,

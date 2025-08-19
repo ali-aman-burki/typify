@@ -177,14 +177,14 @@ class Executor(ast.NodeVisitor):
 		
 		return self.returns
 
-	def snapshot(self): 
+	def snapshot(self) -> list[set[tuple[TypeExpr, int]]]: 
 		result = []
 		for references in self.snapshot_log:
 			counter = defaultdict(int)
 			labeled = set()
 			for ref in references:
-				counter[ref.label()] += 1
-				label = f"{ref.label()}#{counter[ref.label()]}"
+				counter[ref.as_type()] += 1
+				label = (ref.as_type(), counter[ref.as_type()])
 				labeled.add(label)
 			result.append(labeled)
 		return result

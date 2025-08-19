@@ -10,7 +10,7 @@ class CallSignature:
 	function_table: FunctionDefinition
 	arguments: dict[str, ArgTuple]
 	returns: ReferenceSet = field(default_factory=ReferenceSet)
-	snapshot: list[set[str]] = field(default_factory=list)
+	snapshot: list[set] = field(default_factory=list)
 	running: bool = False
 	stabilized: bool = False
 
