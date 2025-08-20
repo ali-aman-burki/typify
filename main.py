@@ -33,6 +33,14 @@ parser.add_argument(
     default="off", 
     help="Set the logging level."
 )
+parser.add_argument(
+    "--types-file", 
+    help="Name of the types JSON file (without extension). Defaults to config value."
+)
+parser.add_argument(
+    "--log-file", 
+    help="Name of the log file (without extension). Defaults to config value."
+)
 
 args = parser.parse_args()
 
@@ -49,6 +57,9 @@ if not Utils.is_valid_directory(output_dir):
 with open(config_path, "r") as f:
     config: dict[str, Union[str, dict[str, str]]] = json.load(f)
 
+types_file_name = args.types_file or config["outputs"]["types"]
+log_file_name = args.log_file or config["outputs"]["log"]
+
 log_levels = {
     "off": LogLevel.OFF,
     "info": LogLevel.INFO,
@@ -60,7 +71,7 @@ log_levels = {
 logger.set_level(log_levels[args.log])
 if logger.level != LogLevel.OFF:
     logger.add_output(
-        open(Path(output_dir) / f"{config["outputs"]["log"]}.log", "w", encoding="utf-8")
+        open(Path(output_dir) / f"{log_file_name}.log", "w", encoding="utf-8")
     )
 
 print(Utils.title)
@@ -84,7 +95,7 @@ for meta, deps in GlobalContext.cleaned_graph.items():
 Inferencer.infer()
 
 GlobalContext.libs[0].export_types(
-    Path(output_dir) / f"{config["outputs"]["types"]}.json"
+    Path(output_dir) / f"{types_file_name}.json"
 )
 
 logger.close()

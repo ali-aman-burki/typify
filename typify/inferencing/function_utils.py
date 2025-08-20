@@ -23,7 +23,8 @@ from typify.inferencing.call_stack import (
 from typify.preprocessing.symbol_table import CallFrame
 
 class FunctionUtils:
-
+	
+	@staticmethod
 	def is_stub(func_node):
 		if len(func_node.body) != 1:
 			return False
