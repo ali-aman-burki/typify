@@ -48,7 +48,7 @@ class ProgressBar:
 
 		filled_len: int = int(self.length * self.iteration // self.total) if self.total > 0 else 0
 		bar = (
-			f"{ANSIColors.GREEN}{self.fill * filled_len}{ANSIColors.RESET}"
+			f"{ANSIColors.BRIGHT_GREEN}{self.fill * filled_len}{ANSIColors.RESET}"
 			f"{ANSIColors.GRAY}{self.empty * (self.length - filled_len)}{ANSIColors.RESET}"
 		)
 
@@ -129,7 +129,7 @@ class IndeterminateProgressBar:
 			for i in range(self.block_len):
 				idx = position + i
 				if 0 <= idx < self.length:
-					bar[idx] = f"{ANSIColors.GREEN}{self.fill}{ANSIColors.RESET}"
+					bar[idx] = f"{ANSIColors.BRIGHT_GREEN}{self.fill}{ANSIColors.RESET}"
 
 			bar_str = ''.join(bar)
 			components = []
@@ -162,7 +162,7 @@ class IndeterminateProgressBar:
 
 			time.sleep(self.speed)
 
-		bar_str = f"{ANSIColors.GREEN}{self.fill * self.length}{ANSIColors.RESET}"
+		bar_str = f"{ANSIColors.BRIGHT_GREEN}{self.fill * self.length}{ANSIColors.RESET}"
 		output_str = ' '.join(filter(None, [
 			self.prefix.ljust(self.prefix_width) if self.prefix else '',
 			f"{self.left}{bar_str}{self.right}",
