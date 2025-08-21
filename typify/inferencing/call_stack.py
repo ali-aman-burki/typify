@@ -1,7 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from typify.preprocessing.instance_utils import ReferenceSet, Instance
-from typify.preprocessing.symbol_table import FunctionDefinition
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
@@ -10,6 +9,7 @@ class CallSignature:
 	fobject: Instance
 	caller: Instance
 	arguments: dict[str, ArgTuple]
+	returns: ReferenceSet
 	running: bool = False
 
 	def __eq__(self, other):

@@ -85,7 +85,8 @@ class FunctionUtils:
 		sigkey = CallSignature(
 			fobject=fobject, 
 			caller=caller,
-			arguments=arguments
+			arguments=arguments,
+			returns=ReferenceSet()
 		)
 		signature = call_stack.get(sigkey) or sigkey
 
@@ -93,11 +94,11 @@ class FunctionUtils:
 			call_stack.push(signature)
 			logger.debug(f"🆕 Pushed: {repr(signature)}")
 
-			returns = executor.execute()
+			signature.returns = executor.execute().copy()
 
 			call_stack.pop()
 			logger.debug(f"✅ Popped: {repr(signature)}")
-			return returns
+			return signature.returns
 		else:
 			if not signature.running:
 				signature.running = True
@@ -107,9 +108,9 @@ class FunctionUtils:
 					arguments=signature.arguments,
 					call_stack=call_stack
 				)
-				returns = executor.execute()
-				return returns.copy()
-			return ReferenceSet()
+				signature.returns = executor.execute().copy()
+			
+			return signature.returns
 	
 	@staticmethod
 	def _pre_resolve_call_arguments(
