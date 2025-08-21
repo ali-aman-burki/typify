@@ -1,22 +1,20 @@
 from dataclasses import dataclass, field
 
-from typify.preprocessing.instance_utils import ReferenceSet
+from typify.preprocessing.instance_utils import ReferenceSet, Instance
 from typify.preprocessing.symbol_table import FunctionDefinition
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
 @dataclass(eq=False)
 class CallSignature:
-	function_table: FunctionDefinition
+	fobject: Instance
+	caller: Instance
 	arguments: dict[str, ArgTuple]
-	returns: ReferenceSet = field(default_factory=ReferenceSet)
-	snapshot: list[set] = field(default_factory=list)
 	running: bool = False
-	stabilized: bool = False
 
 	def __eq__(self, other):
 		if not isinstance(other, CallSignature): return NotImplemented
-		if self.function_table != other.function_table: return False
+		if self.fobject != other.fobject: return False
 		if self.arguments.keys() != other.arguments.keys(): return False
 
 		for key in self.arguments:
@@ -33,14 +31,14 @@ class CallSignature:
 				for k, v in self.arguments.items()
 			)
 		)
-		return hash((self.function_table, param_fingerprint))
+		return hash((self.fobject, param_fingerprint))
 
 	def __repr__(self):
 		args = []
 		for arg in self.arguments.values():
 			args.append(TypeUtils.unify(arg.refset).strip())
 		joined = ", ".join(repr(arg) for arg in args)
-		return self.function_table.parent.id + f"({joined})"
+		return self.fobject.origin.parent.fqn + f"({joined})"
 
 class CallStack:
 	def __init__(self):

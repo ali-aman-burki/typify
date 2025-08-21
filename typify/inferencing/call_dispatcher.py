@@ -34,18 +34,18 @@ class CallDispatcher:
 			modified_node.args.insert(0, ast.Constant(0))
 
 		param_map = fobject.parameters
-		argmap = FunctionUtils.map_call_arguments(modified_node, param_map, self.resolver)
+		arguments = FunctionUtils.map_call_arguments(modified_node, param_map, self.resolver)
 		
-		if inject and argmap:
-			first_param = next(iter(argmap.values()))
+		if inject and arguments:
+			first_param = next(iter(arguments.values()))
 			first_param.refset = ReferenceSet(inject)
 		
 		prev = GlobalContext.symbol_map[self.resolver.symbol]
 		result = FunctionUtils.exec_function(
-			inject,
-			argmap, 
-			fobject, 
-			self.resolver.call_stack
+			fobject=fobject, 
+			caller=inject,
+			arguments=arguments, 
+			call_stack=self.resolver.call_stack
 		)
 		GlobalContext.symbol_map[self.resolver.symbol] = prev
 		return result

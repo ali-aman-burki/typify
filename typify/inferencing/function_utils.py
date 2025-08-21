@@ -70,13 +70,11 @@ class FunctionUtils:
 
 	@staticmethod
 	def exec_function(
+		fobject: Instance,
 		caller: Instance,
 		arguments: dict[str, ArgTuple], 
-		fobject: Instance,
 		call_stack: CallStack
 	) -> ReferenceSet:
-
-		function_table = fobject.origin
 
 		executor = FunctionUtils.construct_executor(
 			caller=caller,
@@ -84,7 +82,11 @@ class FunctionUtils:
 			arguments=arguments, 
 			call_stack=call_stack
 		)
-		sigkey = CallSignature(function_table, arguments)
+		sigkey = CallSignature(
+			fobject=fobject, 
+			caller=caller,
+			arguments=arguments
+		)
 		signature = call_stack.get(sigkey) or sigkey
 
 		if not call_stack.contains(signature):
@@ -92,66 +94,27 @@ class FunctionUtils:
 			logger.debug(f"🆕 Pushed: {repr(signature)}")
 
 			returns = executor.execute()
-			signature.snapshot = executor.snapshot()
-			signature.returns.update(returns)
 
 			call_stack.pop()
 			logger.debug(f"✅ Popped: {repr(signature)}")
 			return returns
 		else:
-			traced = call_stack.trace(signature)
-			logger.debug(f"⚠️  Recursive SCC detected: {[repr(t) for t in traced]}", 1)
-
-			if not any(sig.running for sig in traced):
-				for sig in traced:
-					sig.running = True
-
-				iteration = 0
-				while True:
-					logger.debug(f"🔄 Fixpoint Iteration {iteration}", 1)
-					changed = False
-
-					for sig in traced:
-						logger.debug(f"🚀 Running: {repr(sig)}", 1)
-
-						sigfobject = GlobalContext.function_object_map[sig.function_table]
-
-						executor = FunctionUtils.construct_executor(
-							caller=caller,
-							fobject=sigfobject,
-							arguments=sig.arguments,
-							call_stack=call_stack
-						)
-
-						snapshot_before = sig.snapshot
-						returns = executor.execute()
-						snapshot_after = executor.snapshot()
-
-						sig.returns = returns.copy()
-						sig.snapshot = snapshot_after
-
-						logger.debug(f"  ▸ Before snapshot: {snapshot_before}")
-						logger.debug(f"  ▸ After snapshot:  {snapshot_after}")
-
-						if snapshot_before != snapshot_after:
-							changed = True
-
-					if not changed:
-						logger.debug(f"✅ Fixpoint reached — snapshots stabilized.", 1)
-						break
-
-					iteration += 1
-
-				for sig in traced:
-					sig.running = False
-
-			logger.debug(f"📤 Returning from: {repr(signature)} with returns = {signature.returns}")
-			return signature.returns
+			if not signature.running:
+				signature.running = True
+				executor = FunctionUtils.construct_executor(
+					caller=signature.caller,
+					fobject=signature.fobject,
+					arguments=signature.arguments,
+					call_stack=call_stack
+				)
+				returns = executor.execute()
+				return returns.copy()
+			return ReferenceSet()
 	
 	@staticmethod
 	def _pre_resolve_call_arguments(
 		call_node: ast.Call,
-		resolver: "Resolver",
+		resolver: Resolver,
 	) -> tuple[list[ResolvedArg], dict[str, ResolvedArg]]:
 
 		pos: list[ResolvedArg] = []
@@ -180,7 +143,7 @@ class FunctionUtils:
 		parameters: dict[str, ParameterEntry],
 		resolver: Resolver,
 	) -> dict[str, ArgTuple]:
-		resolved_args: dict[str, "ArgTuple"] = {}
+		resolved_args: dict[str, ArgTuple] = {}
 
 		pos_args, kw_args = FunctionUtils._pre_resolve_call_arguments(call_node, resolver)
 
