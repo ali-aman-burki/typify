@@ -75,13 +75,7 @@ class FunctionUtils:
 		arguments: dict[str, ArgTuple], 
 		call_stack: CallStack
 	) -> ReferenceSet:
-
-		executor = FunctionUtils.construct_executor(
-			caller=caller,
-			fobject=fobject, 
-			arguments=arguments, 
-			call_stack=call_stack
-		)
+		
 		sigkey = CallSignature(
 			fobject=fobject, 
 			caller=caller,
@@ -89,6 +83,13 @@ class FunctionUtils:
 			returns=ReferenceSet()
 		)
 		signature = call_stack.get(sigkey) or sigkey
+
+		executor = FunctionUtils.construct_executor(
+			caller=signature.caller,
+			fobject=signature.fobject, 
+			arguments=signature.arguments, 
+			call_stack=call_stack
+		)
 
 		if not call_stack.contains(signature):
 			call_stack.push(signature)
@@ -98,20 +99,13 @@ class FunctionUtils:
 
 			call_stack.pop()
 			logger.debug(f"✅ Popped: {repr(signature)}")
-			return signature.returns
 		else:
 			if not signature.running:
 				signature.running = True
-				executor = FunctionUtils.construct_executor(
-					caller=signature.caller,
-					fobject=signature.fobject,
-					arguments=signature.arguments,
-					call_stack=call_stack
-				)
 				signature.returns = executor.execute().copy()
-			
-			return signature.returns
-	
+
+		return signature.returns
+		
 	@staticmethod
 	def _pre_resolve_call_arguments(
 		call_node: ast.Call,
