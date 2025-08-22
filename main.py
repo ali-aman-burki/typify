@@ -82,14 +82,9 @@ logger.info("📦 Libraries loaded:", 1)
 for libmeta in GlobalContext.libs:
     logger.info(f"{str(libmeta.src)}")
 
-logger.info("🧩 Original Graph:", 1)
+logger.info("🧩 Dependency Graph:", 1)
 for meta, deps in GlobalContext.dependency_graph.items():
-    joined = ", ".join(f"<{dep}>" if isinstance(dep, str) else repr(dep) for dep in deps)
-    logger.info(f"  {repr(meta)} -> [{joined}]")
-
-logger.info("🧹 Cleaned Graph:", 1)
-for meta, deps in GlobalContext.cleaned_graph.items():
-    joined = ", ".join(f"<{dep}>" if isinstance(dep, str) else repr(dep) for dep in deps)
+    joined = ", ".join(repr(dep) for dep in deps)
     logger.info(f"  {repr(meta)} -> [{joined}]")
 
 Inferencer.infer()

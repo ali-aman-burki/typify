@@ -7,7 +7,7 @@ from typify.preprocessing.core import GlobalContext
 from typify.preprocessing.sequencer import Sequencer
 from typify.preprocessing.symbol_table import (
     Module, 
-    Package, 
+    Package
 )
 
 class DependencyUtils:
@@ -62,6 +62,7 @@ class DependencyUtils:
 		return []
 
 class GraphBuilder:
+
 	@staticmethod
 	def build_graph():
 		for lib in GlobalContext.libs:
@@ -73,26 +74,10 @@ class GraphBuilder:
 		progress.display()
 
 		for i, meta in enumerate(meta_values, 1):
-			tracker = DependencyTracker(meta)
-
-			meta.load_tree()
-			builtin_node = ast.ImportFrom(module="builtins", names=[ast.alias(name="*", asname=None)], level=0)
-			builtin_node.lineno = 0
-			builtin_node.col_offset = 0
-			meta.tree.body.insert(0, builtin_node)
-
-			tracker.visit(meta.tree)
-
-			meta.tree.body.pop(0)
-
+			DependencyTracker(meta).visit(meta.tree)
 			progress.update(i)
 
-		GlobalContext.cleaned_graph = {
-			key: {dep for dep in deps if not isinstance(dep, str)}
-			for key, deps in GlobalContext.dependency_graph.items()
-		}
-
-		GlobalContext.sequences = Sequencer.generate_sequences(GlobalContext.cleaned_graph)
+		GlobalContext.sequences = Sequencer.generate_sequences(GlobalContext.dependency_graph)
 
 class DependencyTracker(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
@@ -100,7 +85,7 @@ class DependencyTracker(ast.NodeVisitor):
 		self.module_table = module_meta.table
 		self.in_function = 0
 
-		GlobalContext.dependency_graph[module_meta] = set()
+		GlobalContext.dependency_graph[self.module_meta] = {GlobalContext.inference["builtins"]}
 	
 	def as_module_metas(self, modules: list[Module]) -> set[ModuleMeta]:
 		return {GlobalContext.meta_map[table] for table in modules if table in GlobalContext.meta_map}
@@ -123,9 +108,7 @@ class DependencyTracker(ast.NodeVisitor):
 				GlobalContext.dependency_graph[self.module_meta].discard(base_fqn)
 				return chain
 
-		GlobalContext.dependency_graph[self.module_meta].add(base_fqn)
 		return []
-
 
 	def visit_Import(self, node):
 		if self.in_function: return

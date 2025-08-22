@@ -1,5 +1,6 @@
+import ast
+
 from pathlib import Path
-import ast, json
 
 from typify.preprocessing.symbol_table import Module
 
@@ -7,9 +8,8 @@ class ModuleMeta:
 
 	def __init__(self, src: Path, trust_annotations: bool):
 		from typify.preprocessing.instance_utils import ReferenceSet
-
 		self.src = src
-		self.tree: ast.Module = None
+		self.tree: ast.Module = self.load_tree()
 		self.table = Module(src.stem)
 		self.trust_annotations = trust_annotations
 
@@ -17,10 +17,9 @@ class ModuleMeta:
 		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | ast.AsyncFunctionDef | str | dict[str, ReferenceSet] | ReferenceSet]] = {}
 
 	def load_tree(self):
-		if not self.tree:
-			with open(self.src, "r", encoding="utf-8") as file:
-				src_code = file.read()
-			self.tree = ast.parse(src_code)
+		with open(self.src, "r", encoding="utf-8") as file:
+			src_code = file.read()
+		return ast.parse(src_code)
 
 	def __repr__(self):
 		return self.table.fqn

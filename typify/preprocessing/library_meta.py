@@ -41,8 +41,8 @@ class LibraryMeta:
 		
 		working_is_package = (self.src / "__init__.py").is_file() or (self.src / "__init__.pyi").is_file()
 		progress_bar = IndeterminateProgressBar(
-			prefix=f"Searching modules in {last_n_parts(self.src, 2)}", 
-			suffix="Discovered: 0 modules", 
+			prefix=f"Parsing modules in {last_n_parts(self.src, 2)}", 
+			suffix="Parsed: 0 modules", 
 		)
 		progress_bar.start()
 
@@ -88,7 +88,7 @@ class LibraryMeta:
 					meta = ModuleMeta(init_path, package_table.trust_annotations)
 					package_table.set_module(meta.table, self.fqn_map)
 					self.meta_map[meta.table] = meta
-					progress_bar.set_suffix(f"Discovered: {len(self.meta_map)} modules")
+					progress_bar.set_suffix(f"Parsed: {len(self.meta_map)} modules")
 					break
 
 		module_candidates = defaultdict(dict)

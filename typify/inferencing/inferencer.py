@@ -22,7 +22,7 @@ class Inferencer:
 		sequences = GlobalContext.sequences
 		sysmodules = GlobalContext.sysmodules
 		libs = GlobalContext.libs
-		cleaned_graph = GlobalContext.cleaned_graph
+		dependency_graph = GlobalContext.dependency_graph
 
 		call_stack = CallStack()
 
@@ -42,7 +42,7 @@ class Inferencer:
 		combined_progress.display()
 		shown_in_combined: set[ModuleMeta] = set()
 
-		for src, targets in cleaned_graph.items():
+		for src, targets in dependency_graph.items():
 			for tgt in targets:
 				reverse_deps[tgt].add(src)
 
@@ -55,7 +55,7 @@ class Inferencer:
 
 			is_single = len(sequence) == 1
 			has_self_loop = (
-				sequence[0] in cleaned_graph.get(sequence[0], set())
+				sequence[0] in dependency_graph.get(sequence[0], set())
 				if is_single else False
 			)
 
