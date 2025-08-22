@@ -28,9 +28,7 @@ class LibraryMeta:
 		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
 		self.fqn_map: dict[str, list[Symbol]] = {}
 
-		self._build()
-
-	def _build(self):
+	def build(self):
 		def last_n_parts(path: Path, n: int) -> str:
 			parts = path.parts
 			n = max(1, min(n, len(parts)))

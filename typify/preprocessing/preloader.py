@@ -78,6 +78,8 @@ print(json.dumps(info))
 				continue
 
 		GlobalContext.libs = [LibraryMeta(path) for path in paths]
+		for lib in GlobalContext.libs:
+			lib.build()
 		
 		print()
 
