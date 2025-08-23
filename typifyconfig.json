@@ -1,5 +1,4 @@
 {
-	"cache": "~/.typifycache",
 	"outputs": {
 		"log": "typify",
 		"types": "types"

@@ -2,6 +2,8 @@ import ast
 import pickle
 import json
 import hashlib
+import os
+import sys
 
 from pathlib import Path
 from dataclasses import dataclass
@@ -44,9 +46,22 @@ class GlobalCache:
 	cache_path: Path = None
 
 	@staticmethod
-	def setup(config_paths: list[Path], cache_path: Path) -> list["LibraryMeta"]:
-		from typify.progbar import IndeterminateProgressBar
+	def get_cache_dir() -> Path:
+		if sys.platform.startswith("win"):
+			base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+		elif sys.platform == "darwin":
+			base = Path.home() / "Library" / "Caches"
+		else:
+			base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
 
+		target_path = base / "typify"
+		return target_path
+
+
+	@staticmethod
+	def setup(config_paths: list[Path]) -> list["LibraryMeta"]:
+		from typify.progbar import IndeterminateProgressBar
+		cache_path = GlobalCache.get_cache_dir()
 		GlobalCache.cache_path = cache_path
 		cache_path.mkdir(parents=True, exist_ok=True)
 
