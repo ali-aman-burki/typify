@@ -1,4 +1,6 @@
 import os
+import pathlib
+import ast
 
 class ANSIColors:
     RESET: str = "\033[0m"
@@ -48,6 +50,12 @@ class Utils:
 """
 
 	@staticmethod
+	def load_tree(path: pathlib.Path):
+		with open(path, "r", encoding="utf-8") as file:
+			src_code = file.read()
+		return ast.parse(src_code)
+
+	@staticmethod
 	def is_valid_directory(path):
 		if os.path.exists(path) and os.path.isdir(path):
 			return path
@@ -62,3 +70,14 @@ class Utils:
 			result += formatted_row + "\n"
 		
 		return result
+
+	@staticmethod
+	def last_n_parts(path: pathlib.Path, n: int) -> str:
+		parts = path.parts
+		n = max(1, min(n, len(parts)))
+
+		if len(parts) <= n:
+			return str(path)
+		else:
+			truncated_path = pathlib.Path("...") / pathlib.Path(*parts[-n:])
+			return str(truncated_path)

@@ -6,6 +6,7 @@ from collections import (
     OrderedDict
 )
 
+from typify.utils import Utils
 from typify.preprocessing.symbol_table import (
 	Symbol,
 	Library,
@@ -28,23 +29,10 @@ class LibraryMeta:
 		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
 		self.fqn_map: dict[str, list[Symbol]] = {}
 
-	def build(self):
-		def last_n_parts(path: Path, n: int) -> str:
-			parts = path.parts
-			n = max(1, min(n, len(parts)))
-
-			if len(parts) <= n:
-				return str(path)
-			else:
-				truncated_path = Path("...") / Path(*parts[-n:])
-				return str(truncated_path)
+	def build(self, progress_bar: IndeterminateProgressBar):
+		from typify.caching import GlobalCache
 		
 		working_is_package = (self.src / "__init__.py").is_file() or (self.src / "__init__.pyi").is_file()
-		progress_bar = IndeterminateProgressBar(
-			prefix=f"Parsing modules in {last_n_parts(self.src, 2)}", 
-			suffix="Parsed: 0 modules", 
-		)
-		progress_bar.start()
 
 		if working_is_package:
 			root_package_table = Package(self.src.name)
@@ -85,7 +73,12 @@ class LibraryMeta:
 			for ext in [".pyi", ".py"]:
 				init_path = dir_path / f"__init__{ext}"
 				if init_path.is_file():
-					meta = ModuleMeta(init_path, package_table.trust_annotations)
+					init_path = init_path.resolve()
+					meta = GlobalCache.get_module_meta(
+						self.src, 
+						init_path, 
+						package_table.trust_annotations
+					)
 					package_table.set_module(meta.table, self.fqn_map)
 					self.meta_map[meta.table] = meta
 					progress_bar.set_suffix(f"Parsed: {len(self.meta_map)} modules")
@@ -105,10 +98,15 @@ class LibraryMeta:
 				continue
 
 			table = package_map[parent]
-			meta = ModuleMeta(chosen_path, True if chosen_path.suffix == ".pyi" else table.trust_annotations)
+			chosen_path: Path = chosen_path.resolve()
+			meta = GlobalCache.get_module_meta(
+				self.src,
+				chosen_path,
+				True if chosen_path.suffix == ".pyi" else table.trust_annotations
+			)
 			table.set_module(meta.table, self.fqn_map)
 			self.meta_map[meta.table] = meta
-			progress_bar.set_suffix(f"Discovered: {len(self.meta_map)} modules")
+			progress_bar.set_suffix(f"Parsed: {len(self.meta_map)} modules")
 		
 		progress_bar.done()
 
@@ -122,7 +120,7 @@ class LibraryMeta:
 		
 		data = {}
 		for i, meta in enumerate(self.meta_map.values(), 1):
-			data[str(meta.src.resolve().as_posix())] = meta.table.to_dict()
+			data[str(meta.src.as_posix())] = meta.table.to_dict()
 			progress.update(i)
 		
 		sorted_data = OrderedDict()
@@ -145,7 +143,7 @@ class LibraryMeta:
 		
 		data = {}
 		for i, meta in enumerate(self.meta_map.values(), 1):
-			data[str(meta.src.resolve().as_posix())] = meta.typeslots()
+			data[str(meta.src.as_posix())] = meta.typeslots()
 			progress.update(i)
 		
 		sorted_data = OrderedDict()

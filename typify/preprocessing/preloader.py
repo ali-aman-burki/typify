@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Union
 from dataclasses import dataclass
 
+from typify.caching import GlobalCache
 from typify.progbar import ProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder
@@ -40,8 +41,8 @@ print(json.dumps(info))
 
 		raw_info = json.loads(result.stdout)
 
-		raw_info["user_site_lib"] = Path(raw_info["user_site_lib"])
-		raw_info["site_libs"] = [Path(p) for p in raw_info["site_libs"]]
+		raw_info["user_site_lib"] = Path(Path(raw_info["user_site_lib"]))
+		raw_info["site_libs"] = [Path(Path(p)) for p in raw_info["site_libs"]]
 
 		return {
 			"user_site_lib": raw_info["user_site_lib"],
@@ -67,7 +68,7 @@ print(json.dumps(info))
 						paths.extend([s for s in site if isinstance(s, Path)])
 			else:
 				try:
-					paths.append(Path(p))
+					paths.append(Path(Path(p).resolve()))
 				except Exception:
 					continue
 
@@ -76,10 +77,11 @@ print(json.dumps(info))
 				inference[k] = Path(v)
 			except Exception:
 				continue
+		
+		inference = {k: Path(v.resolve().as_posix()) for k, v in inference.items()}
+		paths = [Path(p.resolve().as_posix()) for p in paths]
 
-		GlobalContext.libs = [LibraryMeta(path) for path in paths]
-		for lib in GlobalContext.libs:
-			lib.build()
+		GlobalContext.libs = GlobalCache.setup(paths, Path("~/.typify_cache").expanduser())
 		
 		print()
 
