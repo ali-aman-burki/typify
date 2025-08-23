@@ -1,4 +1,5 @@
 **/.typify/
+**/.typifycache/
 
 *.pyc
 *.pyo

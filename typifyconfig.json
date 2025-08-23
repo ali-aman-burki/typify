@@ -1,16 +1,16 @@
 {
-	"cache": "~/.typify_cache",
+	"cache": "~/.typifycache",
 	"outputs": {
 		"log": "typify",
 		"types": "types"
 	},
 	"paths": [
-		"typify-defaults/stdlib/"
+		"typifystubs/stdlib/"
 	],
 	"inference": {
-		"builtins": "typify-defaults/stdlib/builtins.pyi",
-		"typing": "typify-defaults/stdlib/typing.pyi",
-		"types": "typify-defaults/stdlib/types.pyi",
-		"__future__": "typify-defaults/stdlib/__future__.pyi"
+		"builtins": "typifystubs/stdlib/builtins.pyi",
+		"typing": "typifystubs/stdlib/typing.pyi",
+		"types": "typifystubs/stdlib/types.pyi",
+		"__future__": "typifystubs/stdlib/__future__.pyi"
 	}
 }
