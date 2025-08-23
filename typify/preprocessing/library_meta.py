@@ -6,7 +6,6 @@ from collections import (
     OrderedDict
 )
 
-from typify.utils import Utils
 from typify.preprocessing.symbol_table import (
 	Symbol,
 	Library,
