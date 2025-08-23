@@ -59,6 +59,7 @@ with open(config_path, "r") as f:
 
 types_file_name = args.types_file or config["outputs"]["types"]
 log_file_name = args.log_file or config["outputs"]["log"]
+cache_dir = config["cache"]
 
 log_levels = {
     "off": LogLevel.OFF,
@@ -76,7 +77,11 @@ if logger.level != LogLevel.OFF:
 
 print(Utils.title)
 
-Preloader.load(config, Path(project_dir))
+Preloader.load(
+    config, 
+    Path(project_dir),
+    Path(cache_dir)
+)
 
 logger.info("📦 Libraries loaded:", 1)
 for libmeta in GlobalContext.libs:

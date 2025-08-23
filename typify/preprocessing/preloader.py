@@ -50,7 +50,11 @@ print(json.dumps(info))
 		}
 	
 	@staticmethod
-	def load(config: dict[str, Union[str, list[str], dict[str, str]]], project_dir: Path):
+	def load(
+		config: dict[str, Union[str, list[str], dict[str, str]]], 
+		project_dir: Path,
+		cache_dir: Path
+	):
 		from typify.preprocessing.precollector import PreCollector
 
 		paths = [project_dir]
@@ -80,8 +84,9 @@ print(json.dumps(info))
 		
 		inference = {k: Path(v.resolve().as_posix()) for k, v in inference.items()}
 		paths = [Path(p.resolve().as_posix()) for p in paths]
+		cache_dir = cache_dir.expanduser()
 
-		GlobalContext.libs = GlobalCache.setup(paths, Path("~/.typify_cache").expanduser())
+		GlobalContext.libs = GlobalCache.setup(paths, cache_dir)
 		
 		print()
 

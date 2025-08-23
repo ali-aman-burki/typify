@@ -1,13 +1,12 @@
 {
+	"cache": "~/.typify_cache",
 	"outputs": {
 		"log": "typify",
 		"types": "types"
 	},
-
 	"paths": [
 		"typify-defaults/stdlib/"
 	],
-
 	"inference": {
 		"builtins": "typify-defaults/stdlib/builtins.pyi",
 		"typing": "typify-defaults/stdlib/typing.pyi",
