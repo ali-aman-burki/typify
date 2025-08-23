@@ -4,6 +4,7 @@ import json
 import hashlib
 import os
 import sys
+import shutil
 
 from pathlib import Path
 from dataclasses import dataclass
@@ -241,24 +242,12 @@ class GlobalCache:
 
 	@staticmethod
 	def clear():
-		if not GlobalCache.cache_path:
-			return
+		cache_path = GlobalCache.get_cache_dir()
 
-		for _, libstruct in GlobalCache.lib_structs.items():
-			for file in libstruct.path.glob("*.pkl"):
-				file.unlink()
-			index_file = libstruct.path / "index.json"
-			if index_file.exists():
-				index_file.unlink()
-
-		for _, libcache in GlobalCache.libs_cache.items():
-			if libcache.lib_pickle.exists():
-				libcache.lib_pickle.unlink()
-
-		global_index_file = GlobalCache.cache_path / "index.json"
-		if global_index_file.exists():
-			global_index_file.unlink()
+		if cache_path.exists():
+			shutil.rmtree(cache_path, ignore_errors=True)
 
 		GlobalCache.lib_structs.clear()
 		GlobalCache.libs_cache.clear()
 		GlobalCache.global_index.clear()
+		GlobalCache.cache_path = None
