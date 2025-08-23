@@ -17,14 +17,14 @@ from typify.logging import (
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Build and export type inference for a Python project."
+        description="Build and export type bindings for a Python project."
     )
 
     parser.add_argument("project_dir", help="Path to the Python project directory.")
-    parser.add_argument("-o", "--output-dir", help="Path to the export directory (defaults to project path).")
+    parser.add_argument("--output-dir", help="Path to the export directory (defaults to project path).")
 
     parser.add_argument(
-        "-l", "--log",
+        "--log-level",
         choices=["off", "info", "debug", "trace", "error", "warning"],
         default="off",
         help="Set the logging level."
@@ -68,7 +68,7 @@ def main():
         "error": LogLevel.ERROR,
         "warning": LogLevel.WARNING,
     }
-    logger.set_level(log_levels[args.log])
+    logger.set_level(log_levels[args.log_level])
     if logger.level != LogLevel.OFF:
         logger.add_output(
             open(Path(output_dir) / f"{log_file_name}.log", "w", encoding="utf-8")
