@@ -115,7 +115,12 @@ class GraphBuilder:
 			GlobalContext.dependency_graph[from_meta] = out
 
 	@staticmethod
-	def _recompute_for_metas(metas: list["ModuleMeta"], progress: ProgressBar | None = None, log_files: bool = False):
+	def _recompute_for_metas(
+			lib, 
+			metas: list["ModuleMeta"], 
+			progress: ProgressBar | None = None, 
+			log_files: bool = False
+		):
 		from typify.logging import logger
 		builtins = GlobalContext.inference.get("builtins")
 		total = len(metas)
@@ -127,7 +132,8 @@ class GraphBuilder:
 				GlobalContext.dependency_graph[m].add(builtins)
 			DependencyTracker(m).visit(m.tree)
 			if log_files:
-				logger.debug(f"\t↳ {logger.emoji_map['file']} Recomputed {Path(m.src).resolve().as_posix()}")
+				rel = Path(m.src).resolve().relative_to(lib.src.resolve())
+				logger.debug(f"\t↳ {logger.emoji_map['file']} Recomputed {rel.as_posix()}")
 			if progress is not None:
 				progress.update(progress.iteration + 1)
 
@@ -196,7 +202,7 @@ class GraphBuilder:
 					progress.update(progress.iteration + cached_count)
 					logger.debug(f"{logger.emoji_map['changed']} [Deps] {cached_count} module(s) reused from cache in {lib_name}")
 
-				GraphBuilder._recompute_for_metas(metas, progress=progress, log_files=True)
+				GraphBuilder._recompute_for_metas(lib, metas, progress=progress, log_files=True)
 
 				if dep_file:
 					new_edges = GraphBuilder._serialize_edges_for(lib)
@@ -209,7 +215,7 @@ class GraphBuilder:
 				continue
 
 			if action == "full":
-				GraphBuilder._recompute_for_metas(metas, progress=progress, log_files=False)
+				GraphBuilder._recompute_for_metas(lib, metas, progress=progress, log_files=False)
 				if dep_file:
 					dep_file.write_text(json.dumps({
 						"version": 1,
