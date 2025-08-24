@@ -46,7 +46,6 @@ class GlobalCache:
 	libs_cache: dict[Path, LibraryCache] = {}
 	global_index: dict[str, str] = {}
 	modified_map: dict[Path, set[str]] = {}
-	cache_path: Path = None
 
 	@staticmethod
 	def compute_snapshot(lpath: Path) -> dict[str, float]:
@@ -70,13 +69,17 @@ class GlobalCache:
 
 
 	@staticmethod
-	def setup(config_paths: list[Path]) -> list[LibraryMeta]:
+	def setup(
+		cache_path: Path,
+		clear_cache: bool, 
+		config_paths: list[Path]
+	) -> list[LibraryMeta]:
 		from typify.progbar import IndeterminateProgressBar
 		from typify.logging import logger
 
-		cache_path = GlobalCache.get_cache_dir()
-		GlobalCache.cache_path = cache_path
 		cache_path.mkdir(parents=True, exist_ok=True)
+
+		if clear_cache: GlobalCache.clear(cache_path)
 
 		libs: list[LibraryMeta] = []
 
@@ -315,13 +318,10 @@ class GlobalCache:
 				json.dump(libstruct.index, f, indent='\t')
 
 	@staticmethod
-	def clear():
-		cache_path = GlobalCache.get_cache_dir()
-
+	def clear(cache_path: Path):
 		if cache_path.exists():
 			shutil.rmtree(cache_path, ignore_errors=True)
 
 		GlobalCache.lib_structs.clear()
 		GlobalCache.libs_cache.clear()
 		GlobalCache.global_index.clear()
-		GlobalCache.cache_path = None

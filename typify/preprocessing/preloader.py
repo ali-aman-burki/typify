@@ -51,6 +51,8 @@ print(json.dumps(info))
 	
 	@staticmethod
 	def load(
+		cache_path: Path,
+		clear_cache: bool,
 		config: dict[str, Union[str, list[str], dict[str, str]]], 
 		project_dir: Path,
 	):
@@ -64,7 +66,7 @@ print(json.dumps(info))
 		raw_paths = config.get("paths", [])
 
 		for p in raw_paths:
-			if p == "{CURRENT_ENV_SITES}":
+			if p == "{AUTO}":
 				for site in cenv.values():
 					if isinstance(site, Path):
 						paths.append(site)
@@ -86,7 +88,11 @@ print(json.dumps(info))
 		paths = [Path(p.resolve().as_posix()) for p in paths]
 
 		logger.debug(f"{logger.emoji_map['libs']} [Preloader] Loading libraries for {len(paths)} path(s)")
-		GlobalContext.libs = GlobalCache.setup(paths)
+		GlobalContext.libs = GlobalCache.setup(
+			cache_path,
+			clear_cache,
+			paths
+		)
 
 		GlobalContext.path_index.clear()
 		for lib in GlobalContext.libs:

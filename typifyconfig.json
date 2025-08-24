@@ -1,8 +1,5 @@
 {
-	"outputs": {
-		"log": "typify",
-		"types": "types"
-	},
+	"cache_dir": "{AUTO}",
 	"paths": [
 		"typifystubs/stdlib/"
 	],

@@ -51,14 +51,15 @@ def main():
 	if not Utils.is_valid_directory(output_dir):
 		os.makedirs(output_dir, exist_ok=True)
 
-	if args.clear_cache:
-		GlobalCache.clear()
-
 	with open(config_path, "r") as f:
 		config: dict[str, Union[str, dict[str, str]]] = json.load(f)
 
-	types_file_name = args.types_file or config["outputs"]["types"]
-	log_file_name = args.log_file or config["outputs"]["log"]
+	project_dir = Path(project_dir).resolve()
+	output_dir = Path(output_dir).resolve()
+	cache_path = config["cache_dir"] if config["cache_dir"] != "{AUTO}" else GlobalCache.get_cache_dir()
+	cache_path = Path(cache_path).resolve()
+	types_file_name = "types"
+	log_file_name = "typify"
 
 	log_levels = {
 		"off": LogLevel.OFF,
@@ -74,7 +75,12 @@ def main():
 			open(Path(output_dir) / f"{log_file_name}.log", "w", encoding="utf-8")
 		)
 
-	Preloader.load(config, Path(project_dir))
+	Preloader.load(
+		cache_path,
+		args.clear_cache,
+		config,
+		project_dir
+	)
 
 	if args.prune_cache:
 		GlobalCache.prune()
