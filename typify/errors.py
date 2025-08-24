@@ -12,8 +12,6 @@ def safeguard(default_factory, phase: str):
                 if args and isinstance(args[0], ast.AST):
                     node = args[0]
                 loc = f"{getattr(node, 'lineno', '?')}:{getattr(node, 'col_offset', '?')}" if node else "?:?"
-                # keep logs terse by default; uncomment next line if you want full traces
-                # tb = '\n' + traceback.format_exc()
                 tb = ""
                 frag = ""
                 try:

@@ -57,7 +57,6 @@ class Logger:
         self.level = level
 
     def add_output(self, stream):
-        """Register a stream (stdout, stderr, file, buffer, etc.) to receive logs."""
         self.outputs.append(stream)
 
     def _emit(self, level_name: str, msg: str, severity: int, trail: int, header: bool):
@@ -89,7 +88,6 @@ class Logger:
     def warning(self, msg: str, trail: int = 0, header: bool = True):
         self._emit("WARNING", msg, LogLevel.WARNING, trail, header)
 
-    # Back-compat alias
     def warn(self, msg: str, trail: int = 0, header: bool = True):
         self.warning(msg, trail=trail, header=header)
 
@@ -97,11 +95,6 @@ class Logger:
         self._emit("ERROR", msg, LogLevel.ERROR, trail, header)
 
     def capture_warnings(self, enable: bool = True, include_category: bool = True, include_location: bool = True):
-        """
-        Route Python `warnings.warn(...)` through Logger.warning() with a clear origin tag.
-        Example line:
-        [WARNING] (via Python warnings) DeprecationWarning: thing is deprecated [path/file.py:123]
-        """
         if enable and self._orig_showwarning is None:
             self._orig_showwarning = warnings.showwarning
 
@@ -116,7 +109,7 @@ class Logger:
                 self.warning(formatted, header=True)
 
             warnings.showwarning = _showwarning
-            warnings.simplefilter("default")  # ensure they aren’t globally suppressed
+            warnings.simplefilter("default")
 
         elif not enable and self._orig_showwarning is not None:
             warnings.showwarning = self._orig_showwarning

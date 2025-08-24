@@ -68,9 +68,6 @@ class GraphBuilder:
 
 	@staticmethod
 	def initialize_globals():
-		"""
-		Merge library-level maps into GlobalContext once.
-		"""
 		from typify.logging import logger
 		logger.debug(f"{logger.emoji_map['init']} [Deps] Initializing globals from libraries")
 		for lib in GlobalContext.libs:
@@ -136,9 +133,6 @@ class GraphBuilder:
 
 	@staticmethod
 	def build_graph_all(use_cache: bool = True):
-		"""
-		One progress bar whose total == total modules across all libraries.
-		"""
 		from typify.caching import GlobalCache
 		from typify.logging import logger
 
@@ -202,7 +196,6 @@ class GraphBuilder:
 					progress.update(progress.iteration + cached_count)
 					logger.debug(f"{logger.emoji_map['changed']} [Deps] {cached_count} module(s) reused from cache in {lib_name}")
 
-				# patched modules show indented lines
 				GraphBuilder._recompute_for_metas(metas, progress=progress, log_files=True)
 
 				if dep_file:
