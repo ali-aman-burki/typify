@@ -81,12 +81,12 @@ def main():
 
     logger.info("📦 Libraries loaded:", 1)
     for libmeta in GlobalContext.libs:
-        logger.info(f"{libmeta.src.as_posix()}")
+        logger.info(f"   {libmeta.src.as_posix()}")
 
     logger.info("🧩 Dependency Graph:", 1)
     for meta, deps in GlobalContext.dependency_graph.items():
         joined = ", ".join(repr(dep) for dep in deps)
-        logger.info(f"  {repr(meta)} -> [{joined}]")
+        logger.info(f"   {repr(meta)} -> [{joined}]")
 
     Inferencer.infer()
 

@@ -8,8 +8,8 @@ from dataclasses import dataclass
 
 from typify.caching import GlobalCache
 from typify.progbar import ProgressBar
-from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.dependency_utils import GraphBuilder
+from typify.preprocessing.sequencer import Sequencer
 from typify.preprocessing.core import GlobalContext
 
 @dataclass
@@ -55,6 +55,7 @@ print(json.dumps(info))
 		project_dir: Path,
 	):
 		from typify.preprocessing.precollector import PreCollector
+		from typify.logging import logger
 
 		paths = [project_dir]
 		inference: dict[str, Path] = {}
@@ -80,31 +81,32 @@ print(json.dumps(info))
 				inference[k] = Path(v)
 			except Exception:
 				continue
-		
+
 		inference = {k: Path(v.resolve().as_posix()) for k, v in inference.items()}
 		paths = [Path(p.resolve().as_posix()) for p in paths]
 
+		logger.debug(f"📚 [Preloader] Loading libraries for {len(paths)} path(s)")
 		GlobalContext.libs = GlobalCache.setup(paths)
+
 		GlobalContext.path_index.clear()
 		for lib in GlobalContext.libs:
 			for apath, meta in lib.path_index.items():
 				GlobalContext.path_index[apath.resolve()] = meta
-		
+
 		for k, v in inference.items():
 			GlobalContext.inference[k] = GlobalContext.path_index.get(v.resolve())
-		
+
 		print()
+
+		logger.debug("📦 [Preloader] Building dependency graph (all libraries)", trail=1)
+		GraphBuilder.build_graph_all(use_cache=True)
 
 		project_lib = GlobalContext.libs[0]
 		meta_values = list(project_lib.meta_map.values())
-		progress = ProgressBar(
-			len(meta_values), 
-			prefix=f"Collecting typeslots:", 
-		)
+		progress = ProgressBar(len(meta_values), prefix="Collecting typeslots:")
 		progress.display()
 
+		logger.debug(f"📝 [Preloader] Collecting typeslots for {len(meta_values)} module(s)", trail=1)
 		for i, meta in enumerate(meta_values, 1):
 			PreCollector(meta).visit(meta.tree)
 			progress.update(i)
-
-		GraphBuilder.build_graph()

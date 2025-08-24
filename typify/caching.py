@@ -34,17 +34,18 @@ class LibStruct:
 
 @dataclass
 class LibraryCache:
-    lib_dir: Path
-    lib_pickle: Path
-    digest: str
-    meta: LibraryMeta
-    snapshot: dict[str, float] 
+	lib_dir: Path
+	lib_pickle: Path
+	digest: str
+	meta: LibraryMeta
+	snapshot: dict[str, float] 
 
 class GlobalCache:
 
 	lib_structs: dict[Path, LibStruct] = {}
 	libs_cache: dict[Path, LibraryCache] = {}
 	global_index: dict[str, str] = {}
+	modified_map: dict[Path, set[str]] = {}
 	cache_path: Path = None
 
 	@staticmethod
@@ -122,6 +123,7 @@ class GlobalCache:
 						progress_bar.set_suffix(f"Cached: {module_count} modules")
 						logger.debug(f"✅ [Cache] {lpath.as_posix()}")
 						logger.debug(f"\tReused {module_count} modules (cache hit)")
+						GlobalCache.modified_map[lpath] = set()
 						progress_bar.done()
 						continue
 				except Exception as e:
@@ -158,6 +160,9 @@ class GlobalCache:
 					logger.debug(f"🔄 [Cache] {lpath.as_posix()}")
 					logger.debug(f"\tIncremental refresh: {len(modified)} trees updated")
 					logger.debug(f"\tTotal modules: {module_count}")
+
+					abs_posix_modified = {(lpath / rel).resolve().as_posix() for rel in modified}
+					GlobalCache.modified_map[lpath] = abs_posix_modified
 
 					for rel in sorted(modified):
 						abspath = (lpath / rel).resolve()
@@ -200,6 +205,8 @@ class GlobalCache:
 			logger.debug(f"\tFull rebuild performed")
 			logger.debug(f"\tTotal modules: {module_count}")
 
+			GlobalCache.modified_map[lpath] = set()
+
 			libcache = LibraryCache(
 				lib_dir=lib_dir,
 				lib_pickle=lib_pickle,
@@ -214,7 +221,7 @@ class GlobalCache:
 			libs.append(meta)
 
 		with global_index_file.open("w", encoding="utf-8") as f:
-			json.dump(GlobalCache.global_index, f, indent=2)
+			json.dump(GlobalCache.global_index, f, indent='\t')
 
 		total_modules = sum(len(meta.meta_map) for meta in libs)
 		logger.debug("📦 [Cache Summary]")
@@ -222,7 +229,6 @@ class GlobalCache:
 		logger.debug(f"\tTotal modules: {total_modules}")
 
 		return libs
-
 
 	@staticmethod
 	def get_module_meta(lpath: Path, mpath: Path, trust_annotations: bool):
@@ -255,7 +261,7 @@ class GlobalCache:
 
 		index_file = libcache.path / "index.json"
 		with index_file.open("w", encoding="utf-8") as f:
-			json.dump(libcache.index, f, indent=2)
+			json.dump(libcache.index, f, indent='\t')
 
 		return new_mcache.to_meta(mpath)
 
@@ -308,7 +314,7 @@ class GlobalCache:
 
 			index_file = libstruct.path / "index.json"
 			with index_file.open("w", encoding="utf-8") as f:
-				json.dump(libstruct.index, f, indent=2)
+				json.dump(libstruct.index, f, indent='\t')
 
 	@staticmethod
 	def clear():

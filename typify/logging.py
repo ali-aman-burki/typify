@@ -23,6 +23,28 @@ class Logger:
         self.level = level
         self.outputs = []
         self._orig_showwarning = None
+        self.emoji_map = {
+			# --- Status / signaling ---
+			"ok": "🟢",          # success / cache hit / load ok
+			"changed": "🟡",     # reused partially, something updated
+			"refresh": "🔵",     # refresh / recompute / rebuild done
+			"warn": "🟠",        # warning / risky path
+			"error": "🔴",       # error / corrupted / failure
+			"skip": "⚪",        # skipped item
+
+			# --- Process / phases ---
+			"start": "🚀",       # starting something (preloader, build)
+			"init": "🔧",        # initializing / setup
+			"build": "🏗️",       # full build / construction
+			"patch": "🔄",       # partial update / incremental refresh
+			"file": "📄",        # file-level action
+			"folder": "📁",      # directory-level
+			"summary": "📦",     # summary / wrap-up
+			"types": "📝",       # type collection
+			"libs": "📚",        # libraries loaded
+			"graph": "🕸️",      # dependency graph
+		}
+
 
     def set_level(self, level: int):
         self.level = level

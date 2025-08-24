@@ -1,4 +1,7 @@
 import ast
+import json
+
+from pathlib import Path
 
 from typify.progbar import ProgressBar
 from typify.preprocessing.instance_utils import Instance
@@ -6,8 +9,8 @@ from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.core import GlobalContext
 from typify.preprocessing.sequencer import Sequencer
 from typify.preprocessing.symbol_table import (
-    Module, 
-    Package
+	Module, 
+	Package
 )
 
 class DependencyUtils:
@@ -64,20 +67,166 @@ class DependencyUtils:
 class GraphBuilder:
 
 	@staticmethod
-	def build_graph():
+	def initialize_globals():
+		"""
+		Merge library-level maps into GlobalContext once.
+		"""
+		from typify.logging import logger
+		logger.debug("🔧 [Deps] Initializing globals from libraries")
 		for lib in GlobalContext.libs:
 			GlobalContext.meta_map.update(lib.meta_map)
 			GlobalContext.sysmodules.update(lib.sysmodules)
 
-		meta_values = list(GlobalContext.meta_map.values())
-		progress = ProgressBar(len(meta_values), prefix="Building dependency graph:")
+	@staticmethod
+	def _dep_cache_file_for(lib) -> Path | None:
+		from typify.caching import GlobalCache
+		lcache = GlobalCache.libs_cache.get(lib.src)
+		if lcache is None:
+			return None
+		return lcache.lib_dir / "deps.json"
+
+	@staticmethod
+	def _serialize_edges_for(lib) -> dict[str, list[str]]:
+		edges: dict[str, list[str]] = {}
+		lib_paths = {Path(m.src).resolve() for m in lib.meta_map.values()}
+
+		for from_meta, tos in GlobalContext.dependency_graph.items():
+			if Path(from_meta.src).resolve() not in lib_paths:
+				continue
+			from_key = Path(from_meta.src).resolve().as_posix()
+			out: list[str] = []
+			for to_meta in tos:
+				if hasattr(to_meta, "src"):
+					out.append(Path(to_meta.src).resolve().as_posix())
+			edges[from_key] = sorted(set(out)) if out else []
+		return edges
+
+	@staticmethod
+	def _load_edges_into_global(lib, edges: dict[str, list[str]]):
+		builtins = GlobalContext.inference.get("builtins")
+		for from_key, to_list in edges.items():
+			from_meta = GlobalContext.path_index.get(Path(from_key).resolve())
+			if not from_meta:
+				continue
+			out = set()
+			if builtins:
+				out.add(builtins)
+			for to_key in to_list:
+				to_meta = GlobalContext.path_index.get(Path(to_key).resolve())
+				if to_meta:
+					out.add(to_meta)
+			GlobalContext.dependency_graph[from_meta] = out
+
+	@staticmethod
+	def _recompute_for_metas(metas: list["ModuleMeta"], progress: ProgressBar | None = None, log_files: bool = False):
+		from typify.logging import logger
+		builtins = GlobalContext.inference.get("builtins")
+		total = len(metas)
+		if total:
+			logger.debug(f"🔄 [Deps] Recomputing {total} module(s)")
+		for i, m in enumerate(metas, 1):
+			GlobalContext.dependency_graph[m] = set()
+			if builtins:
+				GlobalContext.dependency_graph[m].add(builtins)
+			DependencyTracker(m).visit(m.tree)
+			if log_files:
+				logger.debug(f"\t↳ 📄 Recomputed {Path(m.src).resolve().as_posix()}")
+			if progress is not None:
+				progress.update(progress.iteration + 1)
+
+	@staticmethod
+	def build_graph_all(use_cache: bool = True):
+		"""
+		One progress bar whose total == total modules across all libraries.
+		"""
+		from typify.caching import GlobalCache
+		from typify.logging import logger
+
+		logger.debug("📦 [Deps] Starting dependency graph build")
+
+		GlobalContext.meta_map.clear()
+		GlobalContext.sysmodules.clear()
+		GlobalContext.dependency_graph.clear()
+
+		GraphBuilder.initialize_globals()
+
+		plan: list[tuple[str, object, list["ModuleMeta"], int]] = []
+		total_modules = 0
+
+		for lib in GlobalContext.libs:
+			dep_file = GraphBuilder._dep_cache_file_for(lib)
+			modified = GlobalCache.modified_map.get(lib.src, set())
+			lib_count = len(lib.meta_map)
+			total_modules += lib_count
+
+			if use_cache and dep_file and dep_file.exists() and not modified:
+				plan.append(("load", lib, [], lib_count))
+				continue
+
+			if use_cache and dep_file and dep_file.exists() and modified:
+				metas = []
+				for abs_posix in modified:
+					meta = GlobalContext.path_index.get(Path(abs_posix).resolve())
+					if meta:
+						metas.append(meta)
+				plan.append(("patch", lib, metas, lib_count))
+				continue
+
+			metas = list(lib.meta_map.values())
+			plan.append(("full", lib, metas, lib_count))
+
+		progress = ProgressBar(total_modules, prefix="Building dependency graph:")
 		progress.display()
 
-		for i, meta in enumerate(meta_values, 1):
-			DependencyTracker(meta).visit(meta.tree)
-			progress.update(i)
+		for action, lib, metas, lib_count in plan:
+			dep_file = GraphBuilder._dep_cache_file_for(lib)
+			lib_name = lib.src.resolve().as_posix()
+
+			if action == "load":
+				if dep_file and dep_file.exists():
+					data = json.loads(dep_file.read_text(encoding="utf-8"))
+					edges = data.get("edges", {})
+					GraphBuilder._load_edges_into_global(lib, edges)
+				progress.update(progress.iteration + lib_count)
+				logger.debug(f"✅ [Deps] Loaded {lib_count} module(s) from cache for {lib_name}")
+				continue
+
+			if action == "patch":
+				if dep_file and dep_file.exists():
+					data = json.loads(dep_file.read_text(encoding="utf-8"))
+					edges = data.get("edges", {})
+					GraphBuilder._load_edges_into_global(lib, edges)
+
+				cached_count = lib_count - len(metas)
+				if cached_count > 0:
+					progress.update(progress.iteration + cached_count)
+					logger.debug(f"🟡 [Deps] {cached_count} module(s) reused from cache in {lib_name}")
+
+				# here we pass log_files=True so patched modules log indented paths
+				GraphBuilder._recompute_for_metas(metas, progress=progress, log_files=True)
+
+				if dep_file:
+					new_edges = GraphBuilder._serialize_edges_for(lib)
+					dep_file.write_text(json.dumps({
+						"version": 1,
+						"library_src": lib.src.resolve().as_posix(),
+						"edges": new_edges
+					}, indent="\t"), encoding="utf-8")
+				logger.debug(f"🔄 [Deps] Patched {len(metas)} module(s) in {lib_name}")
+				continue
+
+			if action == "full":
+				GraphBuilder._recompute_for_metas(metas, progress=progress, log_files=False)
+				if dep_file:
+					dep_file.write_text(json.dumps({
+						"version": 1,
+						"library_src": lib.src.resolve().as_posix(),
+						"edges": GraphBuilder._serialize_edges_for(lib)
+					}, indent="\t"), encoding="utf-8")
+				logger.debug(f"🏗️ [Deps] Fully rebuilt {lib_count} module(s) in {lib_name}")
 
 		GlobalContext.sequences = Sequencer.generate_sequences(GlobalContext.dependency_graph)
+		logger.debug("📦 [Deps] Dependency graph build complete, sequences regenerated")
 
 class DependencyTracker(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):

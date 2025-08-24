@@ -46,7 +46,7 @@ class Symbol:
 
 	def export_to_json(self, file_path: Path):
 			with file_path.open("w", encoding="utf-8") as f:
-				json.dump(self.to_dict(), f, indent=4)	
+				json.dump(self.to_dict(), f, indent='\t')	
 
 	def to_dict(self):
 		return {}
