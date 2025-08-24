@@ -85,6 +85,13 @@ print(json.dumps(info))
 		paths = [Path(p.resolve().as_posix()) for p in paths]
 
 		GlobalContext.libs = GlobalCache.setup(paths)
+		GlobalContext.path_index.clear()
+		for lib in GlobalContext.libs:
+			for apath, meta in lib.path_index.items():
+				GlobalContext.path_index[apath.resolve()] = meta
+		
+		for k, v in inference.items():
+			GlobalContext.inference[k] = GlobalContext.path_index.get(v.resolve())
 		
 		print()
 
@@ -99,16 +106,5 @@ print(json.dumps(info))
 		for i, meta in enumerate(meta_values, 1):
 			PreCollector(meta).visit(meta.tree)
 			progress.update(i)
-		
-		for lib in GlobalContext.libs:
-			for meta in lib.meta_map.values():
-				for k, v in inference.items():
-					try:
-						if meta.src.resolve() == v.resolve() and k not in GlobalContext.inference:
-							GlobalContext.inference[k] = meta
-					except Exception:
-						continue
 
-				if GlobalContext.inference.keys() == inference.keys():
-					break
 		GraphBuilder.build_graph()

@@ -1,11 +1,13 @@
+from pathlib import Path
+
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.symbol_table import (
-    Module,
-    ClassDefinition,
-    FunctionDefinition,
-    CallFrame
+	Module,
+	ClassDefinition,
+	FunctionDefinition,
+	CallFrame
 )
 
 class GlobalContext:
@@ -17,3 +19,5 @@ class GlobalContext:
 	meta_map: dict[Module, ModuleMeta] = {}
 	dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
 	sequences: list[list[ModuleMeta]] = []
+
+	path_index: dict[Path, ModuleMeta] = {}
