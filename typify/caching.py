@@ -34,10 +34,11 @@ class LibStruct:
 
 @dataclass
 class LibraryCache:
-	lib_dir: Path
-	lib_pickle: Path
-	digest: str
-	meta: LibraryMeta
+    lib_dir: Path
+    lib_pickle: Path
+    digest: str
+    meta: LibraryMeta
+    snapshot: dict[str, float] 
 
 class GlobalCache:
 
@@ -45,6 +46,14 @@ class GlobalCache:
 	libs_cache: dict[Path, LibraryCache] = {}
 	global_index: dict[str, str] = {}
 	cache_path: Path = None
+
+	@staticmethod
+	def compute_snapshot(lpath: Path) -> dict[str, float]:
+		return {
+			p.relative_to(lpath).as_posix(): p.stat().st_mtime
+			for p in lpath.rglob("*")
+			if p.suffix in {".py", ".pyi"}
+		}
 
 	@staticmethod
 	def get_cache_dir() -> Path:
@@ -60,8 +69,10 @@ class GlobalCache:
 
 
 	@staticmethod
-	def setup(config_paths: list[Path]) -> list["LibraryMeta"]:
+	def setup(config_paths: list[Path]) -> list[LibraryMeta]:
 		from typify.progbar import IndeterminateProgressBar
+		from typify.logging import logger
+
 		cache_path = GlobalCache.get_cache_dir()
 		GlobalCache.cache_path = cache_path
 		cache_path.mkdir(parents=True, exist_ok=True)
@@ -90,32 +101,33 @@ class GlobalCache:
 
 			lib_pickle = lib_dir / "library.pkl"
 
-			snapshot = {
-				str(p.relative_to(lpath)): p.stat().st_mtime
-				for p in lpath.rglob("*")
-				if p.suffix in {".py", ".pyi"}
-			}
+			snapshot = GlobalCache.compute_snapshot(lpath)
 			digest = hashlib.sha1(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
 
 			progress_bar = IndeterminateProgressBar(
 				prefix=f"Parsing modules in {Utils.last_n_parts(lpath, 2)}",
-				suffix="Checking cache...",
+				suffix="Checking cache.",
 			)
 			progress_bar.start()
 
+			cached: LibraryCache | None = None
 			if lib_pickle.exists():
 				try:
 					with open(lib_pickle, "rb") as f:
-						cached: LibraryCache = pickle.load(f)
+						cached = pickle.load(f)
 					if cached.digest == digest:
 						GlobalCache.libs_cache[lpath] = cached
 						libs.append(cached.meta)
 						module_count = len(cached.meta.meta_map)
 						progress_bar.set_suffix(f"Cached: {module_count} modules")
+						logger.debug(f"✅ [Cache] {lpath.as_posix()}")
+						logger.debug(f"\tReused {module_count} modules (cache hit)")
 						progress_bar.done()
 						continue
-				except Exception:
-					pass
+				except Exception as e:
+					logger.debug(f"⚠️ [Cache] {lpath.as_posix()}")
+					logger.debug(f"\tCorrupted cache pickle, forcing rebuild ({e})")
+					cached = None
 
 			index_file = lib_dir / "index.json"
 			if index_file.exists():
@@ -123,36 +135,96 @@ class GlobalCache:
 					index = json.load(f)
 			else:
 				index = {}
-
 			mods: dict[Path, Path] = {}
 			for key, original in index.items():
 				fpath = lib_dir / f"{key}.pkl"
 				if fpath.exists():
 					mods[Path(original)] = fpath
-
 			GlobalCache.lib_structs[lpath] = LibStruct(lib_dir, mods, index)
+
+			if cached is not None and isinstance(cached.meta, LibraryMeta):
+				old_snapshot = cached.snapshot or {}
+				old_paths = set(old_snapshot.keys())
+				new_paths = set(snapshot.keys())
+
+				added   = new_paths - old_paths
+				removed = old_paths - new_paths
+				common  = new_paths & old_paths
+				modified = {p for p in common if snapshot[p] != old_snapshot[p]}
+
+				if not added and not removed:
+					meta = cached.meta
+					module_count = len(meta.meta_map)
+					logger.debug(f"🔄 [Cache] {lpath.as_posix()}")
+					logger.debug(f"\tIncremental refresh: {len(modified)} trees updated")
+					logger.debug(f"\tTotal modules: {module_count}")
+
+					for rel in sorted(modified):
+						abspath = (lpath / rel).resolve()
+						existing = meta.get_meta_by_path(abspath)
+						if existing is None:
+							logger.debug(f"\t\t↳ ⚠️ Skipping {rel}, not found in meta")
+							continue
+
+						refreshed = GlobalCache.get_module_meta(
+							lpath,
+							abspath,
+							existing.trust_annotations
+						)
+						existing.tree = refreshed.tree
+						existing.trust_annotations = refreshed.trust_annotations
+						logger.debug(f"\t\t↳ 📄 Updated tree for {rel}")
+
+					libcache = LibraryCache(
+						lib_dir=lib_dir,
+						lib_pickle=lib_pickle,
+						digest=digest,
+						meta=meta,
+						snapshot=snapshot,
+					)
+					with open(lib_pickle, "wb") as f:
+						pickle.dump(libcache, f)
+
+					GlobalCache.libs_cache[lpath] = libcache
+					libs.append(meta)
+					progress_bar.set_suffix(
+						f"Cached: {module_count} modules"
+					)
+					progress_bar.done()
+					continue
 
 			meta = LibraryMeta(lpath)
 			meta.build(progress_bar=progress_bar)
+			module_count = len(meta.meta_map)
+			logger.debug(f"🏗️ [Cache] {lpath.as_posix()}")
+			logger.debug(f"\tFull rebuild performed")
+			logger.debug(f"\tTotal modules: {module_count}")
 
 			libcache = LibraryCache(
 				lib_dir=lib_dir,
 				lib_pickle=lib_pickle,
 				digest=digest,
-				meta=meta
+				meta=meta,
+				snapshot=snapshot,
 			)
 			with open(lib_pickle, "wb") as f:
 				pickle.dump(libcache, f)
 
 			GlobalCache.libs_cache[lpath] = libcache
 			libs.append(meta)
-
+			progress_bar.set_suffix(f"Full rebuild: {module_count} modules")
 			progress_bar.done()
 
 		with global_index_file.open("w", encoding="utf-8") as f:
 			json.dump(GlobalCache.global_index, f, indent=2)
 
+		total_modules = sum(len(meta.meta_map) for meta in libs)
+		logger.debug("📦 [Cache Summary]")
+		logger.debug(f"\tLibraries processed: {len(libs)}")
+		logger.debug(f"\tTotal modules: {total_modules}")
+
 		return libs
+
 
 	@staticmethod
 	def get_module_meta(lpath: Path, mpath: Path, trust_annotations: bool):
@@ -195,7 +267,7 @@ class GlobalCache:
 
 		def compute_digest(lpath: Path) -> str:
 			snapshot = {
-				str(p.relative_to(lpath)): p.stat().st_mtime
+				p.relative_to(lpath).as_posix(): p.stat().st_mtime
 				for p in lpath.rglob("*")
 				if p.suffix in {".py", ".pyi"}
 			}

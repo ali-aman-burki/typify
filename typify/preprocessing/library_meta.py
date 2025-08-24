@@ -2,8 +2,8 @@ import json
 
 from pathlib import Path
 from collections import (
-    defaultdict,
-    OrderedDict
+	defaultdict,
+	OrderedDict
 )
 
 from typify.preprocessing.symbol_table import (
@@ -27,6 +27,7 @@ class LibraryMeta:
 		self.meta_map: dict[Module, ModuleMeta] = {}
 		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
 		self.fqn_map: dict[str, list[Symbol]] = {}
+		self.path_index: dict[Path, ModuleMeta] = {}
 
 	def build(self, progress_bar: IndeterminateProgressBar):
 		from typify.caching import GlobalCache
@@ -80,6 +81,7 @@ class LibraryMeta:
 					)
 					package_table.set_module(meta.table, self.fqn_map)
 					self.meta_map[meta.table] = meta
+					self.path_index[Path(meta.src).resolve()] = meta
 					progress_bar.set_suffix(f"Parsed: {len(self.meta_map)} modules")
 					break
 
@@ -105,9 +107,13 @@ class LibraryMeta:
 			)
 			table.set_module(meta.table, self.fqn_map)
 			self.meta_map[meta.table] = meta
+			self.path_index[Path(meta.src).resolve()] = meta
 			progress_bar.set_suffix(f"Parsed: {len(self.meta_map)} modules")
 		
 		progress_bar.done()
+
+	def get_meta_by_path(self, mpath: Path):
+		return self.path_index.get(Path(mpath).resolve())
 
 	def export_symbols(self, output: Path):
 		progress = ProgressBar(

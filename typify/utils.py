@@ -80,4 +80,4 @@ class Utils:
 			return str(path)
 		else:
 			truncated_path = pathlib.Path("...") / pathlib.Path(*parts[-n:])
-			return str(truncated_path)
+			return truncated_path.as_posix()

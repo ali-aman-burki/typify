@@ -83,7 +83,7 @@ def main():
 
     logger.info("📦 Libraries loaded:", 1)
     for libmeta in GlobalContext.libs:
-        logger.info(f"{str(libmeta.src)}")
+        logger.info(f"{libmeta.src.as_posix()}")
 
     logger.info("🧩 Dependency Graph:", 1)
     for meta, deps in GlobalContext.dependency_graph.items():
