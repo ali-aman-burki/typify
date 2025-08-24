@@ -105,8 +105,8 @@ class GlobalCache:
 			digest = hashlib.sha1(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
 
 			progress_bar = IndeterminateProgressBar(
-				prefix=f"Parsing modules in {Utils.last_n_parts(lpath, 2)}",
-				suffix="Checking cache.",
+				prefix=f"Locating modules in {Utils.last_n_parts(lpath, 2)}",
+				suffix="Checking cache",
 			)
 			progress_bar.start()
 
@@ -212,8 +212,6 @@ class GlobalCache:
 
 			GlobalCache.libs_cache[lpath] = libcache
 			libs.append(meta)
-			progress_bar.set_suffix(f"Full rebuild: {module_count} modules")
-			progress_bar.done()
 
 		with global_index_file.open("w", encoding="utf-8") as f:
 			json.dump(GlobalCache.global_index, f, indent=2)

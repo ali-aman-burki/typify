@@ -74,8 +74,6 @@ def main():
             open(Path(output_dir) / f"{log_file_name}.log", "w", encoding="utf-8")
         )
 
-    print(Utils.title)
-
     Preloader.load(config, Path(project_dir))
 
     if args.prune_cache:

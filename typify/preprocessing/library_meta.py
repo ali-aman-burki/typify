@@ -110,6 +110,7 @@ class LibraryMeta:
 			self.path_index[Path(meta.src).resolve()] = meta
 			progress_bar.set_suffix(f"Parsed: {len(self.meta_map)} modules")
 		
+		progress_bar.set_suffix(f"Parsed: {len(self.meta_map)} modules")
 		progress_bar.done()
 
 	def get_meta_by_path(self, mpath: Path):
