@@ -121,13 +121,13 @@ class GlobalCache:
 						libs.append(cached.meta)
 						module_count = len(cached.meta.meta_map)
 						progress_bar.set_suffix(f"Cached: {module_count} modules")
-						logger.debug(f"✅ [Cache] {lpath.as_posix()}")
+						logger.debug(f"{logger.emoji_map['ok']} [Cache] {lpath.as_posix()}")
 						logger.debug(f"\tReused {module_count} modules (cache hit)")
 						GlobalCache.modified_map[lpath] = set()
 						progress_bar.done()
 						continue
 				except Exception as e:
-					logger.debug(f"⚠️ [Cache] {lpath.as_posix()}")
+					logger.debug(f"{logger.emoji_map['warn']} [Cache] {lpath.as_posix()}")
 					logger.debug(f"\tCorrupted cache pickle, forcing rebuild ({e})")
 					cached = None
 
@@ -157,7 +157,7 @@ class GlobalCache:
 				if not added and not removed:
 					meta = cached.meta
 					module_count = len(meta.meta_map)
-					logger.debug(f"🔄 [Cache] {lpath.as_posix()}")
+					logger.debug(f"{logger.emoji_map['patch']} [Cache] {lpath.as_posix()}")
 					logger.debug(f"\tIncremental refresh: {len(modified)} trees updated")
 					logger.debug(f"\tTotal modules: {module_count}")
 
@@ -168,7 +168,7 @@ class GlobalCache:
 						abspath = (lpath / rel).resolve()
 						existing = meta.get_meta_by_path(abspath)
 						if existing is None:
-							logger.debug(f"\t\t↳ ⚠️ Skipping {rel}, not found in meta")
+							logger.debug(f"\t\t↳ {logger.emoji_map['warn']} Skipping {rel}, not found in meta")
 							continue
 
 						refreshed = GlobalCache.get_module_meta(
@@ -178,7 +178,7 @@ class GlobalCache:
 						)
 						existing.tree = refreshed.tree
 						existing.trust_annotations = refreshed.trust_annotations
-						logger.debug(f"\t\t↳ 📄 Updated tree for {rel}")
+						logger.debug(f"\t\t↳ {logger.emoji_map['file']} Updated tree for {rel}")
 
 					libcache = LibraryCache(
 						lib_dir=lib_dir,
@@ -192,16 +192,14 @@ class GlobalCache:
 
 					GlobalCache.libs_cache[lpath] = libcache
 					libs.append(meta)
-					progress_bar.set_suffix(
-						f"Cached: {module_count} modules"
-					)
+					progress_bar.set_suffix(f"Cached: {module_count} modules")
 					progress_bar.done()
 					continue
 
 			meta = LibraryMeta(lpath)
 			meta.build(progress_bar=progress_bar)
 			module_count = len(meta.meta_map)
-			logger.debug(f"🏗️ [Cache] {lpath.as_posix()}")
+			logger.debug(f"{logger.emoji_map['build']} [Cache] {lpath.as_posix()}")
 			logger.debug(f"\tFull rebuild performed")
 			logger.debug(f"\tTotal modules: {module_count}")
 
@@ -224,7 +222,7 @@ class GlobalCache:
 			json.dump(GlobalCache.global_index, f, indent='\t')
 
 		total_modules = sum(len(meta.meta_map) for meta in libs)
-		logger.debug("📦 [Cache Summary]")
+		logger.debug(f"{logger.emoji_map['ok']} [Cache Summary]")
 		logger.debug(f"\tLibraries processed: {len(libs)}")
 		logger.debug(f"\tTotal modules: {total_modules}")
 

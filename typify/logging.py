@@ -24,25 +24,32 @@ class Logger:
         self.outputs = []
         self._orig_showwarning = None
         self.emoji_map = {
-			# --- Status / signaling ---
-			"ok": "🟢",          # success / cache hit / load ok
-			"changed": "🟡",     # reused partially, something updated
-			"refresh": "🔵",     # refresh / recompute / rebuild done
-			"warn": "🟠",        # warning / risky path
-			"error": "🔴",       # error / corrupted / failure
-			"skip": "⚪",        # skipped item
+			"ok": "🟢",     
+			"changed": "🟡",
+			"refresh": "🔵",
+			"warn": "🟠",   
+			"error": "🔴",  
+			"skip": "⚪",   
 
-			# --- Process / phases ---
-			"start": "🚀",       # starting something (preloader, build)
-			"init": "🔧",        # initializing / setup
-			"build": "🏗️",       # full build / construction
-			"patch": "🔄",       # partial update / incremental refresh
-			"file": "📄",        # file-level action
-			"folder": "📁",      # directory-level
-			"summary": "📦",     # summary / wrap-up
-			"types": "📝",       # type collection
-			"libs": "📚",        # libraries loaded
-			"graph": "🕸️",      # dependency graph
+			"start": "🚀",  
+			"init": "🔧",   
+			"build": "🏗️",  
+			"patch": "♻️",  
+			"file": "📄",   
+			"folder": "📁", 
+			"summary": "📦",
+			"types": "📝",  
+			"libs": "📚",   
+			"graph": "🕸️",  
+
+            "push": "📥",
+			"pop": "📤",
+			"arrow_up": "⬆️",
+			"arrow_down": "⬇️",
+			"arrow_left": "⬅️",
+			"arrow_right": "➡️",
+			"arrow_loop": "🔄",  
+			"arrow_branch": "↕️",
 		}
 
 

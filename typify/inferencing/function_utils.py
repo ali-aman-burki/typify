@@ -93,12 +93,12 @@ class FunctionUtils:
 
 		if not call_stack.contains(signature):
 			call_stack.push(signature)
-			logger.debug(f"🆕 Pushed: {repr(signature)}")
+			logger.debug(f"{logger.emoji_map['push']} Pushed: {repr(signature)}")
 
 			signature.returns = executor.execute().copy()
 
 			call_stack.pop()
-			logger.debug(f"✅ Popped: {repr(signature)}")
+			logger.debug(f"{logger.emoji_map['pop']} Popped: {repr(signature)}")
 		else:
 			if not signature.running:
 				signature.running = True

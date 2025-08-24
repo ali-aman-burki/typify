@@ -85,7 +85,7 @@ print(json.dumps(info))
 		inference = {k: Path(v.resolve().as_posix()) for k, v in inference.items()}
 		paths = [Path(p.resolve().as_posix()) for p in paths]
 
-		logger.debug(f"📚 [Preloader] Loading libraries for {len(paths)} path(s)")
+		logger.debug(f"{logger.emoji_map['libs']} [Preloader] Loading libraries for {len(paths)} path(s)")
 		GlobalContext.libs = GlobalCache.setup(paths)
 
 		GlobalContext.path_index.clear()
@@ -98,7 +98,7 @@ print(json.dumps(info))
 
 		print()
 
-		logger.debug("📦 [Preloader] Building dependency graph (all libraries)", trail=1)
+		logger.debug(f"{logger.emoji_map['summary']} [Preloader] Building dependency graph (all libraries)", trail=1)
 		GraphBuilder.build_graph_all(use_cache=True)
 
 		project_lib = GlobalContext.libs[0]
@@ -106,7 +106,8 @@ print(json.dumps(info))
 		progress = ProgressBar(len(meta_values), prefix="Collecting typeslots:")
 		progress.display()
 
-		logger.debug(f"📝 [Preloader] Collecting typeslots for {len(meta_values)} module(s)", trail=1)
 		for i, meta in enumerate(meta_values, 1):
 			PreCollector(meta).visit(meta.tree)
 			progress.update(i)
+		
+		logger.debug(f"{logger.emoji_map['ok']} [Preloader] Collected typeslots for {len(meta_values)} module(s)", trail=1)
