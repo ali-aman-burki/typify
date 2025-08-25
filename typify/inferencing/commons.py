@@ -37,12 +37,6 @@ class ArgTuple:
 	defkey: tuple[Module, tuple[int, int]]
 
 class Singletons:
-	
-	_dict: dict[str, str | Instance] = {
-		"True": None,
-		"False": None,
-		"None": None,
-	}
 
 	_typenames = {
 		"True": "bool",
@@ -54,9 +48,9 @@ class Singletons:
 	def get(singname: str):
 		from typify.inferencing.typeutils import TypeUtils
 
-		if singname not in Singletons._dict: return None
+		if singname not in GlobalContext.singletons: return None
 
-		entry = Singletons._dict.get(singname)
+		entry = GlobalContext.singletons.get(singname)
 		typename = Singletons._typenames.get(singname)
 		btype = Builtins.get_type(typename)
 
@@ -65,7 +59,7 @@ class Singletons:
 			return entry
 		else:
 			instance = TypeUtils.instantiate_with_args(btype)
-			Singletons._dict[singname] = instance
+			GlobalContext.singletons[singname] = instance
 			return instance
 
 class Checker:

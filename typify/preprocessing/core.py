@@ -21,3 +21,4 @@ class GlobalContext:
 	sequences: list[list[ModuleMeta]] = []
 
 	path_index: dict[Path, ModuleMeta] = {}
+	singletons: dict[str, Instance] = {"True": None, "False": None, "None": None}
