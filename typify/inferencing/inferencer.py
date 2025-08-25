@@ -31,28 +31,40 @@ class Inferencer:
 		pass_counts: dict[str, int] = {}
 
 		project_only_modules: set[ModuleMeta] = set(libs[0].meta_map.values())
-		inference_only_modules: set[ModuleMeta] = set(GlobalContext.inference.values())
-		all_tracked_modules: set[ModuleMeta] = project_only_modules | inference_only_modules
-
-		combined_progress = ProgressBar(
-			total=len(all_tracked_modules),
-			prefix="Performing Inference:",
-			progress_format="percent"
-		)
-		combined_progress.display()
-		shown_in_combined: set[ModuleMeta] = set()
 
 		for src, targets in dependency_graph.items():
 			for tgt in targets:
 				reverse_deps[tgt].add(src)
 
-		logger.debug("", header=False)
+		corrected_sequences: list[list[ModuleMeta]] = []
+		captured_metas: set[ModuleMeta] = set()
 
 		for sequence in sequences:
-			if all_tracked_modules.issubset(shown_in_combined):
-				if not any(meta in all_tracked_modules for meta in sequence):
-					continue
+			if captured_metas == project_only_modules:
+				break
+			for meta in sequence:
+				if meta in project_only_modules:
+					captured_metas.add(meta)
+			corrected_sequences.append(sequence)
+		
+		all_tracked_modules = {meta for seq in corrected_sequences for meta in seq}
 
+		progress = ProgressBar(
+			total=len(all_tracked_modules),
+			prefix="Performing Inference:",
+			progress_format="percent"
+		)
+		progress.display()
+		shown_in_combined: set[ModuleMeta] = set()
+
+		logger.debug("", header=False)
+		logger.debug("Following Corrected Inference Sequences:")
+		logger.debug("", header=False)
+		
+		pretty = Utils.pretty_list_arrow(corrected_sequences, columns=3)
+		logger.debug(pretty, header=False)
+		
+		for sequence in corrected_sequences:
 			is_single = len(sequence) == 1
 			has_self_loop = (
 				sequence[0] in dependency_graph.get(sequence[0], set())
@@ -69,6 +81,9 @@ class Inferencer:
 					TypeUtils.instantiate_with_args(Builtins.get_type("module"))
 				)
 				GlobalContext.symbol_map[meta.table] = sysmodules[meta.table.fqn]
+
+				logger.info(f"{logger.emoji_map['types']} Inferring for {meta.table.fqn}")
+
 				executor = Executor(
 					module_meta=meta,
 					symbol=meta.table,
@@ -90,7 +105,7 @@ class Inferencer:
 				processed.append(meta)
 
 				if meta in all_tracked_modules and meta not in shown_in_combined:
-					combined_progress.update()
+					progress.update()
 					shown_in_combined.add(meta)
 
 				sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
@@ -116,7 +131,7 @@ class Inferencer:
 				processed.append(meta)
 
 				if meta in all_tracked_modules and meta not in shown_in_combined:
-					combined_progress.update()
+					progress.update()
 					shown_in_combined.add(meta)
 
 			for meta in sequence:
