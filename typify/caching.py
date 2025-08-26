@@ -48,15 +48,7 @@ class GlobalCache:
 	modified_map: dict[Path, set[str]] = {}
 
 	@staticmethod
-	def compute_snapshot(lpath: Path) -> dict[str, float]:
-		return {
-			p.relative_to(lpath).as_posix(): p.stat().st_mtime
-			for p in lpath.rglob("*")
-			if p.suffix in {".py", ".pyi"}
-		}
-
-	@staticmethod
-	def get_cache_dir() -> Path:
+	def get_system_cache() -> Path:
 		if sys.platform.startswith("win"):
 			base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
 		elif sys.platform == "darwin":
@@ -67,6 +59,17 @@ class GlobalCache:
 		target_path = base / "typify"
 		return target_path
 
+	@staticmethod
+	def save_inference_context(cache_path: Path):
+		...
+
+	@staticmethod
+	def compute_snapshot(lpath: Path) -> dict[str, float]:
+		return {
+			p.relative_to(lpath).as_posix(): p.stat().st_mtime
+			for p in lpath.rglob("*")
+			if p.suffix in {".py", ".pyi"}
+		}
 
 	@staticmethod
 	def setup(

@@ -56,7 +56,7 @@ def main():
 
 	project_dir = Path(project_dir).resolve()
 	output_dir = Path(output_dir).resolve()
-	cache_path = config["cache_dir"] if config["cache_dir"] != "{AUTO}" else GlobalCache.get_cache_dir()
+	cache_path = config["cache_dir"] if config["cache_dir"] != "{AUTO}" else GlobalCache.get_system_cache()
 	cache_path = Path(cache_path).resolve()
 	types_file_name = "types"
 	log_file_name = "typify"
