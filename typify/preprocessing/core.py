@@ -17,7 +17,7 @@ class GlobalContext:
 	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance | CallFrame] = {}
 	function_object_map: dict[FunctionDefinition, Instance] = {}
 	meta_map: dict[Module, ModuleMeta] = {}
-	dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
+	dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
 	sequences: list[list[ModuleMeta]] = []
 
 	path_index: dict[Path, ModuleMeta] = {}

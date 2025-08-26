@@ -3,64 +3,52 @@ from collections import defaultdict
 from typify.preprocessing.module_meta import ModuleMeta
 
 class Sequencer:
-	
-	@staticmethod
-	def _tarjan(graph):
-		index = 0
-		indices = {}
-		low_links = {}
-		on_stack = set()
-		stack = []
-		result = []
 
-		def strongconnect(node):
-			nonlocal index
-			indices[node] = index
-			low_links[node] = index
-			index += 1
-			stack.append(node)
-			on_stack.add(node)
+    @staticmethod
+    def _tarjan(graph: dict[ModuleMeta, list[ModuleMeta]]):
+        index = 0
+        indices: dict[ModuleMeta, int] = {}
+        low_links: dict[ModuleMeta, int] = {}
+        on_stack: set[ModuleMeta] = set()
+        stack: list[ModuleMeta] = []
+        result: list[list[ModuleMeta]] = []
 
-			for neighbor in graph.get(node, []):
-				if neighbor not in indices:
-					strongconnect(neighbor)
-					low_links[node] = min(low_links[node], low_links[neighbor])
-				elif neighbor in on_stack:
-					low_links[node] = min(low_links[node], indices[neighbor])
+        def strongconnect(node: ModuleMeta):
+            nonlocal index
+            indices[node] = index
+            low_links[node] = index
+            index += 1
+            stack.append(node)
+            on_stack.add(node)
 
-			if low_links[node] == indices[node]:
-				scc = []
-				while True:
-					popped_node = stack.pop()
-					on_stack.remove(popped_node)
-					scc.append(popped_node)
-					if popped_node == node:
-						break
-				result.append(scc)
+            for neighbor in graph.get(node, []):
+                if neighbor not in indices:
+                    strongconnect(neighbor)
+                    low_links[node] = min(low_links[node], low_links[neighbor])
+                elif neighbor in on_stack:
+                    low_links[node] = min(low_links[node], indices[neighbor])
 
-		for node in graph:
-			if node not in indices:
-				strongconnect(node)
+            if low_links[node] == indices[node]:
+                scc: list[ModuleMeta] = []
+                while True:
+                    popped_node = stack.pop()
+                    on_stack.remove(popped_node)
+                    scc.append(popped_node)
+                    if popped_node == node:
+                        break
+                result.append(scc)
 
-		return result
+        for node in graph:
+            if node not in indices:
+                strongconnect(node)
 
-	@staticmethod
-	def generate_sequences(graph: dict[ModuleMeta, set[ModuleMeta]]) -> list[list[ModuleMeta]]:
-		sequences: list[list[ModuleMeta]] = Sequencer._tarjan(graph)
+        return result
 
-		reverse_deps: dict[ModuleMeta, int] = defaultdict(int)
-		for _, targets in graph.items():
-			for tgt in targets:
-				reverse_deps[tgt] += 1
+    @staticmethod
+    def generate_sequences(graph: dict[ModuleMeta, list[ModuleMeta]]) -> list[list[ModuleMeta]]:
+        sequences: list[list[ModuleMeta]] = Sequencer._tarjan(graph)
 
-		def module_priority(meta: ModuleMeta) -> int:
-			return -reverse_deps.get(meta, 0)
+        for seq in sequences:
+            seq.reverse()
 
-		for seq in sequences:
-			seq.sort(key=module_priority)
-
-		return sequences
-
-
-
-
+        return sequences

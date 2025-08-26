@@ -25,7 +25,7 @@ class LibraryMeta:
 		self.library_table = Library(self.src.name)
 		self.sysmodules: dict[str, Instance] = {}
 		self.meta_map: dict[Module, ModuleMeta] = {}
-		self.dependency_graph: dict[ModuleMeta, set[ModuleMeta]] = {}
+		self.dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
 		self.fqn_map: dict[str, list[Symbol]] = {}
 		self.path_index: dict[Path, ModuleMeta] = {}
 
