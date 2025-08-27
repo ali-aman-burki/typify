@@ -101,7 +101,7 @@ class GraphBuilder:
 		return edges
 
 	@staticmethod
-	def _load_edges_into_global(lib, edges: dict[str, list[str]]):
+	def _load_edges_into_global(edges: dict[str, list[str]]):
 		builtins = GlobalContext.inference.get("builtins")
 		for from_key, to_list in edges.items():
 			from_meta = GlobalContext.path_index.get(Path(from_key).resolve())
@@ -188,7 +188,7 @@ class GraphBuilder:
 				if dep_file and dep_file.exists():
 					data = json.loads(dep_file.read_text(encoding="utf-8"))
 					edges = data.get("edges", {})
-					GraphBuilder._load_edges_into_global(lib, edges)
+					GraphBuilder._load_edges_into_global(edges)
 				progress.update(progress.iteration + lib_count)
 				logger.debug(f"{logger.emoji_map['ok']} [Deps] Loaded {lib_count} module(s) from cache for {lib_name}")
 				continue
@@ -197,7 +197,7 @@ class GraphBuilder:
 				if dep_file and dep_file.exists():
 					data = json.loads(dep_file.read_text(encoding="utf-8"))
 					edges = data.get("edges", {})
-					GraphBuilder._load_edges_into_global(lib, edges)
+					GraphBuilder._load_edges_into_global(edges)
 
 				cached_count = lib_count - len(metas)
 				if cached_count > 0:
