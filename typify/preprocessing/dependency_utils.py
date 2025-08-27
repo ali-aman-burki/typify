@@ -209,7 +209,6 @@ class GraphBuilder:
 				if dep_file:
 					new_edges = GraphBuilder._serialize_edges_for(lib)
 					dep_file.write_text(json.dumps({
-						"version": 1,
 						"library_src": lib.src.resolve().as_posix(),
 						"edges": new_edges
 					}, indent="\t"), encoding="utf-8")
@@ -220,7 +219,6 @@ class GraphBuilder:
 				GraphBuilder._recompute_for_metas(lib, metas, progress=progress, log_files=False)
 				if dep_file:
 					dep_file.write_text(json.dumps({
-						"version": 1,
 						"library_src": lib.src.resolve().as_posix(),
 						"edges": GraphBuilder._serialize_edges_for(lib)
 					}, indent="\t"), encoding="utf-8")

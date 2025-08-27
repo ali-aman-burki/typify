@@ -48,6 +48,7 @@ class LibraryCache:
 	meta: LibraryMeta
 	snapshot: dict[str, float] 
 
+#ignore for now
 @dataclass
 class InferenceCache:
 	call_stack: CallStack
@@ -76,6 +77,7 @@ class GlobalCache:
 		target_path = base / "typify"
 		return target_path
 
+	#ignore for now
 	@staticmethod
 	def save_inference_context(cache_path: Path):
 		...
@@ -111,14 +113,11 @@ class GlobalCache:
 			GlobalCache.global_index = {}
 
 		for lpath in config_paths:
-			lib_id = None
-			for key, existing in GlobalCache.global_index.items():
-				if Path(existing) == lpath:
-					lib_id = key
-					break
+			lpath_str = lpath.as_posix()
+			lib_id = GlobalCache.global_index.get(lpath_str)
 			if lib_id is None:
 				lib_id = str(len(GlobalCache.global_index))
-				GlobalCache.global_index[lib_id] = lpath.as_posix()
+				GlobalCache.global_index[lpath_str] = lib_id
 
 			lib_dir = cache_path / lib_id
 			lib_dir.mkdir(parents=True, exist_ok=True)
@@ -298,17 +297,22 @@ class GlobalCache:
 			}
 			return sha1(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
 
+		dead_libs: set[str] = set()
+
 		for lpath, libcache in list(GlobalCache.libs_cache.items()):
 			if not lpath.exists():
 				if libcache.lib_pickle.exists():
 					libcache.lib_pickle.unlink()
 				GlobalCache.libs_cache.pop(lpath, None)
+				dead_libs.add(lpath.as_posix())
 				continue
+
 			digest = compute_digest(lpath)
 			if digest != libcache.digest:
 				if libcache.lib_pickle.exists():
 					libcache.lib_pickle.unlink()
 				GlobalCache.libs_cache.pop(lpath, None)
+				dead_libs.add(lpath.as_posix())
 
 		for _, libstruct in GlobalCache.lib_structs.items():
 			to_remove = []
@@ -336,6 +340,16 @@ class GlobalCache:
 			index_file = libstruct.path / "index.json"
 			with index_file.open("w", encoding="utf-8") as f:
 				json.dump(libstruct.index, f, indent='\t')
+
+		if dead_libs:
+			to_delete = [path for path in GlobalCache.global_index if path in dead_libs]
+			for path in to_delete:
+				GlobalCache.global_index.pop(path, None)
+
+			global_index_file = GlobalCache.get_system_cache() / "index.json"
+			if global_index_file.exists():
+				with global_index_file.open("w", encoding="utf-8") as f:
+					json.dump(GlobalCache.global_index, f, indent='\t')
 
 	@staticmethod
 	def clear(cache_path: Path):
