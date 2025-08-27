@@ -94,7 +94,7 @@ def main():
 		joined = ", ".join(repr(dep) for dep in deps)
 		logger.info(f"   {repr(meta)} -> [{joined}]")
 
-	Inferencer.infer()
+	Inferencer.infer(cache_path)
 
 	GlobalContext.libs[0].export_types(
 		Path(output_dir) / f"{types_file_name}.json"

@@ -80,7 +80,20 @@ class GlobalCache:
 	#ignore for now
 	@staticmethod
 	def save_inference_context(cache_path: Path):
-		...
+		from typify.preprocessing.core import GlobalContext
+
+		cache_path.mkdir(parents=True, exist_ok=True)
+
+		context_id = repr(GlobalContext.processed_sequences)
+
+		inference_cache = InferenceCache(
+			call_stack=GlobalContext.call_stack,
+			sysmodules=GlobalContext.sysmodules,
+			symbol_map=GlobalContext.symbol_map,
+			function_object_map=GlobalContext.function_object_map,
+			meta_map=GlobalContext.meta_map,
+			singletons=GlobalContext.singletons
+		)
 
 	@staticmethod
 	def compute_snapshot(lpath: Path) -> dict[str, float]:

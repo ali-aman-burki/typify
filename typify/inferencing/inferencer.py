@@ -1,8 +1,10 @@
+from pathlib import Path
 from collections import (
 	deque, 
 	defaultdict
 )
 
+from typify.caching import GlobalCache
 from typify.logging import logger
 from typify.progbar import ProgressBar
 from typify.utils import Utils
@@ -99,19 +101,18 @@ class Inferencer:
 
 
 	@staticmethod
-	def infer() -> None:
+	def infer(cache_path: Path) -> None:
 		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
 		processed: list[ModuleMeta] = []
 		pass_counts: dict[str, int] = {}
+		corrected_sequences: list[list[ModuleMeta]] = []
+		captured_metas: set[ModuleMeta] = set()
 
 		project_only_modules: set[ModuleMeta] = set(GlobalContext.libs[0].meta_map.values())
 
 		for src, targets in GlobalContext.dependency_graph.items():
 			for tgt in targets:
 				reverse_deps[tgt].add(src)
-
-		corrected_sequences: list[list[ModuleMeta]] = []
-		captured_metas: set[ModuleMeta] = set()
 
 		for sequence in GlobalContext.sequences:
 			if captured_metas == project_only_modules:
@@ -149,6 +150,7 @@ class Inferencer:
 				progress
 			)
 			GlobalContext.processed_sequences.append(sequence)
+			GlobalCache.save_inference_context(cache_path)
 
 		logger.info("Sequence Followed:", trail=1)
 		sequence_output = [meta.table.fqn for meta in processed]
