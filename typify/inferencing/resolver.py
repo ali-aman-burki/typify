@@ -2,7 +2,6 @@
 import ast
 
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.inferencing.call_stack import CallStack
 from typify.preprocessing.core import GlobalContext
 from typify.errors import safeguard
 from typify.inferencing.unpacking_utils import (
@@ -34,12 +33,10 @@ class Resolver:
 			module_meta: ModuleMeta,
 			symbol: Module | ClassDefinition | FunctionDefinition, 
 			namespace: Instance,
-			call_stack: CallStack
 		):
 		self.module_meta = module_meta
 		self.symbol = symbol
 		self.namespace = namespace
-		self.call_stack = call_stack
 
 	@safeguard(lambda: None, "legb_lookup")	
 	def LEGB_lookup(self, name: str) -> Name:

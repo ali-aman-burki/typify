@@ -45,7 +45,6 @@ class CallDispatcher:
 			fobject=fobject, 
 			caller=inject,
 			arguments=arguments, 
-			call_stack=self.resolver.call_stack
 		)
 		GlobalContext.symbol_map[self.resolver.symbol] = prev
 		return result

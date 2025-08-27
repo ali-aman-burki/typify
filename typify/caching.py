@@ -11,6 +11,15 @@ from dataclasses import dataclass
 
 from typify.utils import Utils
 from typify.preprocessing.library_meta import LibraryMeta
+from typify.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.instance_utils import Instance
+from typify.inferencing.call_stack import CallStack
+from typify.preprocessing.symbol_table import (
+	Module,
+	ClassDefinition,
+	FunctionDefinition,
+	CallFrame
+)
 
 @dataclass
 class ModuleCache:
@@ -19,7 +28,6 @@ class ModuleCache:
 	last_modified: float
 
 	def to_meta(self, mpath: Path):
-		from typify.preprocessing.module_meta import ModuleMeta
 		return ModuleMeta(
 			mpath,
 			self.tree,
@@ -39,6 +47,15 @@ class LibraryCache:
 	digest: str
 	meta: LibraryMeta
 	snapshot: dict[str, float] 
+
+@dataclass
+class InferenceCache:
+	call_stack: CallStack
+	sysmodules: dict[str, ModuleMeta]
+	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance | CallFrame]
+	function_object_map: dict[FunctionDefinition, Instance]
+	meta_map: dict[Module, ModuleMeta]
+	singletons: dict[str, Instance]
 
 class GlobalCache:
 

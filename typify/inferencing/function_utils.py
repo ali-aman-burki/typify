@@ -16,10 +16,7 @@ from typify.preprocessing.instance_utils import (
     ReferenceSet,
     Instance
 )
-from typify.inferencing.call_stack import (
-    CallStack,
-    CallSignature,
-)
+from typify.inferencing.call_stack import CallSignature
 from typify.preprocessing.symbol_table import CallFrame
 
 class FunctionUtils:
@@ -42,7 +39,6 @@ class FunctionUtils:
 		caller: Instance,
 		fobject: Instance,
 		arguments: dict[str, ArgTuple], 
-		call_stack: CallStack
 	):
 		from typify.inferencing.executor import Executor
 		
@@ -61,7 +57,6 @@ class FunctionUtils:
 			namespace=call_frame, 
 			caller=caller,
 			arguments=arguments,
-			call_stack=call_stack,
 			tree=ast.Module(tree.body, type_ignores=[]), 
 			snapshot_log=[]
 		)
@@ -73,7 +68,6 @@ class FunctionUtils:
 		fobject: Instance,
 		caller: Instance,
 		arguments: dict[str, ArgTuple], 
-		call_stack: CallStack
 	) -> ReferenceSet:
 		
 		sigkey = CallSignature(
@@ -82,22 +76,21 @@ class FunctionUtils:
 			arguments=arguments,
 			returns=ReferenceSet()
 		)
-		signature = call_stack.get(sigkey) or sigkey
+		signature = GlobalContext.call_stack.get(sigkey) or sigkey
 
 		executor = FunctionUtils.construct_executor(
 			caller=signature.caller,
 			fobject=signature.fobject, 
 			arguments=signature.arguments, 
-			call_stack=call_stack
 		)
 
-		if not call_stack.contains(signature):
-			call_stack.push(signature)
+		if not GlobalContext.call_stack.contains(signature):
+			GlobalContext.call_stack.push(signature)
 			logger.debug(f"{logger.emoji_map['push']} Pushed: {repr(signature)}")
 
 			signature.returns = executor.execute().copy()
 
-			call_stack.pop()
+			GlobalContext.call_stack.pop()
 			logger.debug(f"{logger.emoji_map['pop']} Popped: {repr(signature)}")
 		else:
 			if not signature.running:

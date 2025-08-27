@@ -48,7 +48,6 @@ class Executor(ast.NodeVisitor):
 		namespace: Instance | CallFrame, 
 		caller: Instance,
 		arguments: dict[str, ArgTuple],
-		call_stack: list,
 		tree: ast.AST,
 		deferred_annotations: DeferredAnnotations = None,
 		snapshot_log: list[ReferenceSet] = None
@@ -59,7 +58,6 @@ class Executor(ast.NodeVisitor):
 		self.symbol = symbol
 		self.namespace = namespace
 		self.caller = caller
-		self.call_stack = call_stack
 		self.tree = tree
 		self.snapshot_log = snapshot_log if snapshot_log else []
 
@@ -70,7 +68,6 @@ class Executor(ast.NodeVisitor):
 			self.module_meta, 
 			self.symbol, 
 			self.namespace,
-			self.call_stack
 		)
 
 		self.deferred_annotations = deferred_annotations or DeferredAnnotations()
@@ -384,7 +381,6 @@ class Executor(ast.NodeVisitor):
 			namespace=entering_namespace,
 			caller=self.caller,
 			arguments={},
-			call_stack=self.call_stack,
 			tree=ast.Module(class_tree.body, type_ignores=[]),
 			deferred_annotations=self.deferred_annotations,
 			snapshot_log=self.snapshot_log
