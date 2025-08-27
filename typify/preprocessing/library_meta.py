@@ -7,7 +7,6 @@ from collections import (
 )
 
 from typify.preprocessing.symbol_table import (
-	Symbol,
 	Library,
 	Package,
 	Module,
@@ -26,7 +25,7 @@ class LibraryMeta:
 		self.sysmodules: dict[str, Instance] = {}
 		self.meta_map: dict[Module, ModuleMeta] = {}
 		self.dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
-		self.fqn_map: dict[str, list[Symbol]] = {}
+		self.fqn_map: dict[str, list[Package, Module]] = {}
 		self.path_index: dict[Path, ModuleMeta] = {}
 
 	def build(self, progress_bar: IndeterminateProgressBar):

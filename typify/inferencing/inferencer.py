@@ -139,7 +139,18 @@ class Inferencer:
 		pretty = Utils.pretty_list_arrow(corrected_sequences, columns=3)
 		logger.debug(pretty, header=False)
 
-		for sequence in corrected_sequences:
+		filtered_sequences = corrected_sequences.copy()
+
+		for i in range(len(corrected_sequences), 0, -1):
+			current = corrected_sequences[:i]
+			context_id = repr(current)
+			context_cache = GlobalCache.load_inference_context(context_id)
+			if context_cache:
+				# TODO: register cached context to global context
+				filtered_sequences = corrected_sequences[i:]
+				break
+
+		for sequence in filtered_sequences:
 			Inferencer.process_sequence(
 				sequence,
 				reverse_deps,
@@ -150,7 +161,7 @@ class Inferencer:
 				progress
 			)
 			GlobalContext.processed_sequences.append(sequence)
-			GlobalCache.save_inference_context(cache_path)
+			GlobalCache.cache_inference_context(cache_path)
 
 		logger.info("Sequence Followed:", trail=1)
 		sequence_output = [meta.table.fqn for meta in processed]

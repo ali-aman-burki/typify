@@ -48,7 +48,6 @@ class LibraryCache:
 	meta: LibraryMeta
 	snapshot: dict[str, float] 
 
-#ignore for now
 @dataclass
 class InferenceCache:
 	call_stack: CallStack
@@ -63,6 +62,7 @@ class GlobalCache:
 	lib_structs: dict[Path, LibStruct] = {}
 	libs_cache: dict[Path, LibraryCache] = {}
 	global_index: dict[str, str] = {}
+	context_map: dict[str, str] = {}
 	modified_map: dict[Path, set[str]] = {}
 
 	@staticmethod
@@ -77,14 +77,13 @@ class GlobalCache:
 		target_path = base / "typify"
 		return target_path
 
-	#ignore for now
 	@staticmethod
-	def save_inference_context(cache_path: Path):
+	def cache_inference_context(cache_path: Path):
 		from typify.preprocessing.core import GlobalContext
 
 		cache_path.mkdir(parents=True, exist_ok=True)
-
 		context_id = repr(GlobalContext.processed_sequences)
+		context_file = cache_path / "contexts" / f"{len(GlobalCache.context_map)}.pkl"
 
 		inference_cache = InferenceCache(
 			call_stack=GlobalContext.call_stack,
@@ -94,6 +93,29 @@ class GlobalCache:
 			meta_map=GlobalContext.meta_map,
 			singletons=GlobalContext.singletons
 		)
+		
+		with open(context_file, "wb") as f:
+			pickle.dump(inference_cache, f)
+
+		GlobalCache.context_map[context_id] = context_file.resolve().as_posix()
+		context_index_file = cache_path / "contexts" / "context_index.json"
+		with open(context_index_file, "w", encoding="utf-8") as file:
+			json.dump(GlobalCache.context_map, file, indent='\t')
+
+	@staticmethod
+	def load_inference_context(context_id: str) -> InferenceCache | None:
+		context_file_path = GlobalCache.context_map.get(context_id)
+		if context_file_path is None:
+			return None
+
+		context_file = Path(context_file_path)
+		if not context_file.exists():
+			return None
+
+		with open(context_file, "rb") as f:
+			inference_cache: InferenceCache = pickle.load(f)
+			return inference_cache
+		return None
 
 	@staticmethod
 	def compute_snapshot(lpath: Path) -> dict[str, float]:
@@ -124,6 +146,13 @@ class GlobalCache:
 				GlobalCache.global_index = json.load(f)
 		else:
 			GlobalCache.global_index = {}
+		
+		context_index_file = cache_path / "contexts" / "context_index.json"
+		if context_index_file.exists():
+			with context_index_file.open("r", encoding="utf-8") as f:
+				GlobalCache.context_index = json.load(f)
+		else:
+			GlobalCache.context_index = {}
 
 		for lpath in config_paths:
 			lpath_str = lpath.as_posix()
