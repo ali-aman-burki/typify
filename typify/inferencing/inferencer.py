@@ -42,7 +42,7 @@ class Inferencer:
 			)
 			GlobalContext.symbol_map[meta.table] = GlobalContext.sysmodules[meta.table.fqn]
 
-			logger.info(f"{logger.emoji_map['types']} Inferring for {meta.table.fqn}")
+			logger.debug(f"{logger.emoji_map['types']} Inferring for {meta.table.fqn}")
 
 			executor = Executor(
 				module_meta=meta,
@@ -113,6 +113,7 @@ class Inferencer:
 	@staticmethod
 	def infer(cache_path: Path) -> None:
 		reverse_deps, corrected_sequences = Inferencer._init_structures()
+		logger.debug(f"{logger.emoji_map['search']} {len(corrected_sequences)} total sequences to process")
 		
 		progress = ProgressBar(
 			total=len(corrected_sequences),
@@ -155,11 +156,13 @@ class Inferencer:
 		processed_sequences: list[list[ModuleMeta]] = []
 		sequence_followed: list[ModuleMeta] = []
 
+		logger.debug(f"{logger.emoji_map['search']} Checking cache for contexts.")
 		for i in range(len(filter_1), 0, -1):
 			current_path = filter_1[:i]
 			context_id = repr(current_path)
 			sequence_followed = GlobalCache.load_inference_context(context_id)
 			if sequence_followed:
+				logger.debug(f"{logger.emoji_map['ok']} [Cache] Cache hit for {i} sequences (restored {len(set(sequence_followed))} modules)")
 				new_graph = {}
 				for meta, deps in GlobalContext.dependency_graph.items():
 					new_meta = GlobalContext.path_index.get(meta.src, meta)
@@ -172,6 +175,15 @@ class Inferencer:
 				processed_sequences = corrected_sequences[:i]
 				progress.update(i)
 				break
+		
+		if not remaining:
+			logger.debug(f"{logger.emoji_map['ok']} [Cache] Full cached context restored. Inference Skipped.")
+		elif remaining and sequence_followed:
+			logger.debug(f"{logger.emoji_map['ok']} [Cache] Partial cached context restored. Remaining Inference Started.")
+		elif not sequence_followed: 
+			logger.debug(f"{logger.emoji_map['refresh']} [Cache] No cached context found. Recomputing Inference.")
+
+		logger.debug("", header=False)
 
 		for sequence in remaining:
 			Inferencer.process_sequence(
@@ -198,8 +210,14 @@ class Inferencer:
 			)
 			progress.update()
 		
-		logger.info("Sequence Followed:", trail=1)
+		if remaining: logger.debug("", header=False)
+
+		logger.debug("Sequence Followed:")
 		sequence_followed = [meta.table.fqn for meta in sequence_followed]
 		
 		pretty = Utils.pretty_list_arrow(sequence_followed, columns=3)
-		logger.info(pretty, header=False)
+		logger.debug(pretty, header=False)
+
+		logger.info(f"{logger.emoji_map['ok']} Inference complete: "
+            f"{len(processed_sequences)} sequences processed "
+            f"({len(set(sequence_followed))} modules in total)")

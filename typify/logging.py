@@ -31,6 +31,7 @@ class Logger:
 			"error": "🔴",  
 			"skip": "⚪",   
 
+			"search": "🔍",  
 			"start": "🚀",  
 			"init": "🔧",   
 			"build": "🏗️",  

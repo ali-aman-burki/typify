@@ -73,7 +73,7 @@ class GraphBuilder:
 	@staticmethod
 	def initialize_globals():
 		from typify.logging import logger
-		logger.debug(f"{logger.emoji_map['init']} [Deps] Initializing globals from libraries")
+		logger.debug(f"{logger.emoji_map['init']} [Cache] Initializing globals from libraries")
 		for lib in GlobalContext.libs.values():
 			GlobalContext.meta_map.update(lib.meta_map)
 			GlobalContext.sysmodules.update(lib.sysmodules)
@@ -127,7 +127,7 @@ class GraphBuilder:
 		builtins = GlobalContext.inference.get("builtins")
 		total = len(metas)
 		if total:
-			logger.debug(f"{logger.emoji_map['patch']} [Deps] Recomputing {total} module(s)")
+			logger.debug(f"{logger.emoji_map['patch']} [Cache] Recomputing {total} module(s)")
 		for i, m in enumerate(metas, 1):
 			GlobalContext.dependency_graph[m] = []
 			if builtins:
@@ -144,7 +144,7 @@ class GraphBuilder:
 		from typify.caching import GlobalCache
 		from typify.logging import logger
 
-		logger.debug(f"{logger.emoji_map['build']} [Deps] Starting dependency graph build")
+		logger.debug(f"{logger.emoji_map['build']} [Cache] Starting dependency graph build")
 
 		GlobalContext.meta_map.clear()
 		GlobalContext.sysmodules.clear()
@@ -190,7 +190,7 @@ class GraphBuilder:
 					edges = data.get("edges", {})
 					GraphBuilder._load_edges_into_global(edges)
 				progress.update(progress.iteration + lib_count)
-				logger.debug(f"{logger.emoji_map['ok']} [Deps] Loaded {lib_count} module(s) from cache for {lib_name}")
+				logger.debug(f"{logger.emoji_map['ok']} [Cache] Loaded {lib_count} module(s) from cache for {lib_name}")
 				continue
 
 			if action == "patch":
@@ -202,7 +202,7 @@ class GraphBuilder:
 				cached_count = lib_count - len(metas)
 				if cached_count > 0:
 					progress.update(progress.iteration + cached_count)
-					logger.debug(f"{logger.emoji_map['changed']} [Deps] {cached_count} module(s) reused from cache in {lib_name}")
+					logger.debug(f"{logger.emoji_map['changed']} [Cache] {cached_count} module(s) reused from cache in {lib_name}")
 
 				GraphBuilder._recompute_for_metas(lib, metas, progress=progress, log_files=True)
 
@@ -212,7 +212,7 @@ class GraphBuilder:
 						"library_src": lib.src.resolve().as_posix(),
 						"edges": new_edges
 					}, indent="\t"), encoding="utf-8")
-				logger.debug(f"{logger.emoji_map['patch']} [Deps] Patched {len(metas)} module(s) in {lib_name}")
+				logger.debug(f"{logger.emoji_map['patch']} [Cache] Patched {len(metas)} module(s) in {lib_name}")
 				continue
 
 			if action == "full":
@@ -222,9 +222,9 @@ class GraphBuilder:
 						"library_src": lib.src.resolve().as_posix(),
 						"edges": GraphBuilder._serialize_edges_for(lib)
 					}, indent="\t"), encoding="utf-8")
-				logger.debug(f"{logger.emoji_map['libs']} [Deps] Fully rebuilt {lib_count} module(s) in {lib_name}")
+				logger.debug(f"{logger.emoji_map['libs']} [Cache] Fully rebuilt {lib_count} module(s) in {lib_name}")
 
-		logger.debug(f"{logger.emoji_map['summary']} [Deps] Dependency graph build complete, sequences regenerated")
+		logger.debug(f"{logger.emoji_map['summary']} [Cache] Dependency graph build complete, sequences regenerated")
 
 class DependencyTracker(ast.NodeVisitor):
 	def __init__(self, module_meta: ModuleMeta):
