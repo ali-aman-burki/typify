@@ -86,8 +86,8 @@ def main():
 		GlobalCache.prune()
 
 	logger.info(f"{logger.emoji_map['summary']} Libraries loaded:", 1)
-	for libmeta in GlobalContext.libs:
-		logger.info(f"   {libmeta.src.as_posix()}")
+	for libpath in GlobalContext.libs:
+		logger.info(f"   {libpath.as_posix()}")
 
 	logger.info(f"{logger.emoji_map['graph']} Dependency Graph:", 1)
 	for meta, deps in GlobalContext.dependency_graph.items():
@@ -96,7 +96,7 @@ def main():
 
 	Inferencer.infer(cache_path)
 
-	GlobalContext.libs[0].export_types(
+	next(iter(GlobalContext.libs.values())).export_types(
 		Path(output_dir) / f"{types_file_name}.json"
 	)
 

@@ -51,19 +51,22 @@ class LibraryCache:
 @dataclass
 class InferenceCache:
 	call_stack: CallStack
+	inference: dict[str, ModuleMeta]
+	libs: dict[Path, LibraryMeta]
 	sysmodules: dict[str, ModuleMeta]
 	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance | CallFrame]
 	function_object_map: dict[FunctionDefinition, Instance]
-	meta_map: dict[Module, ModuleMeta]
 	singletons: dict[str, Instance]
+	sequence_followed: list[ModuleMeta]
 
 class GlobalCache:
 
 	lib_structs: dict[Path, LibStruct] = {}
 	libs_cache: dict[Path, LibraryCache] = {}
 	global_index: dict[str, str] = {}
-	context_map: dict[str, str] = {}
+	context_index: dict[str, str] = {}
 	modified_map: dict[Path, set[str]] = {}
+	rebuilt_libs: set[Path] = set()
 
 	@staticmethod
 	def get_system_cache() -> Path:
@@ -78,44 +81,73 @@ class GlobalCache:
 		return target_path
 
 	@staticmethod
-	def cache_inference_context(cache_path: Path):
+	def cache_inference_context(
+		cache_path: Path, 
+		libs: dict[Path, LibraryMeta], 
+		processed_sequences: list[list[ModuleMeta]],
+		sequence_followed: list[ModuleMeta]
+	):
 		from typify.preprocessing.core import GlobalContext
 
 		cache_path.mkdir(parents=True, exist_ok=True)
-		context_id = repr(GlobalContext.processed_sequences)
-		context_file = cache_path / "contexts" / f"{len(GlobalCache.context_map)}.pkl"
+		context_id = repr(processed_sequences)
+		context_file = cache_path / "contexts" / f"{len(GlobalCache.context_index)}.pkl"
+		context_file.parent.mkdir(parents=True, exist_ok=True)
 
 		inference_cache = InferenceCache(
 			call_stack=GlobalContext.call_stack,
+			inference=GlobalContext.inference,
+			libs=libs,
 			sysmodules=GlobalContext.sysmodules,
 			symbol_map=GlobalContext.symbol_map,
 			function_object_map=GlobalContext.function_object_map,
-			meta_map=GlobalContext.meta_map,
-			singletons=GlobalContext.singletons
+			singletons=GlobalContext.singletons,
+			sequence_followed=sequence_followed
 		)
 		
 		with open(context_file, "wb") as f:
 			pickle.dump(inference_cache, f)
 
-		GlobalCache.context_map[context_id] = context_file.resolve().as_posix()
-		context_index_file = cache_path / "contexts" / "context_index.json"
+		GlobalCache.context_index[context_id] = context_file.resolve().as_posix()
+		context_index_file = cache_path / "contexts" / "index.json"
 		with open(context_index_file, "w", encoding="utf-8") as file:
-			json.dump(GlobalCache.context_map, file, indent='\t')
+			json.dump(GlobalCache.context_index, file, indent='\t')
 
 	@staticmethod
-	def load_inference_context(context_id: str) -> InferenceCache | None:
-		context_file_path = GlobalCache.context_map.get(context_id)
+	def load_inference_context(context_id: str) -> list[ModuleMeta]:
+		from typify.preprocessing.core import GlobalContext
+
+		context_file_path = GlobalCache.context_index.get(context_id)
 		if context_file_path is None:
-			return None
+			return []
 
 		context_file = Path(context_file_path)
 		if not context_file.exists():
-			return None
+			return []
 
 		with open(context_file, "rb") as f:
-			inference_cache: InferenceCache = pickle.load(f)
-			return inference_cache
-		return None
+			context_cache: InferenceCache = pickle.load(f)
+			meta_map: dict[Module, ModuleMeta] = {}
+			remaining_libs = GlobalContext.libs.keys() - context_cache.libs.keys()
+
+			for libpath in remaining_libs:
+				meta_map.update(GlobalContext.libs[libpath].meta_map)
+			
+			for libpath in context_cache.libs:
+				GlobalContext.libs[libpath] = context_cache.libs[libpath]
+				meta_map.update(context_cache.libs[libpath].meta_map)
+
+			GlobalContext.meta_map = meta_map
+			GlobalContext.call_stack = context_cache.call_stack
+			GlobalContext.inference = context_cache.inference
+			GlobalContext.sysmodules = context_cache.sysmodules
+			GlobalContext.symbol_map = context_cache.symbol_map
+			GlobalContext.function_object_map = context_cache.function_object_map
+			GlobalContext.singletons = context_cache.singletons
+			GlobalContext.path_index = {m.src: m for m in GlobalContext.meta_map.values()}
+
+			return context_cache.sequence_followed
+		return []
 
 	@staticmethod
 	def compute_snapshot(lpath: Path) -> dict[str, float]:
@@ -138,7 +170,7 @@ class GlobalCache:
 
 		if clear_cache: GlobalCache.clear(cache_path)
 
-		libs: list[LibraryMeta] = []
+		libs: dict[Path, LibraryMeta] = {}
 
 		global_index_file = cache_path / "index.json"
 		if global_index_file.exists():
@@ -147,7 +179,7 @@ class GlobalCache:
 		else:
 			GlobalCache.global_index = {}
 		
-		context_index_file = cache_path / "contexts" / "context_index.json"
+		context_index_file = cache_path / "contexts" / "index.json"
 		if context_index_file.exists():
 			with context_index_file.open("r", encoding="utf-8") as f:
 				GlobalCache.context_index = json.load(f)
@@ -182,7 +214,7 @@ class GlobalCache:
 						cached = pickle.load(f)
 					if cached.digest == digest:
 						GlobalCache.libs_cache[lpath] = cached
-						libs.append(cached.meta)
+						libs[cached.meta.src] = cached.meta
 						module_count = len(cached.meta.meta_map)
 						progress_bar.set_suffix(f"Cached: {module_count} modules")
 						logger.debug(f"{logger.emoji_map['ok']} [Cache] {lpath.as_posix()}")
@@ -255,7 +287,7 @@ class GlobalCache:
 						pickle.dump(libcache, f)
 
 					GlobalCache.libs_cache[lpath] = libcache
-					libs.append(meta)
+					libs[meta.src] = meta
 					progress_bar.set_suffix(f"Cached: {module_count} modules")
 					progress_bar.done()
 					continue
@@ -267,6 +299,7 @@ class GlobalCache:
 			logger.debug(f"\tFull rebuild performed")
 			logger.debug(f"\tTotal modules: {module_count}")
 
+			GlobalCache.rebuilt_libs.add(lpath)
 			GlobalCache.modified_map[lpath] = set()
 
 			libcache = LibraryCache(
@@ -280,12 +313,12 @@ class GlobalCache:
 				pickle.dump(libcache, f)
 
 			GlobalCache.libs_cache[lpath] = libcache
-			libs.append(meta)
+			libs[meta.src] = meta
 
 		with global_index_file.open("w", encoding="utf-8") as f:
 			json.dump(GlobalCache.global_index, f, indent='\t')
 
-		total_modules = sum(len(meta.meta_map) for meta in libs)
+		total_modules = sum(len(meta.meta_map) for meta in libs.values())
 		logger.debug(f"{logger.emoji_map['ok']} [Cache Summary]")
 		logger.debug(f"\tLibraries processed: {len(libs)}")
 		logger.debug(f"\tTotal modules: {total_modules}")
@@ -341,6 +374,7 @@ class GlobalCache:
 
 		dead_libs: set[str] = set()
 
+		# --- prune libraries ---
 		for lpath, libcache in list(GlobalCache.libs_cache.items()):
 			if not lpath.exists():
 				if libcache.lib_pickle.exists():
@@ -393,6 +427,35 @@ class GlobalCache:
 				with global_index_file.open("w", encoding="utf-8") as f:
 					json.dump(GlobalCache.global_index, f, indent='\t')
 
+		context_dir = GlobalCache.get_system_cache() / "contexts"
+		if context_dir.exists():
+			to_remove = []
+			for cid, path_str in list(GlobalCache.context_index.items()):
+				path = Path(path_str)
+				if not path.exists():
+					to_remove.append(cid)
+					continue
+				try:
+					with open(path, "rb") as f:
+						pickle.load(f)  # sanity check
+				except Exception:
+					to_remove.append(cid)
+					if path.exists():
+						path.unlink()
+
+			for cid in to_remove:
+				GlobalCache.context_index.pop(cid, None)
+
+			valid_paths = {Path(p) for p in GlobalCache.context_index.values()}
+			for file in context_dir.glob("*.pkl"):
+				if file not in valid_paths:
+					file.unlink()
+
+			index_file = context_dir / "index.json"
+			with index_file.open("w", encoding="utf-8") as f:
+				json.dump(GlobalCache.context_index, f, indent="\t")
+
+
 	@staticmethod
 	def clear(cache_path: Path):
 		if cache_path.exists():
@@ -401,3 +464,6 @@ class GlobalCache:
 		GlobalCache.lib_structs.clear()
 		GlobalCache.libs_cache.clear()
 		GlobalCache.global_index.clear()
+		GlobalCache.context_index.clear()
+		GlobalCache.modified_map.clear()
+		GlobalCache.rebuilt_libs.clear()

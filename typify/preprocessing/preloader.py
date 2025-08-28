@@ -95,7 +95,7 @@ print(json.dumps(info))
 		)
 
 		GlobalContext.path_index.clear()
-		for lib in GlobalContext.libs:
+		for lib in GlobalContext.libs.values():
 			for apath, meta in lib.path_index.items():
 				GlobalContext.path_index[apath.resolve()] = meta
 
@@ -107,7 +107,7 @@ print(json.dumps(info))
 		logger.debug(f"{logger.emoji_map['summary']} [Preloader] Building dependency graph (all libraries)", trail=1)
 		GraphBuilder.build_graph_all(use_cache=True)
 
-		project_lib = GlobalContext.libs[0]
+		project_lib = next(iter(GlobalContext.libs.values()))
 		meta_values = list(project_lib.meta_map.values())
 		progress = ProgressBar(len(meta_values), prefix="Collecting typeslots:")
 		progress.display()

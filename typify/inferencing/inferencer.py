@@ -14,23 +14,20 @@ from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.executor import Executor
 from typify.preprocessing.instance_utils import ReferenceSet
 from typify.preprocessing.core import GlobalContext
+from typify.preprocessing.sequencer import Sequencer
 
 class Inferencer:
 
 	@staticmethod
 	def process_sequence(
 		sequence: list[ModuleMeta],
-		reverse_deps: dict[ModuleMeta, set[ModuleMeta]],
-		pass_counts: dict[str, int],
-		processed: list[ModuleMeta],
-		all_tracked_modules: set[ModuleMeta],
-		shown_in_combined: set[ModuleMeta],
-		progress: ProgressBar
+		reverse_deps: dict[ModuleMeta, list[ModuleMeta]],
+		sequence_followed: list[ModuleMeta]
 	) -> None:
 
 		is_single = len(sequence) == 1
 		has_self_loop = (
-			sequence[0] in GlobalContext.dependency_graph.get(sequence[0], set())
+			sequence[0] in GlobalContext.dependency_graph.get(sequence[0], [])
 			if is_single else False
 		)
 
@@ -56,6 +53,7 @@ class Inferencer:
 				tree=meta.tree,
 				snapshot_log=snapshot_log
 			)
+			sequence_followed.append(meta)
 			executor.execute()
 			return executor.snapshot()
 
@@ -63,12 +61,6 @@ class Inferencer:
 			meta = sequence[0]
 			new_snapshot = run_pass(meta)
 			snapshots[meta] = new_snapshot
-			pass_counts[meta.table.fqn] = 1
-			processed.append(meta)
-
-			if meta in all_tracked_modules and meta not in shown_in_combined:
-				progress.update()
-				shown_in_combined.add(meta)
 
 			GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 			return
@@ -84,37 +76,28 @@ class Inferencer:
 			new_snapshot = run_pass(meta)
 			if new_snapshot != snapshots[meta]:
 				snapshots[meta] = new_snapshot
-				for dependent in reverse_deps.get(meta, set()):
+				for dependent in reverse_deps.get(meta, []):
 					if dependent in sequence and dependent not in in_worklist:
 						worklist.append(dependent)
 						in_worklist.add(dependent)
 
 			GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
-			processed.append(meta)
-
-			if meta in all_tracked_modules and meta not in shown_in_combined:
-				progress.update()
-				shown_in_combined.add(meta)
-
-		for meta in sequence:
-			pass_counts[meta.table.fqn] = passes[meta]
-
 
 	@staticmethod
-	def infer(cache_path: Path) -> None:
-		reverse_deps: dict[ModuleMeta, set[ModuleMeta]] = defaultdict(set)
-		processed: list[ModuleMeta] = []
-		pass_counts: dict[str, int] = {}
+	def _init_structures():
+		reverse_deps: dict[ModuleMeta, list[ModuleMeta]] = defaultdict(list)
 		corrected_sequences: list[list[ModuleMeta]] = []
 		captured_metas: set[ModuleMeta] = set()
 
-		project_only_modules: set[ModuleMeta] = set(GlobalContext.libs[0].meta_map.values())
+		sequences = Sequencer.generate_sequences(GlobalContext.dependency_graph)
+
+		project_only_modules: set[ModuleMeta] = set(next(iter(GlobalContext.libs.values())).meta_map.values())
 
 		for src, targets in GlobalContext.dependency_graph.items():
 			for tgt in targets:
-				reverse_deps[tgt].add(src)
+				reverse_deps[tgt].append(src)
 
-		for sequence in GlobalContext.sequences:
+		for sequence in sequences:
 			if captured_metas == project_only_modules:
 				break
 			for meta in sequence:
@@ -122,49 +105,101 @@ class Inferencer:
 					captured_metas.add(meta)
 			corrected_sequences.append(sequence)
 		
-		all_tracked_modules = {meta for seq in corrected_sequences for meta in seq}
+		return (
+			reverse_deps,
+			corrected_sequences,
+		)
 
+	@staticmethod
+	def infer(cache_path: Path) -> None:
+		reverse_deps, corrected_sequences = Inferencer._init_structures()
+		
 		progress = ProgressBar(
-			total=len(all_tracked_modules),
-			prefix="Performing Inference:",
+			total=len(corrected_sequences),
+			prefix="Performing Inference",
 			progress_format="percent"
 		)
 		progress.display()
-		shown_in_combined: set[ModuleMeta] = set()
-
+		
 		logger.debug("", header=False)
 		logger.debug("Following Corrected Inference Sequences:")
 		logger.debug("", header=False)
 		
 		pretty = Utils.pretty_list_arrow(corrected_sequences, columns=3)
 		logger.debug(pretty, header=False)
-
-		filtered_sequences = corrected_sequences.copy()
-
+		
+		rebuilt_libs = GlobalCache.rebuilt_libs
+		filter_1: list[list[ModuleMeta]] = []
+		
 		for i in range(len(corrected_sequences), 0, -1):
-			current = corrected_sequences[:i]
-			context_id = repr(current)
-			context_cache = GlobalCache.load_inference_context(context_id)
-			if context_cache:
-				# TODO: register cached context to global context
-				filtered_sequences = corrected_sequences[i:]
+			current_path = corrected_sequences[:i]
+			flat = {mod for sublist in current_path for mod in sublist}
+			matching_libs = {
+				k
+				for k, lib in GlobalContext.libs.items()
+				if flat.intersection(lib.meta_map.values())
+			}
+			contains_rebuilt = matching_libs.intersection(rebuilt_libs)
+			if not contains_rebuilt:
+				modified = False
+				for ml in matching_libs:
+					search_space = GlobalCache.modified_map.get(ml, set())
+					if any(f.src.resolve().as_posix() in search_space for f in flat):
+						modified = True
+						break
+				if not modified:
+					filter_1 = current_path
+					break
+		
+		remaining = corrected_sequences.copy()
+		processed_sequences: list[list[ModuleMeta]] = []
+		sequence_followed: list[ModuleMeta] = []
+
+		for i in range(len(filter_1), 0, -1):
+			current_path = filter_1[:i]
+			context_id = repr(current_path)
+			sequence_followed = GlobalCache.load_inference_context(context_id)
+			if sequence_followed:
+				new_graph = {}
+				for meta, deps in GlobalContext.dependency_graph.items():
+					new_meta = GlobalContext.path_index.get(meta.src, meta)
+					new_deps = [GlobalContext.path_index.get(d.src, d) for d in deps]
+					new_graph[new_meta] = new_deps
+				GlobalContext.dependency_graph = new_graph
+
+				reverse_deps, corrected_sequences = Inferencer._init_structures()
+				remaining = corrected_sequences[i:]
+				processed_sequences = corrected_sequences[:i]
+				progress.update(i)
 				break
 
-		for sequence in filtered_sequences:
+		for sequence in remaining:
 			Inferencer.process_sequence(
 				sequence,
 				reverse_deps,
-				pass_counts,
-				processed,
-				all_tracked_modules,
-				shown_in_combined,
-				progress
+				sequence_followed
 			)
-			GlobalContext.processed_sequences.append(sequence)
-			GlobalCache.cache_inference_context(cache_path)
+			processed_sequences.append(sequence)
 
-		logger.info("Sequence Followed:", trail=1)
-		sequence_output = [meta.table.fqn for meta in processed]
+			current_path = processed_sequences
+			flat = {mod for sublist in current_path for mod in sublist}
+
+			libs = {
+				k: lib
+				for k, lib in GlobalContext.libs.items()
+				if flat.intersection(lib.meta_map.values())
+			}
+			
+			GlobalCache.cache_inference_context(
+				cache_path, 
+				libs, 
+				processed_sequences, 
+				sequence_followed
+			)
+			progress.update()
 		
-		pretty = Utils.pretty_list_arrow(sequence_output, columns=3)
+		logger.info("Sequence Followed:", trail=1)
+		sequence_followed = [meta.table.fqn for meta in sequence_followed]
+		
+		pretty = Utils.pretty_list_arrow(sequence_followed, columns=3)
 		logger.info(pretty, header=False)

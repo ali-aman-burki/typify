@@ -45,7 +45,7 @@ class DependencyUtils:
 	) -> list[Instance]:
 
 		fqn = DependencyUtils.to_absolute_name(defkey[0], name, level)
-		for lib in GlobalContext.libs:
+		for lib in GlobalContext.libs.values():
 			if fqn in lib.fqn_map:
 				chain = lib.fqn_map[fqn]
 
@@ -74,7 +74,7 @@ class GraphBuilder:
 	def initialize_globals():
 		from typify.logging import logger
 		logger.debug(f"{logger.emoji_map['init']} [Deps] Initializing globals from libraries")
-		for lib in GlobalContext.libs:
+		for lib in GlobalContext.libs.values():
 			GlobalContext.meta_map.update(lib.meta_map)
 			GlobalContext.sysmodules.update(lib.sysmodules)
 
@@ -155,7 +155,7 @@ class GraphBuilder:
 		plan: list[tuple[str, object, list[ModuleMeta], int]] = []
 		total_modules = 0
 
-		for lib in GlobalContext.libs:
+		for lib in GlobalContext.libs.values():
 			dep_file = GraphBuilder._dep_cache_file_for(lib)
 			modified = GlobalCache.modified_map.get(lib.src, set())
 			lib_count = len(lib.meta_map)
@@ -224,7 +224,6 @@ class GraphBuilder:
 					}, indent="\t"), encoding="utf-8")
 				logger.debug(f"{logger.emoji_map['libs']} [Deps] Fully rebuilt {lib_count} module(s) in {lib_name}")
 
-		GlobalContext.sequences = Sequencer.generate_sequences(GlobalContext.dependency_graph)
 		logger.debug(f"{logger.emoji_map['summary']} [Deps] Dependency graph build complete, sequences regenerated")
 
 class DependencyTracker(ast.NodeVisitor):
@@ -248,7 +247,7 @@ class DependencyTracker(ast.NodeVisitor):
 	def resolve_fqn_chain(self, name: str | None, level: int = 0) -> list[Module | Package]:
 		base_fqn = DependencyUtils.to_absolute_name(self.module_table, name, level)
 
-		for lib in GlobalContext.libs:
+		for lib in GlobalContext.libs.values():
 			if base_fqn in lib.fqn_map:
 				chain = lib.fqn_map[base_fqn]
 				metas = self.as_module_metas(self.filter_chain(chain))

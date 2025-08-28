@@ -12,7 +12,7 @@ from typify.preprocessing.symbol_table import (
 )
 
 class GlobalContext:
-	libs: list[LibraryMeta] = []
+	libs: dict[Path, LibraryMeta] = {}
 	call_stack: CallStack = CallStack()
 	inference: dict[str, ModuleMeta] = {}
 	sysmodules: dict[str, Instance] = {}
@@ -20,8 +20,6 @@ class GlobalContext:
 	function_object_map: dict[FunctionDefinition, Instance] = {}
 	meta_map: dict[Module, ModuleMeta] = {}
 	dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
-	sequences: list[list[ModuleMeta]] = []
-	processed_sequences: list[list[ModuleMeta]] = []
 
 	path_index: dict[Path, ModuleMeta] = {}
 	singletons: dict[str, Instance] = {"True": None, "False": None, "None": None}
