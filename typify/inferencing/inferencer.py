@@ -23,7 +23,7 @@ class Inferencer:
 	def process_sequence(
 		sequence: list[ModuleMeta],
 		reverse_deps: dict[ModuleMeta, list[ModuleMeta]],
-		sequence_followed: list[ModuleMeta]
+		sequence_followed: list[str]
 	) -> None:
 
 		is_single = len(sequence) == 1
@@ -54,7 +54,7 @@ class Inferencer:
 				tree=meta.tree,
 				snapshot_log=snapshot_log
 			)
-			sequence_followed.append(meta)
+			sequence_followed.append(meta.table.fqn)
 			executor.execute()
 			return executor.snapshot()
 
@@ -155,7 +155,7 @@ class Inferencer:
 		
 		remaining = corrected_sequences.copy()
 		processed_sequences: list[list[ModuleMeta]] = []
-		sequence_followed: list[ModuleMeta] = []
+		sequence_followed: list[str] = []
 
 		logger.debug(f"{logger.emoji_map['search']} Checking cache for contexts.")
 		for i in range(len(filter_1), 0, -1):
@@ -215,7 +215,6 @@ class Inferencer:
 		if remaining: logger.debug("", header=False)
 
 		logger.debug("Sequence Followed:")
-		sequence_followed = [meta.table.fqn for meta in sequence_followed]
 		
 		pretty = Utils.pretty_list_arrow(sequence_followed, columns=3)
 		logger.debug(pretty, header=False)
