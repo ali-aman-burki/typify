@@ -10,12 +10,12 @@ import io
 from pathlib import Path
 from dataclasses import dataclass
 
+from typify.logging import logger
 from typify.utils import Utils
-from typify.progbar import ProgressBar
+from typify.progbar import ProgressBar, IndeterminateProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.instance_utils import Instance
-from typify.inferencing.call_stack import CallStack
 from typify.preprocessing.symbol_table import (
 	Module,
 	ClassDefinition,
@@ -152,9 +152,28 @@ class GlobalCache:
 			for libpath in remaining_libs:
 				meta_map.update(GlobalContext.libs[libpath].meta_map)
 			
-			for libpath in context_cache.libs:
-				GlobalContext.libs[libpath] = context_cache.libs[libpath]
-				meta_map.update(context_cache.libs[libpath].meta_map)
+			for libpath, modified_files in GlobalCache.modified_map.items():
+				if libpath not in context_cache.libs:
+					continue
+				if modified_files:
+					logger.debug(
+						f"{logger.emoji_map['patch']} [Cache] Patching {len(modified_files)} module(s) in {libpath.resolve()}"
+					)
+				for abs_posix in sorted(modified_files):
+					abspath = Path(abs_posix)
+					existing = GlobalContext.libs[libpath].get_meta_by_path(abspath)
+					cached   = context_cache.libs[libpath].get_meta_by_path(abspath)
+					if existing is None or cached is None:
+						continue
+					cached.tree = existing.tree
+					cached.trust_annotations = existing.trust_annotations
+
+					relpath = abspath.relative_to(libpath)
+					logger.debug(f"\t↳ {logger.emoji_map['file']} Patched {relpath}")
+
+				for libpath in context_cache.libs:
+					GlobalContext.libs[libpath] = context_cache.libs[libpath]
+					meta_map.update(context_cache.libs[libpath].meta_map)
 
 			GlobalContext.meta_map = meta_map
 			GlobalContext.inference = context_cache.inference
@@ -181,8 +200,6 @@ class GlobalCache:
 		clear_cache: bool, 
 		config_paths: list[Path]
 	) -> list[LibraryMeta]:
-		from typify.progbar import IndeterminateProgressBar
-		from typify.logging import logger
 
 		cache_path.mkdir(parents=True, exist_ok=True)
 
