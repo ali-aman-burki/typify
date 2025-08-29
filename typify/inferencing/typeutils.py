@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import ast
 
-from typify.inferencing.commons import Typing, Checker
 from typify.inferencing.expression import TypeExpr
+from typify.inferencing.commons import (
+	Typing,
+	Builtins, 
+	Singletons,
+	Checker
+)
 from typify.preprocessing.instance_utils import (
 	ReferenceSet,
 	Instance
@@ -31,6 +36,13 @@ class TypeUtils:
 			return result
 		elif Checker.match_origin(unified_type_expr.base, Typing.get_type("Any")):
 			return ReferenceSet()
+		elif Checker.match_origin(unified_type_expr.base, Builtins.get_type("NoneType")):
+			return ReferenceSet(Singletons.get("None"))
+		elif Checker.match_origin(unified_type_expr.base, Builtins.get_type("bool")):
+			return ReferenceSet(
+				Singletons.get("True"), 
+				Singletons.get("False")
+			)
 		else:
 			if not unified_type_expr.base: return ReferenceSet()
 
@@ -103,8 +115,8 @@ class TypeUtils:
 	def instantiate_with_args(
 		instantiator: ClassDefinition, 
 		typeargs: list[Instance] | None = None
-		) -> Instance:
-		
+	) -> Instance:
+
 		instance = Instance(instantiator)
 		instance.update_type_info(instantiator, typeargs)
 		return instance

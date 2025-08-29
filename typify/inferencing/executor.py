@@ -324,7 +324,7 @@ class Executor(ast.NodeVisitor):
 			base_inst_set = self.resolver.resolve_value(base)
 			if base_inst_set:
 				base_inst = base_inst_set.ref()
-				if base_inst.instanceof(Builtins.get_type("NoneType")): continue
+				if base_inst == Singletons.get("None"): continue
 
 				if Checker.is_alias(base_inst):
 					entering_symbol.genbases.append(base_inst)
