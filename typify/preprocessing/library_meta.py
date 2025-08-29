@@ -49,7 +49,7 @@ class LibraryMeta:
 				path = path.parent
 			return True
 
-		for path in self.src.rglob("*"):
+		for path in sorted(self.src.rglob("*")):
 			if path.is_dir():
 				if "__pycache__" in path.parts:
 					continue
@@ -85,7 +85,7 @@ class LibraryMeta:
 					break
 
 		module_candidates = defaultdict(dict)
-		for path in self.src.rglob("*"):
+		for path in sorted(self.src.rglob("*")):
 			if path.suffix in {".py", ".pyi"} and not path.name.startswith("__init__.py"):
 				parent = path.parent
 				if parent in package_map:
