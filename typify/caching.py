@@ -58,7 +58,7 @@ class InferenceCache:
 	symbol_map: dict[Module | ClassDefinition | FunctionDefinition, Instance | CallFrame]
 	function_object_map: dict[FunctionDefinition, Instance]
 	singletons: dict[str, Instance]
-	sequence_followed: list[ModuleMeta]
+	sequence_followed: list[str]
 
 class GlobalCache:
 
@@ -84,9 +84,9 @@ class GlobalCache:
 
 	@staticmethod
 	def stage_inference_context(
-		libs: dict[Path, "LibraryMeta"], 
-		processed_sequences: list[list["ModuleMeta"]],
-		sequence_followed: list["ModuleMeta"]
+		libs: dict[Path, LibraryMeta], 
+		processed_sequences: list[list[ModuleMeta]],
+		sequence_followed: list[str]
 	):
 		from typify.preprocessing.core import GlobalContext
 
