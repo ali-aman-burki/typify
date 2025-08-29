@@ -113,7 +113,6 @@ class Inferencer:
 	@staticmethod
 	def infer(cache_path: Path) -> None:
 		reverse_deps, corrected_sequences = Inferencer._init_structures()
-		logger.debug(f"{logger.emoji_map['search']} {len(corrected_sequences)} total sequences to process")
 		
 		progress = ProgressBar(
 			total=len(corrected_sequences),
@@ -123,7 +122,7 @@ class Inferencer:
 		progress.display()
 		
 		logger.debug("", header=False)
-		logger.debug("Following Corrected Inference Sequences:")
+		logger.debug(f"{logger.emoji_map['search']} {len(corrected_sequences)} total sequences to process")
 		logger.debug("", header=False)
 		
 		pretty = Utils.pretty_list_arrow(corrected_sequences, columns=3)

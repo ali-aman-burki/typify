@@ -29,6 +29,7 @@ class ModuleMeta:
 		}
 
 		for key, value in self.vslots.items():
+			value = value.copy()
 			value[1] = value[1].as_type().strip() if isinstance(value[1], ReferenceSet) else value[1]
 			k = f"{value[2]}:{key[0]}:{key[1]}"
 			v = {
@@ -39,8 +40,10 @@ class ModuleMeta:
 			data["variables"][k] = v
 
 		for key, value in self.fslots.items():
+			value = value.copy()
 			k = f"{value[4]}:{key[0]}:{key[1]}"
 
+			value[2] = value[2].copy()
 			for x, y in value[2].items():
 				value[2][x] = repr(y.as_type().strip()) if isinstance(value[2][x], ReferenceSet) else value[2][x]
 			
