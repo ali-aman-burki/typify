@@ -43,12 +43,6 @@ class Singletons:
 		"None": "NoneType",
 	}
 
-	singname_to_cval = {
-		"True": True,
-		"False": False,
-		"None": None,
-	}
-
 	@staticmethod
 	def get(singname: str):
 		from typify.preprocessing.core import GlobalContext
@@ -65,7 +59,6 @@ class Singletons:
 			return entry
 		else:
 			instance = TypeUtils.instantiate_with_args(btype)
-			instance.cval = Singletons.singname_to_cval[singname]
 			GlobalContext.singletons[singname] = instance
 			return instance
 
