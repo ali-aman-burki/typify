@@ -99,7 +99,8 @@ def main():
 	next(iter(GlobalContext.libs.values())).export_types(
 		Path(output_dir) / f"{types_file_name}.json"
 	)
-	logger.info(f"{logger.emoji_map['ok']} Exported types to: {Path(output_dir) / f"{types_file_name}.json"}")
+	export_path_show = Path(Path(output_dir) / f"{types_file_name}.json").as_posix()
+	logger.info(f"{logger.emoji_map['ok']} Exported types to: {export_path_show}")
 
 	if GlobalCache.staged_contexts:
 		len_staged_ctxs = len(GlobalCache.staged_contexts)

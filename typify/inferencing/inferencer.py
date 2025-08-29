@@ -1,4 +1,5 @@
-from pathlib import Path
+import time
+
 from collections import (
 	deque, 
 	defaultdict
@@ -112,6 +113,8 @@ class Inferencer:
 
 	@staticmethod
 	def infer():
+		start_time = time.time()
+
 		reverse_deps, corrected_sequences = Inferencer._init_structures()
 		
 		progress = ProgressBar(
@@ -208,6 +211,7 @@ class Inferencer:
 			)
 			progress.update()
 		
+		end_time = time.time()
 		if remaining: logger.debug("", header=False)
 
 		logger.debug("Sequence Followed:")
@@ -215,6 +219,7 @@ class Inferencer:
 		pretty = Utils.pretty_list_arrow(sequence_followed, columns=3)
 		logger.debug(pretty, header=False)
 
-		logger.info(f"{logger.emoji_map['ok']} Inference complete: "
-			f"{len(processed_sequences)} sequences processed "
-			f"({len(set(sequence_followed))} module(s) in total)")
+		logger.info(f"{logger.emoji_map['ok']} Inference complete:")
+		logger.info(f"\t\tSequences processed: {len(processed_sequences)}")
+		logger.info(f"\t\tTotal Modules: {len(set(sequence_followed))}")
+		logger.info(f"\t\tTime Taken: {end_time - start_time:.4f} seconds")
