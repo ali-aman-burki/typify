@@ -1,5 +1,5 @@
 {
-	"cache_dir": "{AUTO}",
+	"cache_dir": "{auto}",
 	"paths": [
 		"typifystubs/stdlib/"
 	],

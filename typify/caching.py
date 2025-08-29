@@ -5,11 +5,13 @@ import hashlib
 import os
 import sys
 import shutil
+import io
 
 from pathlib import Path
 from dataclasses import dataclass
 
 from typify.utils import Utils
+from typify.progbar import ProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.instance_utils import Instance
@@ -50,7 +52,6 @@ class LibraryCache:
 
 @dataclass
 class InferenceCache:
-	call_stack: CallStack
 	inference: dict[str, ModuleMeta]
 	libs: dict[Path, LibraryMeta]
 	sysmodules: dict[str, ModuleMeta]
@@ -67,6 +68,7 @@ class GlobalCache:
 	context_index: dict[str, str] = {}
 	modified_map: dict[Path, set[str]] = {}
 	rebuilt_libs: set[Path] = set()
+	staged_contexts: list[tuple[str, bytes]] = []
 
 	@staticmethod
 	def get_system_cache() -> Path:
@@ -81,21 +83,15 @@ class GlobalCache:
 		return target_path
 
 	@staticmethod
-	def cache_inference_context(
-		cache_path: Path, 
-		libs: dict[Path, LibraryMeta], 
-		processed_sequences: list[list[ModuleMeta]],
-		sequence_followed: list[ModuleMeta]
+	def stage_inference_context(
+		libs: dict[Path, "LibraryMeta"], 
+		processed_sequences: list[list["ModuleMeta"]],
+		sequence_followed: list["ModuleMeta"]
 	):
 		from typify.preprocessing.core import GlobalContext
 
-		cache_path.mkdir(parents=True, exist_ok=True)
 		context_id = repr(processed_sequences)
-		context_file = cache_path / "contexts" / f"{len(GlobalCache.context_index)}.pkl"
-		context_file.parent.mkdir(parents=True, exist_ok=True)
-
 		inference_cache = InferenceCache(
-			call_stack=GlobalContext.call_stack,
 			inference=GlobalContext.inference,
 			libs=libs,
 			sysmodules=GlobalContext.sysmodules,
@@ -104,14 +100,37 @@ class GlobalCache:
 			singletons=GlobalContext.singletons,
 			sequence_followed=sequence_followed
 		)
-		
-		with open(context_file, "wb") as f:
-			pickle.dump(inference_cache, f)
+		buf = io.BytesIO()
+		pickle.dump(inference_cache, buf)
+		GlobalCache.staged_contexts.append((context_id, buf.getvalue()))
 
-		GlobalCache.context_index[context_id] = context_file.resolve().as_posix()
-		context_index_file = cache_path / "contexts" / "index.json"
-		with open(context_index_file, "w", encoding="utf-8") as file:
-			json.dump(GlobalCache.context_index, file, indent='\t')
+	@staticmethod
+	def flush_inference_contexts(cache_path: Path):
+		if not GlobalCache.staged_contexts:
+			return
+
+		context_dir = cache_path / "contexts"
+		context_dir.mkdir(parents=True, exist_ok=True)
+
+		progress = ProgressBar(
+			total=len(GlobalCache.staged_contexts),
+			prefix="Flushing Inference Contexts",
+			progress_format="percent"
+		)
+		progress.display()
+
+		for cid, data in GlobalCache.staged_contexts:
+			context_file = context_dir / f"{len(GlobalCache.context_index)}.pkl"
+			with open(context_file, "wb") as f:
+				f.write(data)
+			GlobalCache.context_index[cid] = context_file.resolve().as_posix()
+			progress.update()
+
+		index_file = context_dir / "index.json"
+		with open(index_file, "w", encoding="utf-8") as f:
+			json.dump(GlobalCache.context_index, f, indent="\t")
+
+		GlobalCache.staged_contexts.clear()
 
 	@staticmethod
 	def load_inference_context(context_id: str) -> list[ModuleMeta]:
@@ -138,7 +157,6 @@ class GlobalCache:
 				meta_map.update(context_cache.libs[libpath].meta_map)
 
 			GlobalContext.meta_map = meta_map
-			GlobalContext.call_stack = context_cache.call_stack
 			GlobalContext.inference = context_cache.inference
 			GlobalContext.sysmodules = context_cache.sysmodules
 			GlobalContext.symbol_map = context_cache.symbol_map

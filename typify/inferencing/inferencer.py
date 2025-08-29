@@ -4,7 +4,6 @@ from collections import (
 	defaultdict
 )
 
-from typify.caching import GlobalCache
 from typify.logging import logger
 from typify.progbar import ProgressBar
 from typify.utils import Utils
@@ -15,6 +14,10 @@ from typify.inferencing.executor import Executor
 from typify.preprocessing.instance_utils import ReferenceSet
 from typify.preprocessing.core import GlobalContext
 from typify.preprocessing.sequencer import Sequencer
+from typify.caching import (
+	GlobalCache, 
+	InferenceCache
+)
 
 class Inferencer:
 
@@ -111,7 +114,7 @@ class Inferencer:
 		)
 
 	@staticmethod
-	def infer(cache_path: Path) -> None:
+	def infer():
 		reverse_deps, corrected_sequences = Inferencer._init_structures()
 		
 		progress = ProgressBar(
@@ -161,7 +164,7 @@ class Inferencer:
 			context_id = repr(current_path)
 			sequence_followed = GlobalCache.load_inference_context(context_id)
 			if sequence_followed:
-				logger.debug(f"{logger.emoji_map['ok']} [Cache] Cache hit for {i} sequences (restored {len(set(sequence_followed))} modules)")
+				logger.debug(f"{logger.emoji_map['ok']} [Cache] Cache hit for {i} sequences (restored {len(set(sequence_followed))} module(s))")
 				new_graph = {}
 				for meta, deps in GlobalContext.dependency_graph.items():
 					new_meta = GlobalContext.path_index.get(meta.src, meta)
@@ -201,10 +204,9 @@ class Inferencer:
 				if flat.intersection(lib.meta_map.values())
 			}
 			
-			GlobalCache.cache_inference_context(
-				cache_path, 
-				libs, 
-				processed_sequences, 
+			GlobalCache.stage_inference_context(
+				libs,
+				processed_sequences,
 				sequence_followed
 			)
 			progress.update()
@@ -218,5 +220,5 @@ class Inferencer:
 		logger.debug(pretty, header=False)
 
 		logger.info(f"{logger.emoji_map['ok']} Inference complete: "
-            f"{len(processed_sequences)} sequences processed "
-            f"({len(set(sequence_followed))} modules in total)")
+			f"{len(processed_sequences)} sequences processed "
+			f"({len(set(sequence_followed))} module(s) in total)")

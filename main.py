@@ -56,7 +56,7 @@ def main():
 
 	project_dir = Path(project_dir).resolve()
 	output_dir = Path(output_dir).resolve()
-	cache_path = config["cache_dir"] if config["cache_dir"] != "{AUTO}" else GlobalCache.get_system_cache()
+	cache_path = config["cache_dir"] if config["cache_dir"] != "{auto}" else GlobalCache.get_system_cache()
 	cache_path = Path(cache_path).resolve()
 	types_file_name = "types"
 	log_file_name = "typify"
@@ -94,11 +94,17 @@ def main():
 		joined = ", ".join(repr(dep) for dep in deps)
 		logger.info(f"   {repr(meta)} -> [{joined}]")
 
-	Inferencer.infer(cache_path)
+	Inferencer.infer()
 
 	next(iter(GlobalContext.libs.values())).export_types(
 		Path(output_dir) / f"{types_file_name}.json"
 	)
+	logger.info(f"{logger.emoji_map['ok']} Exported types to: {Path(output_dir) / f"{types_file_name}.json"}")
+
+	if GlobalCache.staged_contexts:
+		len_staged_ctxs = len(GlobalCache.staged_contexts)
+		GlobalCache.flush_inference_contexts(cache_path)
+		logger.debug(f"{logger.emoji_map['ok']} [Cache] Flushed {len_staged_ctxs} staged context(s) to disk.", trail=1)
 
 	logger.close()
 

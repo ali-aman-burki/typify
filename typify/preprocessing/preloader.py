@@ -66,7 +66,7 @@ print(json.dumps(info))
 		raw_paths = config.get("paths", [])
 
 		for p in raw_paths:
-			if p == "{AUTO}":
+			if p == "{auto}":
 				for site in cenv.values():
 					if isinstance(site, Path):
 						paths.append(site)
