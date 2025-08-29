@@ -91,7 +91,8 @@ class Inferencer:
 
 		sequences = Sequencer.generate_sequences(GlobalContext.dependency_graph)
 
-		project_only_modules: set[ModuleMeta] = set(next(iter(GlobalContext.libs.values())).meta_map.values())
+		project_libpath = next(iter(GlobalContext.libs.keys()))
+		project_only_modules: set[ModuleMeta] = set(GlobalContext.libs[project_libpath].meta_map.values())
 
 		for src, targets in GlobalContext.dependency_graph.items():
 			for tgt in targets:
@@ -105,15 +106,13 @@ class Inferencer:
 					captured_metas.add(meta)
 			corrected_sequences.append(sequence)
 		
-		return (
-			reverse_deps,
-			corrected_sequences,
-		)
+		return reverse_deps, corrected_sequences
 
 	@staticmethod
-	def infer():
+	def infer(dont_cache: bool):
 		reverse_deps, corrected_sequences = Inferencer._init_structures()
-		
+		project_libpath = next(iter(GlobalContext.libs.keys()))
+
 		progress = ProgressBar(
 			total=len(corrected_sequences),
 			prefix="Performing Inference",
@@ -200,14 +199,15 @@ class Inferencer:
 				for k, lib in GlobalContext.libs.items()
 				if flat.intersection(lib.meta_map.values())
 			}
-			
-			GlobalCache.stage_inference_context(
-				libs,
-				processed_sequences,
-				sequence_followed
-			)
+
+			if not (dont_cache and project_libpath in libs):
+				GlobalCache.stage_inference_context(
+					libs,
+					processed_sequences,
+					sequence_followed
+				)
 			progress.update()
-		
+				
 		if remaining: logger.debug("", header=False)
 
 		logger.debug("Sequence Followed:")
