@@ -135,7 +135,7 @@ class GraphBuilder:
 			DependencyTracker(m).visit(m.tree)
 			if log_files:
 				rel = Path(m.src).resolve().relative_to(lib.src.resolve())
-				logger.debug(f"\t↳ {logger.emoji_map['file']} Recomputed {rel.as_posix()}")
+				logger.debug(f"\t➜ {logger.emoji_map['file']} Recomputed {rel.as_posix()}")
 			if progress is not None:
 				progress.update(progress.iteration + 1)
 

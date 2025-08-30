@@ -63,12 +63,25 @@ class Utils:
 	@staticmethod
 	def pretty_list_arrow(data: list, columns: int):
 		result = ""
-		max_width = max(len(str(item)) for item in data)
+
+		col_widths = []
+		for col in range(columns):
+			col_items = data[col::columns]
+			if col_items:
+				col_widths.append(max(len(str(item)) for item in col_items))
+			else:
+				col_widths.append(0)
+
 		for i in range(0, len(data), columns):
 			row = data[i:i + columns]
-			formatted_row = " ".join(f"-> {str(item):<{max_width}}" for item in row)
-			result += formatted_row + "\n"
-		
+			formatted_parts = []
+			for j, item in enumerate(row):
+				if j == columns - 1:
+					formatted_parts.append(f"➜ {str(item)}")
+				else:
+					formatted_parts.append(f"➜ {str(item):<{col_widths[j]}}")
+			result += " ".join(formatted_parts) + "\n"
+
 		return result
 
 	@staticmethod

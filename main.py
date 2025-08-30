@@ -92,7 +92,7 @@ def main():
 	logger.info(f"{logger.emoji_map['graph']} Dependency Graph:", 1)
 	for meta, deps in GlobalContext.dependency_graph.items():
 		joined = ", ".join(repr(dep) for dep in deps)
-		logger.info(f"   {repr(meta)} -> [{joined}]")
+		logger.info(f"   {repr(meta)} ➜ [{joined}]")
 
 	Inferencer.infer()
 

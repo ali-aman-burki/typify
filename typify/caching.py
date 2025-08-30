@@ -112,23 +112,35 @@ class GlobalCache:
 		context_dir = cache_path / "contexts"
 		context_dir.mkdir(parents=True, exist_ok=True)
 
+		staged_unique: dict[str, bytes] = {}
+		for cid, data in GlobalCache.staged_contexts:
+			staged_unique[cid] = data
+
 		progress = ProgressBar(
-			total=len(GlobalCache.staged_contexts),
+			total=len(staged_unique),
 			prefix="Flushing Inference Contexts",
 			progress_format="percent"
 		)
 		progress.display()
 
-		for cid, data in GlobalCache.staged_contexts:
-			context_file = context_dir / f"{len(GlobalCache.context_index)}.pkl"
+		for cid, data in staged_unique.items():
+			existing_path = GlobalCache.context_index.get(cid)
+			if existing_path:
+				context_file = Path(existing_path)
+			else:
+				context_file = context_dir / f"{GlobalCache.context_counter}.pkl"
+				GlobalCache.context_index[cid] = context_file.resolve().as_posix()
+				GlobalCache.context_counter += 1
+
 			with open(context_file, "wb") as f:
 				f.write(data)
-			GlobalCache.context_index[cid] = context_file.resolve().as_posix()
+
 			progress.update()
 
 		index_file = context_dir / "index.json"
+		payload = {"__counter__": GlobalCache.context_counter, **GlobalCache.context_index}
 		with open(index_file, "w", encoding="utf-8") as f:
-			json.dump(GlobalCache.context_index, f, indent="\t")
+			json.dump(payload, f, indent="\t")
 
 		GlobalCache.staged_contexts.clear()
 
@@ -160,20 +172,19 @@ class GlobalCache:
 						f"{logger.emoji_map['patch']} [Cache] Patching {len(modified_files)} module(s) in {libpath.resolve()}"
 					)
 				for abs_posix in sorted(modified_files):
-					abspath = Path(abs_posix)
+					abspath  = Path(abs_posix)
 					existing = GlobalContext.libs[libpath].get_meta_by_path(abspath)
 					cached   = context_cache.libs[libpath].get_meta_by_path(abspath)
 					if existing is None or cached is None:
 						continue
 					cached.tree = existing.tree
 					cached.trust_annotations = existing.trust_annotations
-
 					relpath = abspath.relative_to(libpath)
-					logger.debug(f"\t↳ {logger.emoji_map['file']} Patched {relpath}")
+					logger.debug(f"\t➜ {logger.emoji_map['file']} Patched {relpath}")
 
-				for libpath in context_cache.libs:
-					GlobalContext.libs[libpath] = context_cache.libs[libpath]
-					meta_map.update(context_cache.libs[libpath].meta_map)
+			for c_libpath in context_cache.libs:
+				GlobalContext.libs[c_libpath] = context_cache.libs[c_libpath]
+				meta_map.update(context_cache.libs[c_libpath].meta_map)
 
 			GlobalContext.meta_map = meta_map
 			GlobalContext.inference = context_cache.inference
@@ -217,9 +228,12 @@ class GlobalCache:
 		context_index_file = cache_path / "contexts" / "index.json"
 		if context_index_file.exists():
 			with context_index_file.open("r", encoding="utf-8") as f:
-				GlobalCache.context_index = json.load(f)
+				raw_index = json.load(f)
+			GlobalCache.context_counter = int(raw_index.pop("__counter__", len(raw_index)))
+			GlobalCache.context_index = raw_index
 		else:
 			GlobalCache.context_index = {}
+			GlobalCache.context_counter = 0
 
 		for lpath in config_paths:
 			lpath_str = lpath.as_posix()
@@ -299,7 +313,7 @@ class GlobalCache:
 						abspath = (lpath / rel).resolve()
 						existing = meta.get_meta_by_path(abspath)
 						if existing is None:
-							logger.debug(f"\t\t↳ {logger.emoji_map['warn']} Skipping {rel}, not found in meta")
+							logger.debug(f"\t➜ {logger.emoji_map['warn']} Skipping {rel}, not found in meta")
 							continue
 
 						refreshed = GlobalCache.get_module_meta(
@@ -309,7 +323,7 @@ class GlobalCache:
 						)
 						existing.tree = refreshed.tree
 						existing.trust_annotations = refreshed.trust_annotations
-						logger.debug(f"\t\t↳ {logger.emoji_map['file']} Updated tree for {rel}")
+						logger.debug(f"\t➜ {logger.emoji_map['file']} Updated tree for {rel}")
 
 					libcache = LibraryCache(
 						lib_dir=lib_dir,
