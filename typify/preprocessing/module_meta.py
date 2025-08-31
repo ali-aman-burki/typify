@@ -6,12 +6,19 @@ from typify.preprocessing.symbol_table import Module
 
 class ModuleMeta:
 
-	def __init__(self, src: Path, tree: ast.Module, trust_annotations: bool):
+	def __init__(
+			self, 
+			src: Path, 
+			tree: ast.Module, 
+			trust_annotations: bool,
+			last_modified: Path
+		):
 		from typify.preprocessing.instance_utils import ReferenceSet
 		self.src = src
 		self.tree = tree
 		self.table = Module(src.stem)
 		self.trust_annotations = trust_annotations
+		self.last_modified = last_modified
 
 		self.vslots: dict[tuple[int, int], list[str | ReferenceSet]] = {}
 		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | ast.AsyncFunctionDef | str | dict[str, ReferenceSet] | ReferenceSet]] = {}

@@ -34,6 +34,7 @@ def parse_args():
 	parser.add_argument("--types-file", help="Name of the types JSON file (without extension). Defaults to config value.")
 	parser.add_argument("--clear-cache", action="store_true", help="Clear the typify cache before running.")
 	parser.add_argument("--prune-cache", action="store_true", help="Prune stale entries from the typify cache after setup.")
+	parser.add_argument("--dont-cache", action="store_true", help="Prevent saving inference results to cache.")
 
 	return parser.parse_args()
 
@@ -94,7 +95,7 @@ def main():
 		joined = ", ".join(repr(dep) for dep in deps)
 		logger.info(f"   {repr(meta)} ➜ [{joined}]")
 
-	Inferencer.infer()
+	Inferencer.infer(args.dont_cache)
 
 	next(iter(GlobalContext.libs.values())).export_types(
 		Path(output_dir) / f"{types_file_name}.json"

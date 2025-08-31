@@ -33,7 +33,8 @@ class ModuleCache:
 		return ModuleMeta(
 			mpath,
 			self.tree,
-			self.trust_annotations
+			self.trust_annotations,
+			self.last_modified
 		)
 
 @dataclass
@@ -68,7 +69,7 @@ class GlobalCache:
 	context_index: dict[str, str] = {}
 	modified_map: dict[Path, set[str]] = {}
 	rebuilt_libs: set[Path] = set()
-	staged_contexts: list[tuple[str, bytes]] = []
+	staged_contexts: list[tuple[str, float, bytes]] = []
 
 	@staticmethod
 	def get_system_cache() -> Path:
@@ -84,13 +85,15 @@ class GlobalCache:
 
 	@staticmethod
 	def stage_inference_context(
-		libs: dict[Path, LibraryMeta], 
-		processed_sequences: list[list[ModuleMeta]],
+		libs: dict[Path, "LibraryMeta"], 
+		processed_sequences: list[list["ModuleMeta"]],
 		sequence_followed: list[str]
 	):
 		from typify.preprocessing.core import GlobalContext
 
 		context_id = repr(processed_sequences)
+		last_modified = max(m.last_modified for seq in processed_sequences for m in seq)
+
 		inference_cache = InferenceCache(
 			inference=GlobalContext.inference,
 			libs=libs,
@@ -102,7 +105,8 @@ class GlobalCache:
 		)
 		buf = io.BytesIO()
 		pickle.dump(inference_cache, buf)
-		GlobalCache.staged_contexts.append((context_id, buf.getvalue()))
+
+		GlobalCache.staged_contexts.append((context_id, last_modified, buf.getvalue()))
 
 	@staticmethod
 	def flush_inference_contexts(cache_path: Path):
@@ -112,9 +116,9 @@ class GlobalCache:
 		context_dir = cache_path / "contexts"
 		context_dir.mkdir(parents=True, exist_ok=True)
 
-		staged_unique: dict[str, bytes] = {}
-		for cid, data in GlobalCache.staged_contexts:
-			staged_unique[cid] = data
+		staged_unique: dict[str, tuple[float, bytes]] = {}
+		for cid, lm, data in GlobalCache.staged_contexts:
+			staged_unique[cid] = (lm, data)
 
 		progress = ProgressBar(
 			total=len(staged_unique),
@@ -123,17 +127,22 @@ class GlobalCache:
 		)
 		progress.display()
 
-		for cid, data in staged_unique.items():
-			existing_path = GlobalCache.context_index.get(cid)
-			if existing_path:
-				context_file = Path(existing_path)
+		for cid, (lm, data) in staged_unique.items():
+			entry = GlobalCache.context_index.get(cid)
+			if entry:
+				context_file = Path(entry["path"])
 			else:
 				context_file = context_dir / f"{GlobalCache.context_counter}.pkl"
-				GlobalCache.context_index[cid] = context_file.resolve().as_posix()
+				GlobalCache.context_index[cid] = {
+					"path": context_file.resolve().as_posix(),
+					"last_modified": lm,
+				}
 				GlobalCache.context_counter += 1
 
 			with open(context_file, "wb") as f:
 				f.write(data)
+
+			GlobalCache.context_index[cid]["last_modified"] = lm
 
 			progress.update()
 
@@ -145,25 +154,32 @@ class GlobalCache:
 		GlobalCache.staged_contexts.clear()
 
 	@staticmethod
-	def load_inference_context(context_id: str) -> list[ModuleMeta]:
+	def load_inference_context(current_path: list[list[ModuleMeta]]) -> list[ModuleMeta]:
 		from typify.preprocessing.core import GlobalContext
 
-		context_file_path = GlobalCache.context_index.get(context_id)
-		if context_file_path is None:
+		context_id = repr(current_path)
+		entry = GlobalCache.context_index.get(context_id)
+		if not entry:
 			return []
 
-		context_file = Path(context_file_path)
+		context_file = Path(entry["path"])
 		if not context_file.exists():
+			return []
+
+		current_max = max(m.last_modified for seq in current_path for m in seq)
+		saved_lm = entry["last_modified"]
+
+		if current_max > saved_lm:
 			return []
 
 		with open(context_file, "rb") as f:
 			context_cache: InferenceCache = pickle.load(f)
 			meta_map: dict[Module, ModuleMeta] = {}
-			remaining_libs = GlobalContext.libs.keys() - context_cache.libs.keys()
 
+			remaining_libs = GlobalContext.libs.keys() - context_cache.libs.keys()
 			for libpath in remaining_libs:
 				meta_map.update(GlobalContext.libs[libpath].meta_map)
-			
+
 			for libpath, modified_files in GlobalCache.modified_map.items():
 				if libpath not in context_cache.libs:
 					continue
@@ -172,13 +188,14 @@ class GlobalCache:
 						f"{logger.emoji_map['patch']} [Cache] Patching {len(modified_files)} module(s) in {libpath.resolve()}"
 					)
 				for abs_posix in sorted(modified_files):
-					abspath  = Path(abs_posix)
+					abspath = Path(abs_posix)
 					existing = GlobalContext.libs[libpath].get_meta_by_path(abspath)
-					cached   = context_cache.libs[libpath].get_meta_by_path(abspath)
+					cached = context_cache.libs[libpath].get_meta_by_path(abspath)
 					if existing is None or cached is None:
 						continue
 					cached.tree = existing.tree
 					cached.trust_annotations = existing.trust_annotations
+					existing.last_modified = cached.last_modified 
 					relpath = abspath.relative_to(libpath)
 					logger.debug(f"\t➜ {logger.emoji_map['file']} Patched {relpath}")
 
@@ -195,6 +212,7 @@ class GlobalCache:
 			GlobalContext.path_index = {m.src: m for m in GlobalContext.meta_map.values()}
 
 			return context_cache.sequence_followed
+
 		return []
 
 	@staticmethod
@@ -228,9 +246,13 @@ class GlobalCache:
 		context_index_file = cache_path / "contexts" / "index.json"
 		if context_index_file.exists():
 			with context_index_file.open("r", encoding="utf-8") as f:
-				raw_index = json.load(f)
-			GlobalCache.context_counter = int(raw_index.pop("__counter__", len(raw_index)))
-			GlobalCache.context_index = raw_index
+				raw_index: dict = json.load(f)
+
+			GlobalCache.context_counter = int(raw_index.pop("__counter__", 0))
+			GlobalCache.context_index = {
+				cid: {"path": val["path"], "last_modified": float(val["last_modified"])}
+				for cid, val in raw_index.items()
+			}
 		else:
 			GlobalCache.context_index = {}
 			GlobalCache.context_counter = 0
@@ -323,6 +345,7 @@ class GlobalCache:
 						)
 						existing.tree = refreshed.tree
 						existing.trust_annotations = refreshed.trust_annotations
+						existing.last_modified = refreshed.last_modified
 						logger.debug(f"\t➜ {logger.emoji_map['file']} Updated tree for {rel}")
 
 					libcache = LibraryCache(

@@ -112,10 +112,11 @@ class Inferencer:
 		)
 
 	@staticmethod
-	def infer():
+	def infer(dont_cache: bool):
 		start_time = time.time()
 
 		reverse_deps, corrected_sequences = Inferencer._init_structures()
+		project_libpath = next(iter(GlobalContext.libs.keys()))
 		
 		progress = ProgressBar(
 			total=len(corrected_sequences),
@@ -161,8 +162,7 @@ class Inferencer:
 		logger.debug(f"{logger.emoji_map['search']} Checking cache for contexts.")
 		for i in range(len(filter_1), 0, -1):
 			current_path = filter_1[:i]
-			context_id = repr(current_path)
-			sequence_followed = GlobalCache.load_inference_context(context_id)
+			sequence_followed = GlobalCache.load_inference_context(current_path)
 			if sequence_followed:
 				logger.debug(f"{logger.emoji_map['ok']} [Cache] Cache hit for {i} sequences (restored {len(set(sequence_followed))} module(s))")
 				new_graph = {}
@@ -204,11 +204,12 @@ class Inferencer:
 				if flat.intersection(lib.meta_map.values())
 			}
 			
-			GlobalCache.stage_inference_context(
-				libs,
-				processed_sequences,
-				sequence_followed
-			)
+			if not (dont_cache and project_libpath in libs):
+				GlobalCache.stage_inference_context(
+					libs,
+					processed_sequences,
+					sequence_followed
+				)
 			progress.update()
 		
 		end_time = time.time()
