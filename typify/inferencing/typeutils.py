@@ -38,6 +38,11 @@ class TypeUtils:
 			return ReferenceSet()
 		elif Checker.match_origin(unified_type_expr.base, Builtins.get_type("NoneType")):
 			return ReferenceSet(Singletons.get("None"))
+		elif Checker.match_origin(unified_type_expr.base, Typing.get_type("Optional")):
+			result = ReferenceSet(Singletons.get("None"))
+			unified = TypeUtils.unify_from_exprs(unified_type_expr.args)
+			result.update(TypeUtils.instantiate_from_type_expr(unified))
+			return result
 		elif Checker.match_origin(unified_type_expr.base, Builtins.get_type("bool")):
 			return ReferenceSet(
 				Singletons.get("True"), 
