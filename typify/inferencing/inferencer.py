@@ -112,11 +112,10 @@ class Inferencer:
 		)
 
 	@staticmethod
-	def infer(dont_cache: bool):
+	def infer():
 		start_time = time.time()
 
 		reverse_deps, corrected_sequences = Inferencer._init_structures()
-		project_libpath = next(iter(GlobalContext.libs.keys()))
 		
 		progress = ProgressBar(
 			total=len(corrected_sequences),
@@ -204,12 +203,11 @@ class Inferencer:
 				if flat.intersection(lib.meta_map.values())
 			}
 			
-			if not (dont_cache and project_libpath in libs):
-				GlobalCache.stage_inference_context(
-					libs,
-					processed_sequences,
-					sequence_followed
-				)
+			GlobalCache.stage_inference_context(
+				libs,
+				processed_sequences,
+				sequence_followed
+			)
 			progress.update()
 		
 		end_time = time.time()

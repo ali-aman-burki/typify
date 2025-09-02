@@ -70,7 +70,12 @@ class GlobalCache:
 	modified_map: dict[Path, set[str]] = {}
 	rebuilt_libs: set[Path] = set()
 	staged_contexts: list[tuple[str, float, bytes]] = []
+	blocked_libs: set[Path] = set()
 
+	@staticmethod
+	def is_blocked(lpath: Path) -> bool:
+		return lpath in GlobalCache.blocked_libs
+	
 	@staticmethod
 	def get_system_cache() -> Path:
 		if sys.platform.startswith("win"):
@@ -85,10 +90,12 @@ class GlobalCache:
 
 	@staticmethod
 	def stage_inference_context(
-		libs: dict[Path, "LibraryMeta"], 
-		processed_sequences: list[list["ModuleMeta"]],
+		libs: dict[Path, LibraryMeta], 
+		processed_sequences: list[list[ModuleMeta]],
 		sequence_followed: list[str]
 	):
+		if not GlobalCache.blocked_libs.isdisjoint(libs.keys()): return
+
 		from typify.preprocessing.core import GlobalContext
 
 		context_id = repr(processed_sequences)
@@ -226,13 +233,14 @@ class GlobalCache:
 	@staticmethod
 	def setup(
 		cache_path: Path,
-		clear_cache: bool, 
+		clear_cache: bool,
 		config_paths: list[Path]
 	) -> list[LibraryMeta]:
-
+		
 		cache_path.mkdir(parents=True, exist_ok=True)
 
-		if clear_cache: GlobalCache.clear(cache_path)
+		if clear_cache:
+			GlobalCache.clear(cache_path)
 
 		libs: dict[Path, LibraryMeta] = {}
 
@@ -242,12 +250,11 @@ class GlobalCache:
 				GlobalCache.global_index = json.load(f)
 		else:
 			GlobalCache.global_index = {}
-		
+
 		context_index_file = cache_path / "contexts" / "index.json"
 		if context_index_file.exists():
 			with context_index_file.open("r", encoding="utf-8") as f:
 				raw_index: dict = json.load(f)
-
 			GlobalCache.context_counter = int(raw_index.pop("__counter__", 0))
 			GlobalCache.context_index = {
 				cid: {"path": val["path"], "last_modified": float(val["last_modified"])}
@@ -258,16 +265,26 @@ class GlobalCache:
 			GlobalCache.context_counter = 0
 
 		for lpath in config_paths:
-			lpath_str = lpath.as_posix()
+			lpath_str = str(lpath)
+			blocked = GlobalCache.is_blocked(lpath)
+
 			lib_id = GlobalCache.global_index.get(lpath_str)
-			if lib_id is None:
+
+			if lib_id is not None:
+				lib_dir = cache_path / lib_id
+				lib_pickle = lib_dir / "library.pkl" if lib_dir.exists() else None
+			else:
+				lib_dir = None
+				lib_pickle = None
+
+			has_existing_cache = bool(lib_pickle and lib_pickle.exists())
+
+			if lib_id is None and not blocked:
 				lib_id = str(len(GlobalCache.global_index))
 				GlobalCache.global_index[lpath_str] = lib_id
-
-			lib_dir = cache_path / lib_id
-			lib_dir.mkdir(parents=True, exist_ok=True)
-
-			lib_pickle = lib_dir / "library.pkl"
+				lib_dir = cache_path / lib_id
+				lib_dir.mkdir(parents=True, exist_ok=True)
+				lib_pickle = lib_dir / "library.pkl"
 
 			snapshot = GlobalCache.compute_snapshot(lpath)
 			digest = hashlib.sha1(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
@@ -279,7 +296,7 @@ class GlobalCache:
 			progress_bar.start()
 
 			cached: LibraryCache | None = None
-			if lib_pickle.exists():
+			if lib_pickle and lib_pickle.exists():
 				try:
 					with open(lib_pickle, "rb") as f:
 						cached = pickle.load(f)
@@ -292,33 +309,46 @@ class GlobalCache:
 						logger.debug(f"\tReused {module_count} modules (cache hit)")
 						GlobalCache.modified_map[lpath] = set()
 						progress_bar.done()
+
+						index_file = lib_dir / "index.json"
+						if index_file.exists():
+							with index_file.open("r", encoding="utf-8") as f:
+								index = json.load(f)
+							mods: dict[Path, Path] = {}
+							for key, original in index.items():
+								fpath = lib_dir / f"{key}.pkl"
+								if fpath.exists():
+									mods[Path(original)] = fpath
+							GlobalCache.lib_structs[lpath] = LibStruct(lib_dir, mods, index)
+						else:
+							GlobalCache.lib_structs[lpath] = LibStruct(lib_dir, {}, {})
 						continue
 				except Exception as e:
 					logger.debug(f"{logger.emoji_map['warn']} [Cache] {lpath.as_posix()}")
 					logger.debug(f"\tCorrupted cache pickle, forcing rebuild ({e})")
 					cached = None
 
-			index_file = lib_dir / "index.json"
-			if index_file.exists():
-				with index_file.open("r", encoding="utf-8") as f:
+			if lib_dir and (lib_dir / "index.json").exists():
+				with (lib_dir / "index.json").open("r", encoding="utf-8") as f:
 					index = json.load(f)
+				mods: dict[Path, Path] = {}
+				for key, original in index.items():
+					fpath = lib_dir / f"{key}.pkl"
+					if fpath.exists():
+						mods[Path(original)] = fpath
+				GlobalCache.lib_structs[lpath] = LibStruct(lib_dir, mods, index)
 			else:
-				index = {}
-			mods: dict[Path, Path] = {}
-			for key, original in index.items():
-				fpath = lib_dir / f"{key}.pkl"
-				if fpath.exists():
-					mods[Path(original)] = fpath
-			GlobalCache.lib_structs[lpath] = LibStruct(lib_dir, mods, index)
+				if not blocked:
+					GlobalCache.lib_structs[lpath] = LibStruct(lib_dir or Path(), {}, {})
 
 			if cached is not None and isinstance(cached.meta, LibraryMeta):
 				old_snapshot = cached.snapshot or {}
 				old_paths = set(old_snapshot.keys())
 				new_paths = set(snapshot.keys())
 
-				added   = new_paths - old_paths
-				removed = old_paths - new_paths
-				common  = new_paths & old_paths
+				added    = new_paths - old_paths
+				removed  = old_paths - new_paths
+				common   = new_paths & old_paths
 				modified = {p for p in common if snapshot[p] != old_snapshot[p]}
 
 				if not added and not removed:
@@ -355,14 +385,30 @@ class GlobalCache:
 						meta=meta,
 						snapshot=snapshot,
 					)
-					with open(lib_pickle, "wb") as f:
-						pickle.dump(libcache, f)
+					if not blocked and lib_pickle:
+						with open(lib_pickle, "wb") as f:
+							pickle.dump(libcache, f)
 
 					GlobalCache.libs_cache[lpath] = libcache
 					libs[meta.src] = meta
 					progress_bar.set_suffix(f"Cached: {module_count} modules")
 					progress_bar.done()
 					continue
+
+			if blocked and not has_existing_cache:
+				meta = LibraryMeta(lpath)
+				meta.build(progress_bar=progress_bar)
+				module_count = len(meta.meta_map)
+				logger.debug(f"{logger.emoji_map['build']} [Cache] {lpath.as_posix()}")
+				logger.debug(f"\tFull rebuild (blocked, not cached)")
+				logger.debug(f"\tTotal modules: {module_count}")
+
+				GlobalCache.rebuilt_libs.add(lpath)
+				GlobalCache.modified_map[lpath] = set()
+
+				libs[meta.src] = meta
+				progress_bar.done()
+				continue
 
 			meta = LibraryMeta(lpath)
 			meta.build(progress_bar=progress_bar)
@@ -381,11 +427,13 @@ class GlobalCache:
 				meta=meta,
 				snapshot=snapshot,
 			)
-			with open(lib_pickle, "wb") as f:
-				pickle.dump(libcache, f)
+			if not blocked and lib_pickle:
+				with open(lib_pickle, "wb") as f:
+					pickle.dump(libcache, f)
 
 			GlobalCache.libs_cache[lpath] = libcache
 			libs[meta.src] = meta
+			progress_bar.done()
 
 		with global_index_file.open("w", encoding="utf-8") as f:
 			json.dump(GlobalCache.global_index, f, indent='\t')
@@ -399,7 +447,15 @@ class GlobalCache:
 
 	@staticmethod
 	def get_module_meta(lpath: Path, mpath: Path, trust_annotations: bool):
-		libcache = GlobalCache.lib_structs[lpath]
+		libcache = GlobalCache.lib_structs.get(lpath)
+
+		if libcache is None or not libcache.path.exists():
+			new_mcache = ModuleCache(
+				Utils.load_tree(mpath),
+				trust_annotations,
+				mpath.stat().st_mtime
+			)
+			return new_mcache.to_meta(mpath)
 
 		pickled = libcache.mods.get(mpath)
 		if pickled and pickled.exists():
@@ -413,6 +469,9 @@ class GlobalCache:
 			trust_annotations,
 			mpath.stat().st_mtime
 		)
+
+		if GlobalCache.is_blocked(lpath):
+			return new_mcache.to_meta(mpath)
 
 		if mpath in libcache.mods:
 			fname = pickled.stem

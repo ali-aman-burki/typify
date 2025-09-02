@@ -206,22 +206,26 @@ class GraphBuilder:
 
 				GraphBuilder._recompute_for_metas(lib, metas, progress=progress, log_files=True)
 
-				if dep_file:
+				if dep_file and not GlobalCache.is_blocked(lib.src):
 					new_edges = GraphBuilder._serialize_edges_for(lib)
 					dep_file.write_text(json.dumps({
 						"library_src": lib.src.resolve().as_posix(),
 						"edges": new_edges
 					}, indent="\t"), encoding="utf-8")
+
 				logger.debug(f"{logger.emoji_map['patch']} [Cache] Patched {len(metas)} module(s) in {lib_name}")
 				continue
 
 			if action == "full":
 				GraphBuilder._recompute_for_metas(lib, metas, progress=progress, log_files=False)
-				if dep_file:
+
+				if dep_file and not GlobalCache.is_blocked(lib.src):
+					new_edges = GraphBuilder._serialize_edges_for(lib)
 					dep_file.write_text(json.dumps({
 						"library_src": lib.src.resolve().as_posix(),
-						"edges": GraphBuilder._serialize_edges_for(lib)
+						"edges": new_edges
 					}, indent="\t"), encoding="utf-8")
+
 				logger.debug(f"{logger.emoji_map['libs']} [Cache] Fully rebuilt {lib_count} module(s) in {lib_name}")
 
 		logger.debug(f"{logger.emoji_map['summary']} [Cache] Dependency graph build complete, sequences regenerated")

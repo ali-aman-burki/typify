@@ -78,10 +78,11 @@ def main():
         logger.add_output(open(log_file.with_suffix(".log"), "w", encoding="utf-8"))
 
     Preloader.load(
-        cache_path,
-        args.clear_cache,
-        config,
-        project_dir
+        cache_path=cache_path,
+        clear_cache=args.clear_cache,
+        dont_cache=args.dont_cache,
+        config=config,
+        project_dir=project_dir,
     )
 
     if args.prune_cache:
@@ -96,7 +97,7 @@ def main():
         joined = ", ".join(repr(dep) for dep in deps)
         logger.info(f"   {repr(meta)} ➜ [{joined}]")
 
-    Inferencer.infer(args.dont_cache)
+    Inferencer.infer()
 
     next(iter(GlobalContext.libs.values())).export_types(
         types_file.with_suffix(".json")

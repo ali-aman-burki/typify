@@ -53,8 +53,9 @@ print(json.dumps(info))
 	def load(
 		cache_path: Path,
 		clear_cache: bool,
+		dont_cache: bool,
 		config: dict[str, Union[str, list[str], dict[str, str]]], 
-		project_dir: Path,
+		project_dir: Path
 	):
 		from typify.preprocessing.precollector import PreCollector
 		from typify.logging import logger
@@ -86,6 +87,14 @@ print(json.dumps(info))
 
 		inference = {k: Path(v.resolve().as_posix()) for k, v in inference.items()}
 		paths = [Path(p.resolve().as_posix()) for p in paths]
+
+		if dont_cache:
+			GlobalCache.blocked_libs.add(paths[0])
+		
+		if GlobalCache.blocked_libs:
+			logger.debug(f"{logger.emoji_map['refresh']} [Cache] Blocked the following libs from caching:")
+			for bpath in GlobalCache.blocked_libs:
+				logger.debug(f"\t➜ {logger.emoji_map['folder']} {bpath}")
 
 		logger.debug(f"{logger.emoji_map['libs']} [Preloader] Loading libraries for {len(paths)} path(s)")
 		GlobalContext.libs = GlobalCache.setup(
