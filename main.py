@@ -49,7 +49,6 @@ def main():
 
     project_dir = Path(args.project_dir).resolve()
     default_outdir = project_dir / ".typify"
-    os.makedirs(default_outdir, exist_ok=True)
 
     if not Utils.is_valid_directory(project_dir):
         print("Invalid project path given.")
@@ -61,9 +60,11 @@ def main():
     cache_path = config["cache_dir"] if config["cache_dir"] != "{auto}" else GlobalCache.get_system_cache()
     cache_path = Path(cache_path).resolve()
 
-    # Handle log/types file defaults
     log_file = Path(args.log_file) if args.log_file else (default_outdir / "typify")
     types_file = Path(args.types_file) if args.types_file else (default_outdir / "types")
+
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    types_file.parent.mkdir(parents=True, exist_ok=True)
 
     log_levels = {
         "off": LogLevel.OFF,
@@ -99,6 +100,7 @@ def main():
 
     Inferencer.infer()
 
+    types_file.parent.mkdir(parents=True, exist_ok=True)
     next(iter(GlobalContext.libs.values())).export_types(
         types_file.with_suffix(".json")
     )
