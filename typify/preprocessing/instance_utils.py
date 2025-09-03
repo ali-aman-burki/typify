@@ -26,10 +26,17 @@ class ReferenceSet:
 	def add(self, reference: Instance):
 		self.references[reference] = None
 
-	def update(self, other: 'ReferenceSet'):
+	def update(self, other: ReferenceSet):
 		for ref in other:
 			self.references[ref] = None
 	
+	def clean(self):
+		seen = {}
+		for ref in self.references:
+			key = (ref.instantiator, frozenset(ref.names.keys()))
+			seen[key] = ref
+		self.references = dict.fromkeys(seen.values())
+
 	def ref(self) -> Instance | None:
 		if len(self.references) > 1: 
 			logger.error("Multiple references found where 1 was expected.")

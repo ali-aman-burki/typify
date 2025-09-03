@@ -299,4 +299,5 @@ class Name(Symbol):
 		for definition in self.definitions.values():
 			result.update(definition.refset)
 		
+		result.clean()
 		return result
