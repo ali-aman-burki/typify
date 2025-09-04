@@ -37,11 +37,11 @@ class ModuleMeta:
 
 		for key, value in self.vslots.items():
 			value = value.copy()
-			value[1] = value[1].as_type().strip() if isinstance(value[1], ReferenceSet) else value[1]
+			value[1] = value[1].typestring() if isinstance(value[1], ReferenceSet) else value[1]
 			k = f"{value[2]}:{key[0]}:{key[1]}"
 			v = {
 				"name": value[0],
-				"type": f"{value[1]}",
+				"type": value[1],
 				"node": value[3] 
 			}
 			data["variables"][k] = v
@@ -52,9 +52,9 @@ class ModuleMeta:
 
 			value[2] = value[2].copy()
 			for x, y in value[2].items():
-				value[2][x] = repr(y.as_type().strip()) if isinstance(value[2][x], ReferenceSet) else value[2][x]
+				value[2][x] = y.typestring() if isinstance(value[2][x], ReferenceSet) else value[2][x]
 			
-			value[3] = repr(value[3].as_type().strip()) if isinstance(value[3], ReferenceSet) else value[3]
+			value[3] = value[3].typestring() if isinstance(value[3], ReferenceSet) else value[3]
 			
 			v = PreCollector.build_function_signature(value[0], value[1], value[2], value[3])
 			data["functions"][k] = v

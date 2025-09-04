@@ -47,6 +47,9 @@ class ReferenceSet:
 	def as_type(self):
 		from typify.inferencing.typeutils import TypeUtils
 		return TypeUtils.unify(self)
+	
+	def typestring(self):
+		return repr(self.as_type().strip())
 
 class Instance:
 	def __init__(self, instantiator: ClassDefinition):
