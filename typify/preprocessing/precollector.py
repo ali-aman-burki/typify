@@ -4,7 +4,7 @@ from typify.preprocessing.module_meta import ModuleMeta
 
 class PreCollector(ast.NodeVisitor):
 
-	UNVISITED = "Any"
+	UNVISITED = "[UNVISITED]"
 	
 	@staticmethod
 	def build_function_signature(
