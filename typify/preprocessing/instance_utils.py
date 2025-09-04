@@ -175,7 +175,7 @@ class Instance:
 		return TypeExpr(base, args)
 
 	def __repr__(self) -> str:
-		return self.label()
+		return f"instance@{repr(self.as_type())}"
 	
 	def get_name(self, id: str) -> Name:
 		name = self.names.get(id)
@@ -183,6 +183,3 @@ class Instance:
 			name = Name(id)
 			self.names[id] = name
 		return name
-	
-	def label(self) -> str:
-		return f"instance@{repr(self.as_type())}"
