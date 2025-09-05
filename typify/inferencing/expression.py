@@ -88,6 +88,10 @@ class TypeExpr:
 
 	def __repr__(self):
 		fqn = self.base.parent.id if self.base else PreCollector.UNVISITED
+		if Checker.match_origin(self.base, Builtins.get_type("NoneType")):
+			return "None"
+		elif Checker.match_origin(self.base, Builtins.get_type("function")):
+			return "Callable"
 		strs = []
 		for typeexpr in self.args:
 			strs.append(repr(typeexpr))
