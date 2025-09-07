@@ -64,18 +64,6 @@ class TypeExpr:
 
 		return TypeExpr(self.base, new_args)
 
-	def remove_typenest(self) -> TypeExpr:
-		if Checker.match_origin(self.base, Builtins.get_type("type")):
-			payload = self.args[0] if self.args else None
-			while payload and Checker.match_origin(payload.base, Builtins.get_type("type")):
-				payload = payload.args[0] if payload.args else None
-
-			if payload:
-				return TypeExpr(Builtins.get_type("type"), [payload.remove_typenest()])
-			else:
-				return TypeExpr(Builtins.get_type("type"))
-		return TypeExpr(self.base, [arg.remove_typenest() for arg in self.args])
-
 	def __eq__(self, other: TypeExpr):
 		if not isinstance(other, TypeExpr):
 			return NotImplemented

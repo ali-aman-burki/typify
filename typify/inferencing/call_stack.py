@@ -3,14 +3,7 @@ from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
 class CallSignature:
-    def __init__(
-			self, 
-			fobject: Instance, 
-			caller: Instance, 
-			arguments: dict[str, ArgTuple], 
-			returns: ReferenceSet, 
-			running: bool = False
-		):
+    def __init__(self, fobject, caller, arguments, returns, running=False):
         self.fobject = fobject
         self.caller = caller
         self.arguments = arguments
@@ -18,7 +11,7 @@ class CallSignature:
         self.running = running
 
         self._param_fp = tuple(
-			(k, TypeUtils.unify(v.refset).strip().remove_typenest())
+			(k, TypeUtils.unify(v.refset).strip())
 			for k, v in arguments.items()
         )
         self._fp = (self.fobject, self._param_fp)
