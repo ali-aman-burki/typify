@@ -100,7 +100,7 @@ class FunctionUtils:
 		return signature.returns
 		
 	@staticmethod
-	def _pre_resolve_call_arguments(
+	def resolve_call_arguments(
 		call_node: ast.Call,
 		resolver: Resolver,
 	) -> tuple[list[ResolvedArg], dict[str, ResolvedArg]]:
@@ -127,13 +127,12 @@ class FunctionUtils:
 
 	@staticmethod
 	def map_call_arguments(
-		call_node: ast.Call,
 		parameters: dict[str, ParameterEntry],
-		resolver: Resolver,
+		resolved_call_args: tuple[list[ResolvedArg], dict[str, ResolvedArg]]
 	) -> dict[str, ArgTuple]:
 		resolved_args: dict[str, ArgTuple] = {}
 
-		pos_args, kw_args = FunctionUtils._pre_resolve_call_arguments(call_node, resolver)
+		pos_args, kw_args = resolved_call_args
 
 		vararg_param = next((p for p in parameters.values() if p.is_vararg), None)
 
