@@ -76,14 +76,13 @@ class FunctionUtils:
 			arguments=arguments,
 			returns=ReferenceSet()
 		)
-		signature = GlobalContext.call_stack.get(sigkey) or sigkey
+		signature = GlobalContext.call_stack.get(sigkey)
 
 		executor = FunctionUtils.construct_executor(
 			caller=signature.caller,
 			fobject=signature.fobject, 
 			arguments=signature.arguments, 
 		)
-
 		if not GlobalContext.call_stack.contains(signature):
 			GlobalContext.call_stack.push(signature)
 			logger.debug(f"{logger.emoji_map['push']} Pushed: {repr(signature)}")
@@ -100,7 +99,7 @@ class FunctionUtils:
 		return signature.returns
 		
 	@staticmethod
-	def resolve_call_arguments(
+	def pre_resolve_call_arguments(
 		call_node: ast.Call,
 		resolver: Resolver,
 	) -> tuple[list[ResolvedArg], dict[str, ResolvedArg]]:
@@ -127,12 +126,13 @@ class FunctionUtils:
 
 	@staticmethod
 	def map_call_arguments(
+		call_node: ast.Call,
 		parameters: dict[str, ParameterEntry],
-		resolved_call_args: tuple[list[ResolvedArg], dict[str, ResolvedArg]]
+		resolver: Resolver,
 	) -> dict[str, ArgTuple]:
 		resolved_args: dict[str, ArgTuple] = {}
 
-		pos_args, kw_args = resolved_call_args
+		pos_args, kw_args = FunctionUtils.pre_resolve_call_arguments(call_node, resolver)
 
 		vararg_param = next((p for p in parameters.values() if p.is_vararg), None)
 
@@ -174,7 +174,11 @@ class FunctionUtils:
 			if pname not in resolved_args:
 				resolved_args[pname] = ArgTuple(pentry.refset, pentry.defkey)
 
-		return resolved_args
+		ordered_args: dict[str, ArgTuple] = {}
+		for pname in parameters.keys():
+			ordered_args[pname] = resolved_args[pname]
+
+		return ordered_args
 
 	#TODO: add support *varargs and **kwargs
 	@staticmethod
@@ -257,8 +261,3 @@ class FunctionUtils:
 			)
 
 		return parameters
-
-
-
-
-			

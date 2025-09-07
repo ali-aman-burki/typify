@@ -1,70 +1,47 @@
-from dataclasses import dataclass
-
 from typify.preprocessing.instance_utils import ReferenceSet, Instance
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
-@dataclass(eq=False)
 class CallSignature:
-	fobject: Instance
-	caller: Instance
-	arguments: dict[str, ArgTuple]
-	returns: ReferenceSet
-	running: bool = False
+    def __init__(self, fobject, caller, arguments, returns, running=False):
+        self.fobject = fobject
+        self.caller = caller
+        self.arguments = arguments
+        self.returns = returns
+        self.running = running
 
-	def __eq__(self, other):
-		if not isinstance(other, CallSignature): return NotImplemented
-		if self.fobject != other.fobject: return False
-		if self.arguments.keys() != other.arguments.keys(): return False
+        self._param_fp = tuple(
+			(k, TypeUtils.unify(v.refset).strip())
+			for k, v in arguments.items()
+        )
+        self._fp = (self.fobject, self._param_fp)
 
-		for key in self.arguments:
-			t1 = TypeUtils.unify(self.arguments[key].refset).strip()
-			t2 = TypeUtils.unify(other.arguments[key].refset).strip()
-			if t1 != t2: return False
+    def __eq__(self, other):
+        if not isinstance(other, CallSignature): return NotImplemented
+        return self._fp == other._fp
 
-		return True
+    def __hash__(self):
+        return hash(self._fp)
 
-	def __hash__(self):
-		param_fingerprint = tuple(
-			sorted(
-				(k, TypeUtils.unify(v.refset).strip())
-				for k, v in self.arguments.items()
-			)
-		)
-		return hash((self.fobject, param_fingerprint))
-
-	def __repr__(self):
-		args = []
-		for arg in self.arguments.values():
-			args.append(TypeUtils.unify(arg.refset).strip())
-		joined = ", ".join(repr(arg) for arg in args)
-		return self.fobject.origin.parent.fqn + f"({joined})"
+    def __repr__(self):
+        parts = [f"{k}: {t}" for (k, t) in self._param_fp]
+        return self.fobject.origin.parent.fqn + "(" + ", ".join(parts) + ")"
 
 class CallStack:
 	def __init__(self):
 		self.stack: list[CallSignature] = []
-		self.index_map: dict[CallSignature, int] = {}
-
-	def push(self, sig: CallSignature):
-		self.stack.append(sig)
-		self.index_map[sig] = len(self.stack) - 1
-
+	
+	def push(self, signature: CallSignature):
+		self.stack.append(signature)
+	
 	def pop(self) -> CallSignature:
-		sig = self.stack.pop()
-		self.index_map.pop(sig, None)
-		return sig
+		return self.stack.pop()
+	
+	def contains(self, signature: CallSignature):
+		return signature in self.stack
 
-	def contains(self, sig: CallSignature) -> bool:
-		return sig in self.index_map
-
-	def get(self, sig: CallSignature) -> CallSignature | None:
-		index = self.index_map.get(sig)
-		if index is not None:
-			return self.stack[index]
-		return None
-
-	def trace(self, sig: CallSignature) -> list[CallSignature]:
-		index = self.index_map.get(sig)
-		if index is not None:
-			return self.stack[index:]
-		return []
+	def get(self, signature: CallSignature):
+		for sig in self.stack:
+			if sig == signature:
+				return sig
+		return signature

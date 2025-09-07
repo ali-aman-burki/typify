@@ -34,8 +34,7 @@ class CallDispatcher:
 			modified_node.args.insert(0, ast.Constant(0))
 
 		param_map = fobject.parameters
-		resolved_call = FunctionUtils.resolve_call_arguments(modified_node, self.resolver)
-		arguments = FunctionUtils.map_call_arguments(param_map, resolved_call)
+		arguments = FunctionUtils.map_call_arguments(modified_node, param_map, self.resolver)
 		
 		if inject and arguments:
 			first_param = next(iter(arguments.values()))
@@ -56,13 +55,13 @@ class CallDispatcher:
 			callers_set = self.resolver.resolve_value(self.node.func.value)
 			for caller in callers_set:
 				method_attr = caller.attribute_lookup(self.node.func.attr)
-				if not method_attr:
-					FunctionUtils.resolve_call_arguments(self.node, self.resolver) 
+				if not method_attr: 
+					FunctionUtils.pre_resolve_call_arguments(self.node, self.resolver)
 					continue
 
 				candidate_def = method_attr.get_latest_definition()
 				if not candidate_def.refset: 
-					FunctionUtils.resolve_call_arguments(self.node, self.resolver)
+					FunctionUtils.pre_resolve_call_arguments(self.node, self.resolver)
 					continue
 
 				candidate = candidate_def.refset.ref()
@@ -100,9 +99,9 @@ class CallDispatcher:
 
 				elif Checker.is_type(candidate):
 					result.add(self.dispatch_instance(candidate))
-		
+			
 			if not callers_set:
-				FunctionUtils.resolve_call_arguments(self.node, self.resolver)
+				FunctionUtils.pre_resolve_call_arguments(self.node, self.resolver)
 		else:
 			candidates = self.resolver.resolve_value(self.node.func)
 		
@@ -113,9 +112,9 @@ class CallDispatcher:
 
 				elif Checker.is_type(candidate):
 					result.add(self.dispatch_instance(candidate))
-
+			
 			if not candidates:
-				FunctionUtils.resolve_call_arguments(self.node, self.resolver)
+				FunctionUtils.pre_resolve_call_arguments(self.node, self.resolver)
 		return result
 	
 	def dispatch_instance(self, candidate: Instance) -> Instance:

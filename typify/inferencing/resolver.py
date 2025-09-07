@@ -113,7 +113,7 @@ class Resolver:
 
 	#TODO: need support for comprehensions, generators 
 	#TODO: need support for literal types i.e Literal[...]
-	@safeguard(lambda: ReferenceSet(), "resolve_value")
+	# @safeguard(lambda: ReferenceSet(), "resolve_value")
 	def resolve_value(self, node: ast.Expr) -> ReferenceSet:
 		from typify.inferencing.call_dispatcher import CallDispatcher
 		from typify.inferencing.typeutils import TypeUtils
