@@ -53,7 +53,7 @@ class CallSignature:
 		return self.fobject.origin.parent.fqn + "(" + ", ".join(parts) + ")"
 
 class CallStack:
-	def __init__(self, *, max_per_fobject: int = 2):
+	def __init__(self, max_per_fobject: int = 2):
 		self.stack: list[CallSignature] = []
 		self.max_per_fobject = max_per_fobject
 
