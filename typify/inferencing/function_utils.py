@@ -69,20 +69,20 @@ class FunctionUtils:
 		caller: Instance,
 		arguments: dict[str, ArgTuple], 
 	) -> ReferenceSet:
-		
-		sigkey = CallSignature(
-			fobject=fobject, 
-			caller=caller,
-			arguments=arguments,
-			returns=ReferenceSet()
-		)
+		sigkey = CallSignature(fobject=fobject, caller=caller, arguments=arguments)
 		signature = GlobalContext.call_stack.get(sigkey)
+
+		cap = GlobalContext.call_stack.max_per_fobject
+		if GlobalContext.call_stack.count_fobject(signature.fobject) >= cap:
+			logger.debug(f"{logger.emoji_map['warn']} recursion cap hit for {signature.fobject.origin.parent.fqn} (cap={cap})")
+			return signature.returns
 
 		executor = FunctionUtils.construct_executor(
 			caller=signature.caller,
 			fobject=signature.fobject, 
 			arguments=signature.arguments, 
 		)
+
 		if not GlobalContext.call_stack.contains(signature):
 			GlobalContext.call_stack.push(signature)
 			logger.debug(f"{logger.emoji_map['push']} Pushed: {repr(signature)}")

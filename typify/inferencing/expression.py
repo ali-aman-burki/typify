@@ -1,4 +1,5 @@
 from __future__ import annotations
+from functools import lru_cache
 
 import ast
 
@@ -63,6 +64,29 @@ class TypeExpr:
 			return TypeExpr(self.base, new_args)
 
 		return TypeExpr(self.base, new_args)
+	
+	def remove_nested(self, original: TypeExpr, level: int = 0) -> TypeExpr:
+		@lru_cache(maxsize=None)
+		def _longest_chain(node: TypeExpr) -> tuple[TypeExpr, ...]:
+			if node == original:
+				return (node,)
+
+			best: tuple[TypeExpr, ...] = ()
+			for child in node.args:
+				sub = _longest_chain(child)
+				if sub:
+					cand = (node,) + sub
+					if len(cand) > len(best):
+						best = cand
+			return best
+
+		chain = _longest_chain(self)
+		if not chain:
+			return self
+
+		wrappers = len(chain) - 1
+		idx = len(chain) - 1 - level if level <= wrappers else len(chain) - 1
+		return chain[idx]
 
 	def __eq__(self, other: TypeExpr):
 		if not isinstance(other, TypeExpr):
