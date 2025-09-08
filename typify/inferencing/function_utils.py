@@ -13,8 +13,8 @@ from typify.inferencing.commons import (
 	ResolvedArg
 )
 from typify.preprocessing.instance_utils import (
-	ReferenceSet,
-	Instance
+    ReferenceSet,
+    Instance
 )
 from typify.inferencing.call_stack import CallSignature
 from typify.preprocessing.symbol_table import CallFrame
@@ -70,14 +70,11 @@ class FunctionUtils:
 		arguments: dict[str, ArgTuple], 
 	) -> ReferenceSet:
 		
-		current_root = GlobalContext.call_stack._root_map.get(fobject, None)
-
 		sigkey = CallSignature(
 			fobject=fobject, 
 			caller=caller,
 			arguments=arguments,
-			returns=ReferenceSet(),
-			root=current_root,
+			returns=ReferenceSet()
 		)
 		signature = GlobalContext.call_stack.get(sigkey)
 
