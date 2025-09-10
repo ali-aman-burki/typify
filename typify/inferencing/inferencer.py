@@ -18,6 +18,9 @@ from typify.preprocessing.core import GlobalContext
 from typify.preprocessing.sequencer import Sequencer
 
 class Inferencer:
+	USE_FIXPOINT_LIMITS: bool = True
+	MAX_FIXPOINT_PASSES: int = 1
+	MAX_SCC_ITERATIONS: int = 1
 
 	@staticmethod
 	def process_sequence(
@@ -58,21 +61,89 @@ class Inferencer:
 			executor.execute()
 			return executor.snapshot()
 
+		# ---------- Acyclic single module ----------
 		if is_single and not has_self_loop:
 			meta = sequence[0]
-			new_snapshot = run_pass(meta)
-			snapshots[meta] = new_snapshot
+			if Inferencer.USE_FIXPOINT_LIMITS:
+				if Inferencer.MAX_FIXPOINT_PASSES >= 1:
+					new_snapshot = run_pass(meta)
+					snapshots[meta] = new_snapshot
+				else:
+					logger.warning(
+						f"MAX_FIXPOINT_PASSES={Inferencer.MAX_FIXPOINT_PASSES} prevents processing {meta.table.fqn}"
+					)
+					return
+			else:
+				# Original behavior: always do the pass
+				new_snapshot = run_pass(meta)
+				snapshots[meta] = new_snapshot
 
 			GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
 			return
 
-		worklist: deque[ModuleMeta] = deque(sequence)
-		in_worklist: set[ModuleMeta] = set(sequence)
+		# ---------- SCC handling ----------
+		if not Inferencer.USE_FIXPOINT_LIMITS:
+			# ---- Original unconstrained fix-point loop ----
+			worklist: deque[ModuleMeta] = deque(sequence)
+			in_worklist: set[ModuleMeta] = set(sequence)
 
-		while worklist:
+			while worklist:
+				meta = worklist.popleft()
+				in_worklist.remove(meta)
+				passes[meta] += 1  # tracked but not used for limiting
+
+				new_snapshot = run_pass(meta)
+				if new_snapshot != snapshots[meta]:
+					snapshots[meta] = new_snapshot
+					for dependent in reverse_deps.get(meta, []):
+						if dependent in sequence and dependent not in in_worklist:
+							worklist.append(dependent)
+							in_worklist.add(dependent)
+
+				GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
+			return
+
+		# ---- Limited mode: guaranteed first sweep + capped refinements ----
+		first_sweep_changed: set[ModuleMeta] = set()
+		for meta in sequence:
+			if passes[meta] >= Inferencer.MAX_FIXPOINT_PASSES:
+				logger.warning(
+					f"Reached max passes ({Inferencer.MAX_FIXPOINT_PASSES}) for {meta.table.fqn} "
+					f"during first sweep. Skipping."
+				)
+				continue
+
+			passes[meta] += 1
+			new_snapshot = run_pass(meta)
+			if new_snapshot != snapshots[meta]:
+				snapshots[meta] = new_snapshot
+				first_sweep_changed.add(meta)
+
+			GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
+
+		worklist: deque[ModuleMeta] = deque()
+		in_worklist: set[ModuleMeta] = set()
+
+		for m in first_sweep_changed:
+			for dependent in reverse_deps.get(m, []):
+				if dependent in sequence and dependent not in in_worklist:
+					worklist.append(dependent)
+					in_worklist.add(dependent)
+
+		iteration_count = 0
+		while worklist and iteration_count < Inferencer.MAX_SCC_ITERATIONS:
+			iteration_count += 1
+
 			meta = worklist.popleft()
 			in_worklist.remove(meta)
+
 			passes[meta] += 1
+			if passes[meta] > Inferencer.MAX_FIXPOINT_PASSES:
+				logger.warning(
+					f"Reached max passes ({Inferencer.MAX_FIXPOINT_PASSES}) for {meta.table.fqn}. "
+					f"Skipping further refinement."
+				)
+				continue
 
 			new_snapshot = run_pass(meta)
 			if new_snapshot != snapshots[meta]:
@@ -83,6 +154,12 @@ class Inferencer:
 						in_worklist.add(dependent)
 
 			GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
+
+		if worklist and iteration_count >= Inferencer.MAX_SCC_ITERATIONS:
+			logger.warning(
+				f"Reached max SCC iterations ({Inferencer.MAX_SCC_ITERATIONS}) while processing "
+				f"sequence {[m.table.fqn for m in sequence]}"
+			)
 
 	@staticmethod
 	def _init_structures():
