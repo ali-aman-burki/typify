@@ -22,7 +22,7 @@ from typify.preprocessing.symbol_table import CallFrame
 class FunctionUtils:
 	
 	@staticmethod
-	def is_stub(func_node):
+	def is_stub(func_node: ast.FunctionDef):
 		if len(func_node.body) != 1:
 			return False
 
@@ -71,11 +71,6 @@ class FunctionUtils:
 	) -> ReferenceSet:
 		sigkey = CallSignature(fobject=fobject, caller=caller, arguments=arguments)
 		signature = GlobalContext.call_stack.get(sigkey)
-
-		cap = GlobalContext.call_stack.max_per_fobject
-		if GlobalContext.call_stack.count_fobject(signature.fobject) >= cap:
-			logger.debug(f"{logger.emoji_map['warn']} recursion cap hit for {signature.fobject.origin.parent.fqn} (cap={cap})")
-			return signature.returns
 
 		executor = FunctionUtils.construct_executor(
 			caller=signature.caller,

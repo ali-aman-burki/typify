@@ -1,5 +1,3 @@
-from collections import defaultdict, deque
-
 from typify.preprocessing.module_meta import ModuleMeta
 
 class Sequencer:

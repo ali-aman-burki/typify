@@ -37,8 +37,8 @@ class CallSignature:
 				if updated != current:
 					break
 			pairs.append((k, updated))
-		self._param_fp = tuple(pairs)
 
+		self._param_fp = tuple(pairs)
 		self._fp = (self.fobject, self._param_fp)
 
 	def __eq__(self, other):
@@ -53,12 +53,8 @@ class CallSignature:
 		return self.fobject.origin.parent.fqn + "(" + ", ".join(parts) + ")"
 
 class CallStack:
-	def __init__(self, max_per_fobject: int = 2):
+	def __init__(self):
 		self.stack: list[CallSignature] = []
-		self.max_per_fobject = max_per_fobject
-
-	def count_fobject(self, fobject) -> int:
-		return sum(1 for sig in self.stack if sig.fobject == fobject)
 
 	def push(self, signature: CallSignature):
 		self.stack.append(signature)
