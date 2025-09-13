@@ -78,10 +78,7 @@ class Instance:
 		resolver: Resolver = resolver
 
 		if self.instanceof(Builtins.get_type("str")):
-			try:
-				node = ast.parse(self.cval, mode='eval').body
-			except Exception:
-				return self
+			node = ast.parse(self.cval, mode='eval').body
 			refset = resolver.resolve_value(node)
 			if refset:
 				ref = refset.ref()

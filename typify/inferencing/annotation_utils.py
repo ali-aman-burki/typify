@@ -24,10 +24,7 @@ class DeferredAnnotations:
 		lookup: dict[str, Instance] = {}
 
 		for string in self.strings:
-			try:
-				node = ast.parse(string, mode='eval').body
-			except Exception:
-				continue
+			node = ast.parse(string, mode='eval').body
 			refset = resolver.resolve_value(node)
 			
 			if refset:
