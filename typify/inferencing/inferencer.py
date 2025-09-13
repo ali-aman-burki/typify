@@ -13,7 +13,6 @@ from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.executor import Executor
-from typify.preprocessing.instance_utils import ReferenceSet
 from typify.preprocessing.core import GlobalContext
 from typify.preprocessing.sequencer import Sequencer
 
