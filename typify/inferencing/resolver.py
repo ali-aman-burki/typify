@@ -225,37 +225,31 @@ class Resolver:
 			self, 
 			target: ast.expr, 
 			value: ast.expr,
-			executor
 		) -> None:
 
 		from typify.inferencing.desugar import Desugar
 		from typify.inferencing.executor import Executor
 
-		executor: Executor = executor
-
 		if isinstance(target, ast.Subscript):
 			call = Desugar.setitem_call(target, value)
-			refset = self.resolve_value(call)
-			executor.add_to_snapshot(refset)
+			self.resolve_value(call)
 			return
 
 		if isinstance(target, (ast.Tuple, ast.List)) and isinstance(value, (ast.Tuple, ast.List)):
 			if len(target.elts) == len(value.elts):
 				for t_i, v_i in zip(target.elts, value.elts):
-					self.assign(t_i, v_i, executor)
+					self.assign(t_i, v_i)
 				return
 
 			resolved_target = self.resolve_target(target)
 			resolved_value  = self.resolve_value(value)
 			
 			self.process_name_binding(resolved_target, resolved_value)
-			executor.add_to_snapshot(resolved_value)
 			return
 
 		resolved_target = self.resolve_target(target)
 		resolved_value  = self.resolve_value(value)
 		
-		executor.add_to_snapshot(resolved_value)
 		self.process_name_binding(resolved_target, resolved_value)
 	
 	#TODO: in the future, remove hardcoded logic for tuple and generalize it based on generics
@@ -264,11 +258,12 @@ class Resolver:
 	def process_name_binding(
 			self, 
 			resolved_target: PackGroup, 
-			resolved_value: ReferenceSet
+			resolved_value: ReferenceSet,
 		):
 		from typify.inferencing.typeutils import TypeUtils
 
 		targets: set[TargetEntry] = set()
+
 		for ref in resolved_value:
 			reftype = ref.as_type()
 			for i in range(len(resolved_target.groups)):
@@ -300,9 +295,4 @@ class Resolver:
 				ndef.refset.update(target.definition.refset)
 				target.symbol_name.merge_definition(ndef)
 			
-			if self.module_meta.vslots:
-				to_export = resolved_value.copy()
-				if isinstance(self.module_meta.vslots[position][1], ReferenceSet):
-					self.module_meta.vslots[position][1].update(to_export)
-				else:
-					self.module_meta.vslots[position][1] = to_export
+			self.module_meta.safe_update_vslot(position, resolved_value.copy())

@@ -20,83 +20,64 @@ from typify.preprocessing.sequencer import Sequencer
 class Inferencer:
 
 	@staticmethod
+	def _run_pass(meta: ModuleMeta, sequence_followed: list[str]) -> tuple[dict, dict]:
+		GlobalContext.sysmodules.setdefault(
+			meta.table.fqn,
+			TypeUtils.instantiate_with_args(Builtins.get_type("module"))
+		)
+		GlobalContext.symbol_map[meta.table] = GlobalContext.sysmodules[meta.table.fqn]
+
+		logger.debug(f"{logger.emoji_map['types']} Inferring for {meta.table.fqn}")
+
+		executor = Executor(
+			module_meta=meta,
+			symbol=meta.table,
+			namespace=GlobalContext.sysmodules[meta.table.fqn],
+			caller=None,
+			arguments={},
+			tree=meta.tree,
+		)
+		executor.execute()
+		sequence_followed.append(meta.table.fqn)
+		GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
+		return meta.snapshot()
+
+	@staticmethod
+	def _run_passes(
+		sequence: list[ModuleMeta], 
+		sequence_followed: list[str]
+	) -> list[tuple[dict, dict]]:
+		return [Inferencer._run_pass(meta, sequence_followed) for meta in sequence]
+
+	@staticmethod
 	def process_sequence(
 		sequence: list[ModuleMeta],
-		reverse_deps: dict[ModuleMeta, list[ModuleMeta]],
 		sequence_followed: list[str]
 	) -> None:
 
-		is_single = len(sequence) == 1
-		has_self_loop = (
-			sequence[0] in GlobalContext.dependency_graph.get(sequence[0], [])
-			if is_single else False
-		)
+		has_self_loop = len(sequence) == 1 and sequence[0] in GlobalContext.dependency_graph.get(sequence[0], [])
+		needs_fixpoint = has_self_loop or len(sequence) > 1
 
-		snapshots: dict[ModuleMeta, list[set]] = {meta: [] for meta in sequence}
-		passes: dict[ModuleMeta, int] = {meta: 0 for meta in sequence}
-
-		def run_pass(meta: ModuleMeta) -> list[set]:
-			snapshot_log: list[ReferenceSet] = []
-			GlobalContext.sysmodules.setdefault(
-				meta.table.fqn,
-				TypeUtils.instantiate_with_args(Builtins.get_type("module"))
-			)
-			GlobalContext.symbol_map[meta.table] = GlobalContext.sysmodules[meta.table.fqn]
-
-			logger.debug(f"{logger.emoji_map['types']} Inferring for {meta.table.fqn}")
-
-			executor = Executor(
-				module_meta=meta,
-				symbol=meta.table,
-				namespace=GlobalContext.sysmodules[meta.table.fqn],
-				caller=None,
-				arguments={},
-				tree=meta.tree,
-				snapshot_log=snapshot_log
-			)
-			sequence_followed.append(meta.table.fqn)
-			executor.execute()
-			return executor.snapshot()
-
-		if is_single and not has_self_loop:
-			meta = sequence[0]
-			new_snapshot = run_pass(meta)
-			snapshots[meta] = new_snapshot
-
-			GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
-			return
-
-		worklist: deque[ModuleMeta] = deque(sequence)
-		in_worklist: set[ModuleMeta] = set(sequence)
-
-		while worklist:
-			meta = worklist.popleft()
-			in_worklist.remove(meta)
-			passes[meta] += 1
-
-			new_snapshot = run_pass(meta)
-			if new_snapshot != snapshots[meta]:
-				snapshots[meta] = new_snapshot
-				for dependent in reverse_deps.get(meta, []):
-					if dependent in sequence and dependent not in in_worklist:
-						worklist.append(dependent)
-						in_worklist.add(dependent)
-
-			GlobalContext.sysmodules[meta.table.fqn].update_type_info(Builtins.get_type("module"))
+		if needs_fixpoint:
+			prev_snapshots = []
+			while True:
+				curr_snapshots = Inferencer._run_passes(
+					sequence, 
+					sequence_followed
+				)
+				if curr_snapshots == prev_snapshots:
+					break
+				prev_snapshots = curr_snapshots
+		else:
+			Inferencer._run_pass(sequence[0], sequence_followed)
 
 	@staticmethod
 	def _init_structures():
-		reverse_deps: dict[ModuleMeta, list[ModuleMeta]] = defaultdict(list)
 		corrected_sequences: list[list[ModuleMeta]] = []
 		captured_metas: set[ModuleMeta] = set()
 
 		sequences = Sequencer.generate_sequences(GlobalContext.dependency_graph)
-
 		project_only_modules: set[ModuleMeta] = set(next(iter(GlobalContext.libs.values())).meta_map.values())
-
-		for src, targets in GlobalContext.dependency_graph.items():
-			for tgt in targets:
-				reverse_deps[tgt].append(src)
 
 		for sequence in sequences:
 			if captured_metas == project_only_modules:
@@ -106,16 +87,12 @@ class Inferencer:
 					captured_metas.add(meta)
 			corrected_sequences.append(sequence)
 		
-		return (
-			reverse_deps,
-			corrected_sequences,
-		)
+		return corrected_sequences
 
 	@staticmethod
 	def infer():
 		start_time = time.time()
-
-		reverse_deps, corrected_sequences = Inferencer._init_structures()
+		corrected_sequences = Inferencer._init_structures()
 		
 		progress = ProgressBar(
 			total=len(corrected_sequences),
@@ -171,7 +148,7 @@ class Inferencer:
 					new_graph[new_meta] = new_deps
 				GlobalContext.dependency_graph = new_graph
 
-				reverse_deps, corrected_sequences = Inferencer._init_structures()
+				corrected_sequences = Inferencer._init_structures()
 				remaining = corrected_sequences[i:]
 				processed_sequences = corrected_sequences[:i]
 				progress.update(i)
@@ -189,7 +166,6 @@ class Inferencer:
 		for sequence in remaining:
 			Inferencer.process_sequence(
 				sequence,
-				reverse_deps,
 				sequence_followed
 			)
 			processed_sequences.append(sequence)

@@ -14,6 +14,7 @@ class ModuleMeta:
 			last_modified: Path
 		):
 		from typify.preprocessing.instance_utils import ReferenceSet
+		
 		self.src = src
 		self.tree = tree
 		self.table = Module(src.stem)
@@ -22,6 +23,66 @@ class ModuleMeta:
 
 		self.vslots: dict[tuple[int, int], list[str | ReferenceSet]] = {}
 		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | ast.AsyncFunctionDef | str | dict[str, ReferenceSet] | ReferenceSet]] = {}
+		self.vslots_snapshots: dict[tuple[int, int], ReferenceSet] = {}
+		self.fslots_snapshots: dict[tuple[int, int], list[dict[str, ReferenceSet] | ReferenceSet]] = {}
+
+	def snapshot(self) -> tuple[dict, dict]:
+		hashable_funcslots = {}
+		for position, funcstuff in self.fslots_snapshots.items():
+			h_params = {}
+			for p, r in funcstuff[0].items():
+				h_params[p] = r.as_type()
+			h_returns = funcstuff[1].as_type()
+
+			hashable_funcslots[position] = (h_params, h_returns)
+		
+		hashable_varsots = {}
+		for position, varstuff in self.vslots_snapshots.items():
+			hashable_varsots[position] = varstuff.as_type()
+
+		return (hashable_varsots, hashable_funcslots)
+
+	def safe_update_vslot(self, position: tuple[int, int], refset):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
+		refset: ReferenceSet = refset
+		
+		if self.vslots:
+			if isinstance(self.vslots[position][1], ReferenceSet):
+				self.vslots[position][1].update(refset)
+			else:
+				self.vslots[position][1] = refset
+		
+		if position in self.vslots_snapshots:
+			self.vslots_snapshots[position].update(refset)
+		else:
+			self.vslots_snapshots[position] = refset
+	
+	def register_fslot(self, position: tuple[int, int]):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
+		if position not in self.fslots_snapshots:
+			self.fslots_snapshots[position] = [{}, ReferenceSet()]
+
+	def safe_update_fslot_args(self, position: tuple[int, int], argname: str, refset):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
+		refset: ReferenceSet = refset
+
+		if self.fslots:
+			self.fslots[position][2][argname] = refset
+		
+		self.fslots_snapshots[position][0][argname] = refset
+
+	def safe_update_fslot_return(self, position: tuple[int, int], refset):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
+		refset: ReferenceSet = refset
+
+		if self.fslots:
+			self.fslots[position][3] = refset
+		
+		self.fslots_snapshots[position][1] = refset
 
 	def __repr__(self):
 		return self.table.fqn

@@ -50,7 +50,6 @@ class Executor(ast.NodeVisitor):
 		arguments: dict[str, ArgTuple],
 		tree: ast.AST,
 		deferred_annotations: DeferredAnnotations = None,
-		snapshot_log: list[ReferenceSet] = None
 	):
 		from typify.inferencing.generics.utils import GenericUtils
 
@@ -59,7 +58,6 @@ class Executor(ast.NodeVisitor):
 		self.namespace = namespace
 		self.caller = caller
 		self.tree = tree
-		self.snapshot_log = snapshot_log if snapshot_log else []
 
 		self.import_stmt_count = 0
 
@@ -71,50 +69,50 @@ class Executor(ast.NodeVisitor):
 		)
 
 		self.deferred_annotations = deferred_annotations or DeferredAnnotations()
-			
 		fobject = GlobalContext.function_object_map.get(self.symbol)
+
 		if fobject:
 			fobject.concsubs = {}
+			
+			position = (fobject.tree.lineno, fobject.tree.col_offset)
 
-		for argname in arguments:
-			argtuple = arguments[argname]
-			refset = argtuple.refset
-			defkey = argtuple.defkey
+			for argname in arguments:
+				argtuple = arguments[argname]
+				refset = argtuple.refset
+				defkey = argtuple.defkey
 
-			namespace_name = self.namespace.get_name(argname)
-			symbol_name = self.symbol.get_name(argname)
+				namespace_name = self.namespace.get_name(argname)
+				symbol_name = self.symbol.get_name(argname)
 
-			ndef = NameDefinition(defkey)
-			ndef.refset.update(refset)
-			namespace_name.set_definition(ndef)
-			merged = symbol_name.merge_definition(ndef)
-			annotation = fobject.parameters[argname].annotation
-			is_vararg = fobject.parameters[argname].is_vararg
+				ndef = NameDefinition(defkey)
+				ndef.refset.update(refset)
+				namespace_name.set_definition(ndef)
+				merged = symbol_name.merge_definition(ndef)
+				annotation = fobject.parameters[argname].annotation
+				is_vararg = fobject.parameters[argname].is_vararg
 
-			if annotation:
-				type_to_use = refset.as_type()
-				if is_vararg:
-					type_to_use = TypeUtils.unify_from_exprs(type_to_use.args)
+				if annotation:
+					type_to_use = refset.as_type()
+					if is_vararg:
+						type_to_use = TypeUtils.unify_from_exprs(type_to_use.args)
 
-				fobject.concsubs.update(
-					GenericUtils.build_ownerless_concsubs(
-						annotation,
-						type_to_use,
-						fobject.concsubs
+					fobject.concsubs.update(
+						GenericUtils.build_ownerless_concsubs(
+							annotation,
+							type_to_use,
+							fobject.concsubs
+						)
 					)
-				)
-				if caller:
-					GenericUtils.register_annotation(
-						annotation=annotation,
-						type_expr=type_to_use,
-						classdef=self.symbol.get_enclosing_class_definition(),
-						genconstruct=caller.genconstruct,
-					)
-
-			if self.module_meta.fslots:
-				position = (fobject.tree.lineno, fobject.tree.col_offset)
-				self.module_meta.fslots[position][2][argname] = merged.refset
-		
+					if caller:
+						GenericUtils.register_annotation(
+							annotation=annotation,
+							type_expr=type_to_use,
+							classdef=self.symbol.get_enclosing_class_definition(),
+							genconstruct=caller.genconstruct,
+						)
+				
+				self.module_meta.safe_update_fslot_args(position, argname, merged.refset)
+			
 		enclosing = None
 		enclosing_concsubs = {}
 		self.concsubs = {}
@@ -129,13 +127,14 @@ class Executor(ast.NodeVisitor):
 
 		if fobject:
 			self.concsubs = fobject.concsubs = enclosing_concsubs | fobject.concsubs
-
-
+	
 	def execute(self) -> ReferenceSet: 
 		from typify.inferencing.generics.utils import GenericUtils
 		
 		fobject = GlobalContext.function_object_map.get(self.symbol)
+
 		if isinstance(self.namespace, CallFrame) and FunctionUtils.is_stub(fobject.tree):
+			position = (fobject.tree.lineno, fobject.tree.col_offset)
 			if fobject.return_annotation and fobject.return_annotation.instantiator:
 				if self.caller:
 					gencons = self.caller.genconstruct.get(self.symbol.get_enclosing_class_definition())
@@ -147,15 +146,13 @@ class Executor(ast.NodeVisitor):
 				result = TypeUtils.instantiate_from_type_expr(type_expr)
 				self.returns.update(result)
 				self.symbol.refset.update(result)
+				self.module_meta.safe_update_fslot_return(position, self.symbol.refset)
 
-				if self.module_meta.fslots:
-					position = (fobject.tree.lineno, fobject.tree.col_offset)
-					self.module_meta.fslots[position][3] = self.symbol.refset
-				
 				return self.returns
 
 		self.visit(self.tree)
 		if isinstance(self.namespace, CallFrame):
+			position = (fobject.tree.lineno, fobject.tree.col_offset)
 			if not TypeUtils.has_complete_return(self.tree.body):
 				self.returns.add(Singletons.get("None"))
 				self.symbol.refset.add(Singletons.get("None"))
@@ -168,26 +165,9 @@ class Executor(ast.NodeVisitor):
 					genconstruct=self.caller.genconstruct
 				)
 
-			if self.module_meta.fslots:
-				position = (fobject.tree.lineno, fobject.tree.col_offset)
-				self.module_meta.fslots[position][3] = self.symbol.refset
-		
+			self.module_meta.safe_update_fslot_return(position, self.symbol.refset)
+
 		return self.returns
-
-	def snapshot(self) -> list[set[tuple[TypeExpr, int]]]: 
-		result = []
-		for references in self.snapshot_log:
-			counter = defaultdict(int)
-			labeled = set()
-			for ref in references:
-				counter[ref.as_type()] += 1
-				label = (ref.as_type(), counter[ref.as_type()])
-				labeled.add(label)
-			result.append(labeled)
-		return result
-
-	def add_to_snapshot(self, refset: ReferenceSet):
-		self.snapshot_log.append(refset.copy())
 
 	def visit_Return(self, node):
 		resolved = self.resolver.resolve_value(node.value)
@@ -200,8 +180,6 @@ class Executor(ast.NodeVisitor):
 
 		self.symbol.refset.update(new)
 		self.returns.update(new)
-
-		self.add_to_snapshot(self.returns)
 
 	def visit_Import(self, node):
 		position = (node.lineno, node.col_offset)
@@ -229,9 +207,6 @@ class Executor(ast.NodeVisitor):
 			self.symbol.get_name(name).merge_definition(deftable)
 			self.namespace.get_name(name).merge_definition(deftable)
 
-			reference = self.namespace.get_name(name).lookup_definition(defkey).refset
-			self.add_to_snapshot(reference)
-
 		self.generic_visit(node)
 	
 	def visit_ImportFrom(self, node):
@@ -252,7 +227,6 @@ class Executor(ast.NodeVisitor):
 					lat_def = NameDefinition(defkey)
 					lat_def.refset = name.get_plausible_refset().copy()
 					self.namespace.get_name(name.id).set_definition(lat_def)
-					self.add_to_snapshot(lat_def.refset)
 		else:
 			for alias in node.names:
 				name = alias.asname if alias.asname else alias.name
@@ -298,9 +272,6 @@ class Executor(ast.NodeVisitor):
 					self.symbol.get_name(name).merge_definition(deftable)
 					self.namespace.get_name(name).merge_definition(deftable)
 				
-				reference = self.namespace.get_name(name).lookup_definition(defkey).refset
-				self.add_to_snapshot(reference)
-
 		self.deferred_annotations.compute(self.resolver)
 		self.generic_visit(node)
 
@@ -331,7 +302,6 @@ class Executor(ast.NodeVisitor):
 					base_inst = base_inst.packed_expr.base
 				
 				entering_symbol.bases.append(base_inst)
-				self.add_to_snapshot(ReferenceSet(base_inst))
 
 		if not entering_symbol.bases:
 			if builtins_module_object:
@@ -340,7 +310,6 @@ class Executor(ast.NodeVisitor):
 					object_def = object_class.get_latest_definition()
 					instance = object_def.refset.ref()
 					entering_symbol.bases.append(instance)
-					self.add_to_snapshot(ReferenceSet(instance))
 			
 		gentree = { entering_symbol: GenericUtils.build_gentree(entering_symbol) }
 		entering_symbol.genconstruct = GenericUtils.flatten_gentree(gentree)
@@ -383,7 +352,6 @@ class Executor(ast.NodeVisitor):
 			arguments={},
 			tree=ast.Module(class_tree.body, type_ignores=[]),
 			deferred_annotations=self.deferred_annotations,
-			snapshot_log=self.snapshot_log
 		).execute()
 
 		deftable = NameDefinition(defkey)
@@ -392,15 +360,15 @@ class Executor(ast.NodeVisitor):
 		self.namespace.get_name(name).set_definition(deftable)
 
 		entering_symbol.mro = MROBuilder.build_mro(entering_namespace)
-
-		self.add_to_snapshot(deftable.refset)
 		self.deferred_annotations.compute(self.resolver)
 
-	@safeguard(lambda: None, "visit_classdef")
+	@safeguard(lambda: None, "visit_functiondef")
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
 		position = (func_tree.lineno, func_tree.col_offset)
 		defkey = (self.module_meta.table, position)
 		name = func_tree.name
+
+		self.module_meta.register_fslot(position)
 
 		deftable = NameDefinition(defkey)
 		self.symbol.get_name(name).merge_definition(deftable)
@@ -433,7 +401,6 @@ class Executor(ast.NodeVisitor):
 				func_tree.returns,
 				func_obj
 			)
-
 		for k, v in func_obj.parameters.items():
 			if v.node:
 				AnnotationUtils.check_and_defer(
@@ -446,33 +413,30 @@ class Executor(ast.NodeVisitor):
 			ndef = NameDefinition(v.defkey)
 			ndef.refset = v.refset.copy()
 			mdef = function_def.get_name(k).set_definition(ndef)
-			if self.module_meta.fslots:
-				self.module_meta.fslots[position][2][k] = mdef.refset
+			
+			self.module_meta.safe_update_fslot_args(position, k, mdef.refset)
 
 		deftable = NameDefinition(defkey)
 		deftable.refset.add(func_obj)
 		self.symbol.get_name(name).merge_definition(deftable)
 		self.namespace.get_name(name).merge_definition(deftable)
-
-		self.add_to_snapshot(deftable.refset)
 		self.deferred_annotations.compute(self.resolver)
 	
 	def visit_AsyncFunctionDef(self, node):
 		self.visit_FunctionDef(node)
 
 	def visit_Call(self, node):
-		self.add_to_snapshot(self.resolver.resolve_value(node))
+		self.resolver.resolve_value(node)
 	
 	def visit_Subscript(self, node):
-		self.add_to_snapshot(self.resolver.resolve_value(node))
+		self.resolver.resolve_value(node)
 
 	def visit_AnnAssign(self, node):
 		from typify.inferencing.generics.utils import GenericUtils
 
 		resolved_value = self.resolver.resolve_value(node.value)
-		self.add_to_snapshot(resolved_value)
-
 		arefset = self.resolver.resolve_value(node.annotation)
+
 		if arefset:
 			annotation = arefset.ref().resolve_fully(self.resolver)
 			if self.caller and not annotation.instanceof(Builtins.get_type("str")):
@@ -502,7 +466,7 @@ class Executor(ast.NodeVisitor):
 	def visit_Assign(self, node):
 		value_expr = node.value
 		for tgt in node.targets:
-			self.resolver.assign(tgt, value_expr, self)
+			self.resolver.assign(tgt, value_expr)
 		self.deferred_annotations.compute(self.resolver)
 	
 	def visit_AugAssign(self, node):

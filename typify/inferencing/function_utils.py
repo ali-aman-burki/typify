@@ -58,7 +58,6 @@ class FunctionUtils:
 			caller=caller,
 			arguments=arguments,
 			tree=ast.Module(tree.body, type_ignores=[]), 
-			snapshot_log=[]
 		)
 
 		return executor
