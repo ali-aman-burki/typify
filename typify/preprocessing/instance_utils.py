@@ -114,9 +114,16 @@ class Instance:
 		return {}
 
 	def instanceof(self, *typedefs: ClassDefinition | tuple[ClassDefinition, ...]) -> bool:
-		typedefs = typedefs[0] if len(typedefs) == 1 and isinstance(typedefs[0], tuple) else typedefs
-		return any(self.instantiator and td and self.instantiator.mro[0] in td.mro for td in typedefs)
+		if not self.instantiator: return False
 
+		typedefs = typedefs[0] if len(typedefs) == 1 and isinstance(typedefs[0], tuple) else typedefs
+		mro = [i.origin for i in self.instantiator.mro]
+		for td in typedefs:
+			if td and td in mro:
+				return True
+
+		return False
+	
 	def attribute_lookup(
 			self, 
 			attr: str

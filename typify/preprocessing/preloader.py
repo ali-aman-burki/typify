@@ -115,14 +115,3 @@ print(json.dumps(info))
 
 		logger.debug(f"{logger.emoji_map['summary']} [Preloader] Building dependency graph (all libraries)", trail=1)
 		GraphBuilder.build_graph_all(use_cache=True)
-
-		project_lib = next(iter(GlobalContext.libs.values()))
-		meta_values = list(project_lib.meta_map.values())
-		progress = ProgressBar(len(meta_values), prefix="Collecting typeslots:")
-		progress.display()
-
-		for i, meta in enumerate(meta_values, 1):
-			PreCollector(meta).visit(meta.tree)
-			progress.update(i)
-		
-		logger.debug(f"{logger.emoji_map['ok']} [Preloader] Collected typeslots for {len(meta_values)} module(s)", trail=1)

@@ -7,6 +7,7 @@
 		"builtins": "typifystubs/stdlib/builtins.pyi",
 		"typing": "typifystubs/stdlib/typing.pyi",
 		"types": "typifystubs/stdlib/types.pyi",
+		"collections.abc": "typifystubs/stdlib/collections/abc.pyi",
 		"__future__": "typifystubs/stdlib/__future__.pyi"
 	}
 }

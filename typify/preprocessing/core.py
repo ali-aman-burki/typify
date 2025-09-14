@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from typify.progbar import ProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.instance_utils import Instance
@@ -20,6 +21,7 @@ class GlobalContext:
 	function_object_map: dict[FunctionDefinition, Instance] = {}
 	meta_map: dict[Module, ModuleMeta] = {}
 	dependency_graph: dict[ModuleMeta, list[ModuleMeta]] = {}
+	progress_bar: ProgressBar = None
 
 	path_index: dict[Path, ModuleMeta] = {}
 	singletons: dict[str, Instance] = {"True": None, "False": None, "None": None}

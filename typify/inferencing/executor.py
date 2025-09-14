@@ -147,6 +147,7 @@ class Executor(ast.NodeVisitor):
 				self.returns.update(result)
 				self.symbol.refset.update(result)
 				self.module_meta.safe_update_fslot_return(position, self.symbol.refset)
+				self.module_meta.update_count_map(position)
 
 				return self.returns
 
@@ -166,6 +167,7 @@ class Executor(ast.NodeVisitor):
 				)
 
 			self.module_meta.safe_update_fslot_return(position, self.symbol.refset)
+			self.module_meta.update_count_map(position)
 
 		return self.returns
 
@@ -369,6 +371,7 @@ class Executor(ast.NodeVisitor):
 		name = func_tree.name
 
 		self.module_meta.register_fslot(position)
+		self.module_meta.update_count_map(position)
 
 		deftable = NameDefinition(defkey)
 		self.symbol.get_name(name).merge_definition(deftable)

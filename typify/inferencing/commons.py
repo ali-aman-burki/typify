@@ -191,3 +191,22 @@ class Future:
 			return result
 		except Exception: 
 			return None
+
+class CollectionsAbc:
+
+	@staticmethod
+	def module() -> Module:
+		from typify.preprocessing.core import GlobalContext
+		try:
+			result = GlobalContext.inference["collections.abc"].table
+			return result
+		except Exception:
+			return None
+	
+	@staticmethod
+	def get_type(type_name: str) -> ClassDefinition | None:
+		try: 
+			result = CollectionsAbc.module().classes[type_name].get_latest_definition()
+			return result
+		except Exception: 
+			return None

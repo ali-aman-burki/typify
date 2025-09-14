@@ -223,7 +223,7 @@ class frozenset(_typing.Generic[_T]):
 	@classmethod
 	def __class_getitem__(cls, item) -> _types.GenericAlias: ...
 	
-class tuple(_typing.Generic[_typing.Unpack[_Ts]]): 
+class tuple(_abc.Iterable, _typing.Generic[_typing.Unpack[_Ts]]): 
 
 	@classmethod
 	def __class_getitem__(cls, item) -> _types.GenericAlias: ...

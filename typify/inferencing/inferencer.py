@@ -85,20 +85,34 @@ class Inferencer:
 				if meta in project_only_modules:
 					captured_metas.add(meta)
 			corrected_sequences.append(sequence)
-		
+
 		return corrected_sequences
 
 	@staticmethod
 	def infer():
 		start_time = time.time()
 		corrected_sequences = Inferencer._init_structures()
+		project_only_modules: set[ModuleMeta] = set(next(iter(GlobalContext.libs.values())).meta_map.values())
+
+		flattened = [meta for sequence in corrected_sequences for meta in sequence]
+		total_modules = len(flattened)
 		
-		progress = ProgressBar(
-			total=len(corrected_sequences),
+		progress = ProgressBar(total=total_modules, prefix="Preprocessing:")
+		progress.display()
+
+		total_counts = 0
+		for i in range(total_modules):
+			meta = flattened[i]
+			total_counts += meta.precollect(meta in project_only_modules)
+			progress.update()
+
+		logger.debug(f"{logger.emoji_map['ok']} [Inferencer] Preprocessed {total_modules} module(s)", trail=1)
+		GlobalContext.progress_bar = ProgressBar(
+			total=total_counts,
 			prefix="Performing Inference",
 			progress_format="percent"
 		)
-		progress.display()
+		GlobalContext.progress_bar.display()
 		
 		logger.debug("", header=False)
 		logger.debug(f"{logger.emoji_map['search']} {len(corrected_sequences)} total sequences to process")
@@ -150,7 +164,7 @@ class Inferencer:
 				corrected_sequences = Inferencer._init_structures()
 				remaining = corrected_sequences[i:]
 				processed_sequences = corrected_sequences[:i]
-				progress.update(i)
+				GlobalContext.progress_bar.update(GlobalContext.progress_bar.iteration)
 				break
 		
 		if not remaining:
@@ -181,10 +195,12 @@ class Inferencer:
 			GlobalCache.stage_inference_context(
 				libs,
 				processed_sequences,
-				sequence_followed
+				sequence_followed,
+				GlobalContext.progress_bar.iteration
 			)
-			progress.update()
 		
+		if GlobalContext.progress_bar.iteration < GlobalContext.progress_bar.total:
+			print()
 		end_time = time.time()
 		if remaining: logger.debug("", header=False)
 

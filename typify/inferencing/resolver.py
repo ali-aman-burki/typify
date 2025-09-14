@@ -24,6 +24,7 @@ from typify.preprocessing.symbol_table import (
 )
 from typify.inferencing.commons import (
 	Builtins,
+	CollectionsAbc,
 	Singletons,
 )
 
@@ -269,12 +270,7 @@ class Resolver:
 			for i in range(len(resolved_target.groups)):
 				group = resolved_target.groups[i]
 				if isinstance(group, PackGroup):
-					if ref.instanceof(
-						Builtins.get_type("list"),
-						Builtins.get_type("tuple"),
-						Builtins.get_type("set"),
-						Builtins.get_type("dict"),
-					):
+					if ref.instanceof(CollectionsAbc.get_type("Iterable")):
 						next_instances = TypeUtils.instantiate_from_type_expr(reftype.args[0])
 						if ref.instanceof(Builtins.get_type("tuple")):
 							if len(ref.store) > i:
@@ -296,3 +292,4 @@ class Resolver:
 				target.symbol_name.merge_definition(ndef)
 			
 			self.module_meta.safe_update_vslot(position, resolved_value.copy())
+			self.module_meta.update_count_map(position)

@@ -1,5 +1,9 @@
-from pathlib import Path
+from typify.progbar import ProgressBar
+import time
 
-path = Path("x/y/z")
-print(path)
-print(str(path))
+p = ProgressBar(total=10, prefix="Hello")
+p.display()
+
+for i in range(5):
+    p.update()
+    time.sleep(0.5)

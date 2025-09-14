@@ -60,6 +60,7 @@ class InferenceCache:
 	function_object_map: dict[FunctionDefinition, Instance]
 	singletons: dict[str, Instance]
 	sequence_followed: list[str]
+	last_progress: int
 
 class GlobalCache:
 
@@ -92,7 +93,8 @@ class GlobalCache:
 	def stage_inference_context(
 		libs: dict[Path, LibraryMeta], 
 		processed_sequences: list[list[ModuleMeta]],
-		sequence_followed: list[str]
+		sequence_followed: list[str],
+		last_progress: int
 	):
 		if not GlobalCache.blocked_libs.isdisjoint(libs.keys()): return
 
@@ -108,7 +110,8 @@ class GlobalCache:
 			symbol_map=GlobalContext.symbol_map,
 			function_object_map=GlobalContext.function_object_map,
 			singletons=GlobalContext.singletons,
-			sequence_followed=sequence_followed
+			sequence_followed=sequence_followed,
+			last_progress=last_progress
 		)
 		buf = io.BytesIO()
 		pickle.dump(inference_cache, buf)
@@ -217,6 +220,7 @@ class GlobalCache:
 			GlobalContext.function_object_map = context_cache.function_object_map
 			GlobalContext.singletons = context_cache.singletons
 			GlobalContext.path_index = {m.src: m for m in GlobalContext.meta_map.values()}
+			GlobalContext.progress_bar.iteration = context_cache.last_progress
 
 			return context_cache.sequence_followed
 

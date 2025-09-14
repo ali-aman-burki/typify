@@ -26,6 +26,13 @@ class ModuleMeta:
 		self.vslots_snapshots: dict[tuple[int, int], ReferenceSet] = {}
 		self.fslots_snapshots: dict[tuple[int, int], list[dict[str, ReferenceSet] | ReferenceSet]] = {}
 
+		self.count_map: dict[tuple[int, int], int] = {}
+
+	def precollect(self, typeslots: bool):
+		from typify.preprocessing.precollector import PreCollector
+		PreCollector(self, typeslots).visit(self.tree)
+		return sum(self.count_map.values())
+
 	def snapshot(self) -> tuple[dict, dict]:
 		hashable_funcslots = {}
 		for position, funcstuff in self.fslots_snapshots.items():
@@ -41,6 +48,12 @@ class ModuleMeta:
 			hashable_varsots[position] = varstuff.as_type()
 
 		return (hashable_varsots, hashable_funcslots)
+
+	def update_count_map(self, position: tuple[int, int]):
+		from typify.preprocessing.core import GlobalContext
+		if self.count_map[position] > 0:
+			self.count_map[position] -= 1
+			GlobalContext.progress_bar.update()
 
 	def safe_update_vslot(self, position: tuple[int, int], refset):
 		from typify.preprocessing.instance_utils import ReferenceSet

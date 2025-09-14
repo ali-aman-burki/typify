@@ -94,41 +94,53 @@ class PreCollector(ast.NodeVisitor):
 		visit(expr)
 		return targets
 
-	def __init__(self, module_meta: ModuleMeta):
+	def __init__(self, module_meta: ModuleMeta, typeslots: bool):
 		self.module_meta = module_meta
 		self.scope_stack: list[str] = [module_meta.table.fqn.split(".")[-1]]
+		self.typeslots = typeslots
+		self.in_function = False
 
 	def visit_AnnAssign(self, node):
 		fqn = ".".join(self.scope_stack)
 		position = (node.target.lineno, node.target.col_offset)
-		self.module_meta.vslots[position] = [
-			ast.unparse(node.target), 
-			PreCollector.UNVISITED, 
-			fqn, 
-			type(node).__name__
-		]
+		if self.typeslots or not self.in_function:
+			self.module_meta.count_map[position] = 1
+
+		if self.typeslots:  
+			self.module_meta.vslots[position] = [
+				ast.unparse(node.target), 
+				PreCollector.UNVISITED, 
+				fqn, 
+				type(node).__name__
+			]
 
 	def visit_Assign(self, node):
 		fqn = ".".join(self.scope_stack)
 		for target in node.targets:
 			packs = PreCollector.collect_targets(target)
 			for k, v in packs.items():
-				self.module_meta.vslots[v] = [
-					ast.unparse(k), 
-					PreCollector.UNVISITED, 
-					fqn, 
-					type(node).__name__
-				]
+				if self.typeslots or not self.in_function:
+					self.module_meta.count_map[v] = 1
+				if self.typeslots:
+					self.module_meta.vslots[v] = [
+						ast.unparse(k), 
+						PreCollector.UNVISITED, 
+						fqn, 
+						type(node).__name__
+					]
 
 	def visit_AugAssign(self, node):
 		fqn = ".".join(self.scope_stack)
 		v = (node.target.lineno, node.target.col_offset)
-		self.module_meta.vslots[v] = [
-			ast.unparse(node.target), 
-			PreCollector.UNVISITED, 
-			fqn, 
-			type(node).__name__
-		]
+		if self.typeslots or not self.in_function:
+			self.module_meta.count_map[v] = 1
+		if self.typeslots:
+			self.module_meta.vslots[v] = [
+				ast.unparse(node.target), 
+				PreCollector.UNVISITED, 
+				fqn, 
+				type(node).__name__
+			]
 
 	def visit_ClassDef(self, node):
 		self.scope_stack.append(node.name)
@@ -139,10 +151,20 @@ class PreCollector(ast.NodeVisitor):
 		fqn = ".".join(self.scope_stack)
 		position = (node.lineno, node.col_offset)
 		param_slots = PreCollector.collect_parameter_slots(node)
-		self.module_meta.fslots[position] = [node, node.name, param_slots, PreCollector.UNVISITED, fqn]
+
+		if self.typeslots or not self.in_function:
+			self.module_meta.count_map[position] = 2 if self.typeslots else 1
+		if self.typeslots:
+			self.module_meta.fslots[position] = [node, node.name, param_slots, PreCollector.UNVISITED, fqn]
 
 		self.scope_stack.append(node.name)
+
+		prev_in_function = self.in_function
+		self.in_function = True
+
 		self.generic_visit(node)
+
+		self.in_function = prev_in_function
 		self.scope_stack.pop()
 	
 	def visit_AsyncFunctionDef(self, node):
