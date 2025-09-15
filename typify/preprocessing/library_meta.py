@@ -138,7 +138,7 @@ class LibraryMeta:
 		
 		progress.update(len(self.meta_map) + 1)
 
-	def export_types(self, output: Path):
+	def export_types_per_proj(self, output: Path):
 		progress = ProgressBar(
 			len(self.meta_map) + 1, 
 			prefix="Exporting Types",
@@ -159,4 +159,29 @@ class LibraryMeta:
 		with output.open("w", encoding="utf-8") as f:
 			json.dump(sorted_data, f, indent='\t', ensure_ascii=False)
 		
+		progress.update(len(self.meta_map) + 1)
+	
+	def export_types_per_file(self, output: Path, relative_to: Path):
+		progress = ProgressBar(
+			len(self.meta_map) + 1,
+			prefix="Exporting Types",
+			progress_format="percent"
+		)
+		progress.display()
+
+		for i, meta in enumerate(self.meta_map.values(), 1):
+			rel_path = meta.src.relative_to(relative_to).as_posix()
+
+			file_stem = rel_path.replace("/", "_").removesuffix(".py")
+			json_name = f"{file_stem}_INFERREDTYPES.json"
+			json_path = output / json_name
+
+			data = OrderedDict()
+			data[str(meta.src.as_posix())] = meta.typeslots()
+
+			with json_path.open("w", encoding="utf-8") as f:
+				json.dump(data, f, indent="\t", ensure_ascii=False)
+
+			progress.update(i)
+
 		progress.update(len(self.meta_map) + 1)
