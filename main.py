@@ -28,6 +28,12 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--relative-to",
+        help="Path to compute relative source paths against when naming export files. "
+             "Defaults to project_dir.",
+    )
+
+    parser.add_argument(
         "--log-level",
         choices=["off", "info", "debug", "trace", "error", "warning"],
         default="off",
@@ -48,6 +54,8 @@ def main():
     project_dir = Path(args.project_dir).resolve()
     default_outdir = project_dir / ".typify"
     outdir = Path(args.output_dir).resolve() if args.output_dir else default_outdir
+
+    relative_to = Path(args.relative_to).resolve() if args.relative_to else project_dir
 
     if not Utils.is_valid_directory(project_dir):
         print("Invalid project path given.")
@@ -101,7 +109,7 @@ def main():
     Inferencer.infer()
 
     next(iter(GlobalContext.libs.values())).export_types_per_file(
-        outdir, project_dir.parent.parent
+        outdir, relative_to
     )
     logger.info(f"{logger.emoji_map['ok']} Exported types to: {outdir.as_posix()}")
 
