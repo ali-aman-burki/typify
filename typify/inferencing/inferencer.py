@@ -213,3 +213,4 @@ class Inferencer:
 		logger.info(f"\t\tSequences processed: {len(processed_sequences)}")
 		logger.info(f"\t\tTotal Modules: {len(set(sequence_followed))}")
 		logger.info(f"\t\tTime Taken: {end_time - start_time:.4f} seconds")
+		logger.info(f"\t\tProgress: {((GlobalContext.progress_bar.iteration / GlobalContext.progress_bar.total) * 100):.2f} percent")
