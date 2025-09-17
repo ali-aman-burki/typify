@@ -162,7 +162,7 @@ class LibraryMeta:
 		
 		progress.update(len(self.meta_map) + 1)
 	
-	def export_types_per_file(self, output: Path, relative_to: Path):
+	def export_types_per_file(self, output: Path, relative_to: Path, normalize=False):
 		progress = ProgressBar(
 			len(self.meta_map) + 1,
 			prefix="Exporting Types",
@@ -180,7 +180,7 @@ class LibraryMeta:
 			data = OrderedDict()
 			data[str(meta.src.as_posix())] = meta.typeslots()
 
-			normalized = normalize_inferred_types(data)
+			normalized = normalize_inferred_types(data) if normalize else data
 
 			with json_path.open("w", encoding="utf-8") as f:
 				json.dump(normalized, f, indent="\t", ensure_ascii=False)
