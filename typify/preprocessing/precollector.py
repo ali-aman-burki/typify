@@ -1,11 +1,10 @@
 import ast
-
 from typify.preprocessing.module_meta import ModuleMeta
 
 class PreCollector(ast.NodeVisitor):
 
 	UNVISITED = "Any"
-	
+
 	@staticmethod
 	def build_function_signature(
 		fdef: ast.FunctionDef | ast.AsyncFunctionDef, 
@@ -13,7 +12,6 @@ class PreCollector(ast.NodeVisitor):
 		parameters: dict[str, str], 
 		return_annotation: str
 	) -> str:
-		
 		args_node = fdef.args
 		parts = []
 
@@ -63,7 +61,7 @@ class PreCollector(ast.NodeVisitor):
 			parts.append(f"**{name}: {ann}")
 
 		return f"def {fqn}({', '.join(parts)}) -> {return_annotation}: ..."
-	
+
 	@staticmethod
 	def collect_parameter_slots(fdef: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, str]:
 		args_node = fdef.args
@@ -96,12 +94,15 @@ class PreCollector(ast.NodeVisitor):
 
 	def __init__(self, module_meta: ModuleMeta, typeslots: bool):
 		self.module_meta = module_meta
-		self.scope_stack: list[str] = [module_meta.table.fqn.split(".")[-1]]
+		self.scope_stack: list[tuple[str, str]] = []
 		self.typeslots = typeslots
 		self.in_function = False
 
+	def _format_fqn(self) -> str:
+		return ".".join(f"{kind}:{name}" for kind, name in self.scope_stack)
+
 	def visit_AnnAssign(self, node):
-		fqn = ".".join(self.scope_stack)
+		fqn = self._format_fqn()
 		position = (node.target.lineno, node.target.col_offset)
 		if self.typeslots or not self.in_function:
 			self.module_meta.count_map[position] = 1
@@ -115,7 +116,7 @@ class PreCollector(ast.NodeVisitor):
 			]
 
 	def visit_Assign(self, node):
-		fqn = ".".join(self.scope_stack)
+		fqn = self._format_fqn()
 		for target in node.targets:
 			packs = PreCollector.collect_targets(target)
 			for k, v in packs.items():
@@ -130,7 +131,7 @@ class PreCollector(ast.NodeVisitor):
 					]
 
 	def visit_AugAssign(self, node):
-		fqn = ".".join(self.scope_stack)
+		fqn = self._format_fqn()
 		v = (node.target.lineno, node.target.col_offset)
 		if self.typeslots or not self.in_function:
 			self.module_meta.count_map[v] = 1
@@ -143,12 +144,12 @@ class PreCollector(ast.NodeVisitor):
 			]
 
 	def visit_ClassDef(self, node):
-		self.scope_stack.append(node.name)
+		self.scope_stack.append(("C", node.name))
 		self.generic_visit(node)
 		self.scope_stack.pop()
 
 	def visit_FunctionDef(self, node):
-		fqn = ".".join(self.scope_stack)
+		fqn = self._format_fqn()
 		position = (node.lineno, node.col_offset)
 		param_slots = PreCollector.collect_parameter_slots(node)
 
@@ -157,7 +158,7 @@ class PreCollector(ast.NodeVisitor):
 		if self.typeslots:
 			self.module_meta.fslots[position] = [node, node.name, param_slots, PreCollector.UNVISITED, fqn]
 
-		self.scope_stack.append(node.name)
+		self.scope_stack.append(("F", node.name))
 
 		prev_in_function = self.in_function
 		self.in_function = True
@@ -168,9 +169,4 @@ class PreCollector(ast.NodeVisitor):
 		self.scope_stack.pop()
 	
 	def visit_AsyncFunctionDef(self, node):
-		self.visit_FunctionDef(node)  
-
-	def _get_local_fqn(self, name: str) -> str:
-		if self.scope_stack:
-			return ".".join(self.scope_stack + [name])
-		return name
+		self.visit_FunctionDef(node)

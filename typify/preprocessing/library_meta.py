@@ -6,6 +6,7 @@ from collections import (
 	OrderedDict
 )
 
+from typify.normalizer import normalize_inferred_types
 from typify.preprocessing.symbol_table import (
 	Library,
 	Package,
@@ -179,8 +180,10 @@ class LibraryMeta:
 			data = OrderedDict()
 			data[str(meta.src.as_posix())] = meta.typeslots()
 
+			normalized = normalize_inferred_types(data)
+
 			with json_path.open("w", encoding="utf-8") as f:
-				json.dump(data, f, indent="\t", ensure_ascii=False)
+				json.dump(normalized, f, indent="\t", ensure_ascii=False)
 
 			progress.update(i)
 
