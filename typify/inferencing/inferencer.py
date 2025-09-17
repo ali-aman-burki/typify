@@ -1,10 +1,5 @@
 import time
 
-from collections import (
-	deque, 
-	defaultdict
-)
-
 from typify.logging import logger
 from typify.progbar import ProgressBar
 from typify.utils import Utils
