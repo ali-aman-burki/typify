@@ -64,6 +64,8 @@ class PreCollector(ast.NodeVisitor):
 
 	@staticmethod
 	def collect_parameter_slots(fdef: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, str]:
+		from typify.preprocessing.instance_utils import ReferenceSet
+
 		args_node = fdef.args
 		parameters: dict[str, str] = {}
 
@@ -102,6 +104,8 @@ class PreCollector(ast.NodeVisitor):
 		return ".".join(f"{kind}:{name}" for kind, name in self.scope_stack)
 
 	def visit_AnnAssign(self, node):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
 		fqn = self._format_fqn()
 		position = (node.target.lineno, node.target.col_offset)
 		if self.typeslots or not self.in_function:
@@ -112,10 +116,13 @@ class PreCollector(ast.NodeVisitor):
 				ast.unparse(node.target), 
 				PreCollector.UNVISITED, 
 				fqn, 
-				type(node).__name__
+				type(node).__name__,
+				ReferenceSet()
 			]
 
 	def visit_Assign(self, node):
+		from typify.preprocessing.instance_utils import ReferenceSet
+		
 		fqn = self._format_fqn()
 		for target in node.targets:
 			packs = PreCollector.collect_targets(target)
@@ -127,10 +134,13 @@ class PreCollector(ast.NodeVisitor):
 						ast.unparse(k), 
 						PreCollector.UNVISITED, 
 						fqn, 
-						type(node).__name__
+						type(node).__name__,
+						ReferenceSet()
 					]
 
 	def visit_AugAssign(self, node):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
 		fqn = self._format_fqn()
 		v = (node.target.lineno, node.target.col_offset)
 		if self.typeslots or not self.in_function:
@@ -140,7 +150,8 @@ class PreCollector(ast.NodeVisitor):
 				ast.unparse(node.target), 
 				PreCollector.UNVISITED, 
 				fqn, 
-				type(node).__name__
+				type(node).__name__,
+				ReferenceSet()
 			]
 
 	def visit_ClassDef(self, node):
@@ -149,6 +160,8 @@ class PreCollector(ast.NodeVisitor):
 		self.scope_stack.pop()
 
 	def visit_FunctionDef(self, node):
+		from typify.preprocessing.instance_utils import ReferenceSet
+
 		fqn = self._format_fqn()
 		position = (node.lineno, node.col_offset)
 		param_slots = PreCollector.collect_parameter_slots(node)
@@ -156,7 +169,15 @@ class PreCollector(ast.NodeVisitor):
 		if self.typeslots or not self.in_function:
 			self.module_meta.count_map[position] = 2 if self.typeslots else 1
 		if self.typeslots:
-			self.module_meta.fslots[position] = [node, node.name, param_slots, PreCollector.UNVISITED, fqn]
+			self.module_meta.fslots[position] = [
+				node, 
+				node.name, 
+				param_slots, 
+				PreCollector.UNVISITED, 
+				fqn, 
+				{pname: ReferenceSet() for pname in param_slots}, 
+				ReferenceSet()
+			]
 
 		self.scope_stack.append(("F", node.name))
 

@@ -61,10 +61,7 @@ class ModuleMeta:
 		refset: ReferenceSet = refset
 		
 		if self.vslots:
-			if isinstance(self.vslots[position][1], ReferenceSet):
-				self.vslots[position][1].update(refset)
-			else:
-				self.vslots[position][1] = refset
+			self.vslots[position][4].update(refset)
 		
 		if position in self.vslots_snapshots:
 			self.vslots_snapshots[position].update(refset)
@@ -83,7 +80,7 @@ class ModuleMeta:
 		refset: ReferenceSet = refset
 
 		if self.fslots:
-			self.fslots[position][2][argname] = refset
+			self.fslots[position][5][argname] = refset
 		
 		self.fslots_snapshots[position][0][argname] = refset
 
@@ -93,7 +90,7 @@ class ModuleMeta:
 		refset: ReferenceSet = refset
 
 		if self.fslots:
-			self.fslots[position][3] = refset
+			self.fslots[position][6] = refset
 		
 		self.fslots_snapshots[position][1] = refset
 
@@ -101,7 +98,6 @@ class ModuleMeta:
 		return self.table.fqn
 	
 	def typeslots(self):
-		from typify.preprocessing.instance_utils import ReferenceSet
 		from typify.preprocessing.precollector import PreCollector
 
 		data = {
@@ -110,28 +106,33 @@ class ModuleMeta:
 		}
 
 		for key, value in self.vslots.items():
-			value = value.copy()
-			value[1] = value[1].typestring() if isinstance(value[1], ReferenceSet) else value[1]
-			k = f"{value[2]}:{key[0]}:{key[1]}"
-			v = {
-				"name": value[0],
-				"type": value[1],
-				"node": value[3] 
+			name_value = value[0] 
+			type_value = value[4].typestring()
+			node_value = value[3]
+			
+			result_key = f"{value[2]}:{key[0]}:{key[1]}"
+			result_value = {
+				"name": name_value,
+				"type": type_value,
+				"node": node_value 
 			}
-			data["variables"][k] = v
+			data["variables"][result_key] = result_value
 
 		for key, value in self.fslots.items():
-			value = value.copy()
-			k = f"{value[4]}:{key[0]}:{key[1]}"
+			result_key = f"{value[4]}:{key[0]}:{key[1]}"
 
-			value[2] = value[2].copy()
-			for x, y in value[2].items():
-				value[2][x] = y.typestring() if isinstance(value[2][x], ReferenceSet) else value[2][x]
+			fdef_value = value[0]
+			fqn_value = value[1]
+			parameters_value = {pname: ptype.typestring() for pname, ptype in value[5].items()}
+			return_type_value = value[6].typestring()
 			
-			value[3] = value[3].typestring() if isinstance(value[3], ReferenceSet) else value[3]
-			
-			v = PreCollector.build_function_signature(value[0], value[1], value[2], value[3])
-			data["functions"][k] = v
+			result_value = PreCollector.build_function_signature(
+				fdef_value, 
+				fqn_value, 
+				parameters_value, 
+				return_type_value
+			)
+			data["functions"][result_key] = result_value
 			
 		return data
 
