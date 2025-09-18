@@ -99,10 +99,21 @@ class ModuleMeta:
 	
 	def typeslots(self):
 		from typify.preprocessing.precollector import PreCollector
+		from typify.preprocessing.instance_utils import ReferenceSet
+		from typify.inferencing.commons import Typing, Checker
 
-		def type_filter(inferred: str, preinferred: str):
-			if preinferred != PreCollector.UNVISITED and inferred != PreCollector.UNVISITED:
+		def type_filter(refset: ReferenceSet, preinferred: str):
+			inferred = refset.typestring() if refset else preinferred
+			
+			if PreCollector.UNVISITED not in (preinferred, inferred) and inferred != preinferred:
+				type_expr = refset.as_type()
+				if Checker.match_origin(type_expr.base, Typing.get_type("Union")):
+					repr_args = [repr(arg) for arg in type_expr.args]
+					if preinferred in repr_args:
+						return inferred
+
 				inferred = f"Union[{preinferred}, {inferred}]"
+
 			return inferred
 
 		data = {
@@ -112,7 +123,7 @@ class ModuleMeta:
 
 		for key, value in self.vslots.items():
 			name_value = value[0] 
-			type_value = type_filter(value[4].typestring() if value[4] else value[1], value[1])
+			type_value = type_filter(value[4], value[1])
 			node_value = value[3]
 			
 			result_key = f"{value[2]}:{key[0]}:{key[1]}"
@@ -130,11 +141,11 @@ class ModuleMeta:
 			fqn_value = value[1]
 
 			parameters_value = {
-				pname: type_filter(ptype.typestring() if ptype else value[2][pname], value[2][pname])
+				pname: type_filter(ptype, value[2][pname])
 				for pname, ptype in value[5].items()
 			}
 
-			return_type_value = type_filter(value[6].typestring() if value[6] else value[3], value[3])
+			return_type_value = type_filter(value[6], value[3])
 			
 			result_value = PreCollector.build_function_signature(
 				fdef_value, 
@@ -145,5 +156,3 @@ class ModuleMeta:
 			data["functions"][result_key] = result_value
 			
 		return data
-
-
