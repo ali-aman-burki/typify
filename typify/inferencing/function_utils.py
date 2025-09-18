@@ -13,8 +13,8 @@ from typify.inferencing.commons import (
 	ResolvedArg
 )
 from typify.preprocessing.instance_utils import (
-    ReferenceSet,
-    Instance
+	ReferenceSet,
+	Instance
 )
 from typify.inferencing.call_stack import CallSignature
 from typify.preprocessing.symbol_table import CallFrame
@@ -66,29 +66,47 @@ class FunctionUtils:
 	def exec_function(
 		fobject: Instance,
 		caller: Instance,
-		arguments: dict[str, ArgTuple], 
+		arguments: dict[str, ArgTuple],
 	) -> ReferenceSet:
 		sigkey = CallSignature(fobject=fobject, caller=caller, arguments=arguments)
 		signature = GlobalContext.call_stack.get(sigkey)
 
 		executor = FunctionUtils.construct_executor(
 			caller=signature.caller,
-			fobject=signature.fobject, 
-			arguments=signature.arguments, 
+			fobject=signature.fobject,
+			arguments=signature.arguments,
 		)
 
-		if not GlobalContext.call_stack.contains(signature):
-			GlobalContext.call_stack.push(signature)
+		cs = GlobalContext.call_stack
+		recursion_root = cs.current_recursion_root()
+
+		if not cs.contains(signature) and recursion_root is not None:
+			hits = cs.get_recursion_count(recursion_root, signature)
+			if hits >= cs.recursion_limit:
+				cached = cs.memo_get(signature)
+				if cached is not None:
+					logger.debug(f"♻️ Reusing memo (limit hit) for: {repr(signature)}")
+					return cached
+				logger.debug(f"⛔ Skipping execution (limit hit, no memo) for: {repr(signature)}")
+				return ReferenceSet()
+			else:
+				cs.inc_recursion_count(recursion_root, signature)
+				logger.debug(f"📈 Count {hits+1}/{cs.recursion_limit} for: {repr(signature)} under recursion root {repr(cs.lineage()[-1])}")
+
+		if not cs.contains(signature):
+			cs.push(signature)
 			logger.debug(f"{logger.emoji_map['push']} Pushed: {repr(signature)}")
 
 			signature.returns = executor.execute().copy()
+			cs.memo_set(signature, signature.returns)
 
-			GlobalContext.call_stack.pop()
+			cs.pop()
 			logger.debug(f"{logger.emoji_map['pop']} Popped: {repr(signature)}")
 		else:
 			if not signature.running:
 				signature.running = True
 				signature.returns = executor.execute().copy()
+				cs.memo_set(signature, signature.returns)
 
 		return signature.returns
 		

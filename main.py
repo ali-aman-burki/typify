@@ -111,7 +111,7 @@ def main():
     next(iter(GlobalContext.libs.values())).export_types_per_file(
         output=outdir, 
         relative_to=relative_to, 
-        normalize=True
+        normalize=False
     )
     logger.info(f"{logger.emoji_map['ok']} Exported types to: {outdir.as_posix()}")
 

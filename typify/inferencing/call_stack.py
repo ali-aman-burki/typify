@@ -53,25 +53,57 @@ class CallSignature:
 		return self.fobject.origin.parent.fqn + "(" + ", ".join(parts) + ")"
 
 class CallStack:
-	def __init__(self):
-		self.stack: list[CallSignature] = []
+    def __init__(self):
+        self.stack: list[CallSignature] = []
+        self._recursion_counts: dict[tuple[Instance, CallSignature], int] = defaultdict(int)
+        self._memo: dict[CallSignature, ReferenceSet] = {}
+        self.recursion_limit: int = 1
 
-	def push(self, signature: CallSignature):
-		self.stack.append(signature)
+    def push(self, signature: CallSignature):
+        self.stack.append(signature)
 
-	def pop(self) -> CallSignature:
-		return self.stack.pop()
-	
-	def contains(self, signature: CallSignature):
-		return signature in self.stack
+    def pop(self) -> CallSignature:
+        popped = self.stack.pop()
+        if not any(s.fobject == popped.fobject for s in self.stack):
+            self.clear_recursion_root(popped.fobject)
+        return popped
 
-	def get(self, signature: CallSignature):
-		for sig in self.stack:
-			if sig == signature:
-				return sig
-		return signature
+    def contains(self, signature: CallSignature):
+        return signature in self.stack
 
-	def lineage(self) -> list[CallSignature]:
-		if not self.stack: return []
-		current = self.stack[-1]
-		return [sig for sig in self.stack if sig.fobject == current.fobject]
+    def get(self, signature: CallSignature):
+        for sig in self.stack:
+            if sig == signature:
+                return sig
+        return signature
+
+    def lineage(self) -> list[CallSignature]:
+        if not self.stack: return []
+        current = self.stack[-1]
+        return [sig for sig in self.stack if sig.fobject == current.fobject]
+
+    def current_recursion_root(self) -> Instance | None:
+        if not self.stack:
+            return None
+        current_fobj = self.stack[-1].fobject
+        count = sum(1 for s in self.stack if s.fobject == current_fobj)
+        return current_fobj if count >= 2 else None
+
+    def get_recursion_count(self, root: Instance, sig: CallSignature) -> int:
+        return self._recursion_counts.get((root, sig), 0)
+
+    def inc_recursion_count(self, root: Instance, sig: CallSignature) -> int:
+        key = (root, sig)
+        self._recursion_counts[key] = self._recursion_counts.get(key, 0) + 1
+        return self._recursion_counts[key]
+
+    def clear_recursion_root(self, root: Instance) -> None:
+        to_del = [k for k in self._recursion_counts.keys() if k[0] == root]
+        for k in to_del:
+            self._recursion_counts.pop(k, None)
+
+    def memo_get(self, sig: CallSignature) -> ReferenceSet | None:
+        return self._memo.get(sig)
+
+    def memo_set(self, sig: CallSignature, returns: ReferenceSet) -> None:
+        self._memo[sig] = returns.copy()
