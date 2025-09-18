@@ -100,6 +100,11 @@ class ModuleMeta:
 	def typeslots(self):
 		from typify.preprocessing.precollector import PreCollector
 
+		def type_filter(inferred: str, preinferred: str):
+			if preinferred != PreCollector.UNVISITED and inferred != PreCollector.UNVISITED:
+				inferred = f"Union[{preinferred}, {inferred}]"
+			return inferred
+
 		data = {
 			"variables": {},
 			"functions": {}
@@ -107,7 +112,7 @@ class ModuleMeta:
 
 		for key, value in self.vslots.items():
 			name_value = value[0] 
-			type_value = value[4].typestring()
+			type_value = type_filter(value[4].typestring() if value[4] else value[1], value[1])
 			node_value = value[3]
 			
 			result_key = f"{value[2]}:{key[0]}:{key[1]}"
@@ -123,8 +128,13 @@ class ModuleMeta:
 
 			fdef_value = value[0]
 			fqn_value = value[1]
-			parameters_value = {pname: ptype.typestring() for pname, ptype in value[5].items()}
-			return_type_value = value[6].typestring()
+
+			parameters_value = {
+				pname: type_filter(ptype.typestring() if ptype else value[2][pname], value[2][pname])
+				for pname, ptype in value[5].items()
+			}
+
+			return_type_value = type_filter(value[6].typestring() if value[6] else value[3], value[3])
 			
 			result_value = PreCollector.build_function_signature(
 				fdef_value, 
