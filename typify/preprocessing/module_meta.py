@@ -102,19 +102,24 @@ class ModuleMeta:
 		from typify.preprocessing.instance_utils import ReferenceSet
 		from typify.inferencing.commons import Typing, Checker
 
-		def type_filter(refset: ReferenceSet, preinferred: str):
+		def type_filter(refset: ReferenceSet, preinferred: str) -> str:
 			inferred = refset.typestring() if refset else preinferred
-			
-			if PreCollector.UNVISITED not in (preinferred, inferred) and inferred != preinferred:
-				type_expr = refset.as_type()
-				if Checker.match_origin(type_expr.base, Typing.get_type("Union")):
-					repr_args = [repr(arg) for arg in type_expr.args]
-					if preinferred in repr_args:
-						return inferred
 
-				inferred = f"Union[{preinferred}, {inferred}]"
+			if (
+				PreCollector.UNVISITED in (preinferred, inferred)
+				or inferred == preinferred
+			):
+				return inferred
 
-			return inferred
+			type_expr = refset.as_type()
+
+			if Checker.match_origin(type_expr.base, Typing.get_type("Union")):
+				repr_args = [repr(arg) for arg in type_expr.args]
+				if preinferred in repr_args:
+					return inferred
+				return f"Union[{preinferred}, {', '.join(repr_args)}]"
+
+			return f"Union[{preinferred}, {inferred}]"
 
 		data = {
 			"variables": {},
