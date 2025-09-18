@@ -64,8 +64,6 @@ class PreCollector(ast.NodeVisitor):
 
 	@staticmethod
 	def collect_parameter_slots(fdef: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, str]:
-		from typify.preprocessing.instance_utils import ReferenceSet
-
 		args_node = fdef.args
 		parameters: dict[str, str] = {}
 
