@@ -85,13 +85,13 @@ class FunctionUtils:
 			if hits >= cs.recursion_limit:
 				cached = cs.memo_get(signature)
 				if cached is not None:
-					logger.debug(f"♻️ Reusing memo (limit hit) for: {repr(signature)}")
+					logger.debug(f"{logger.emoji_map["patch"]} Reusing memo (limit hit) for: {repr(signature)}")
 					return cached
-				logger.debug(f"⛔ Skipping execution (limit hit, no memo) for: {repr(signature)}")
+				logger.debug(f"{logger.emoji_map["refresh"]} Skipping execution (limit hit, no memo) for: {repr(signature)}")
 				return ReferenceSet()
 			else:
 				cs.inc_recursion_count(recursion_root, signature)
-				logger.debug(f"📈 Count {hits+1}/{cs.recursion_limit} for: {repr(signature)} under recursion root {repr(cs.lineage()[-1])}")
+				logger.debug(f"{logger.emoji_map["ok"]} Count {hits+1}/{cs.recursion_limit} for: {repr(signature)} under recursion root {repr(cs.lineage()[-1])}")
 
 		if not cs.contains(signature):
 			cs.push(signature)
