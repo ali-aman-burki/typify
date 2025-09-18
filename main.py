@@ -48,30 +48,34 @@ def parse_args():
 	return parser.parse_args()
 
 def get_next_logfile(log_file: Path) -> Path:
-	base_name = log_file.stem 
-	ext = log_file.suffix
+    base_name = log_file.stem
+    ext = log_file.suffix
 
-	existing_logs = list(log_file.parent.glob(f"{base_name}*{ext}"))
+    existing_logs = list(log_file.parent.glob(f"{base_name}*{ext}"))
 
-	if not existing_logs:
-		return log_file
-	
-	if log_file.exists():
-		log_file.rename(log_file.parent / "typify_0.log")
+    if not existing_logs:
+        return log_file
 
-	indices = []
-	for lf in existing_logs:
-		stem = lf.stem
-		if stem == base_name:
-			indices.append(0)
-		elif "_" in stem:
-			try:
-				indices.append(int(stem.split("_")[-1]))
-			except ValueError:
-				pass
+    indices = []
+    for lf in existing_logs:
+        stem = lf.stem
+        if stem == base_name:
+            indices.append(None)
+        elif "_" in stem:
+            try:
+                indices.append(int(stem.split("_")[-1]))
+            except ValueError:
+                pass
 
-	next_index = max(indices) + 1
-	return log_file.parent / f"{base_name}_{next_index}{ext}"
+    if None in indices and all(isinstance(i, int) and i == 0 for i in indices if i is not None):
+        old_log = log_file
+        if old_log.exists():
+            old_log.replace(log_file.parent / f"{base_name}_0{ext}")
+        return log_file.parent / f"{base_name}_1{ext}"
+
+    numeric_indices = [i for i in indices if isinstance(i, int)]
+    next_index = (max(numeric_indices) if numeric_indices else 0) + 1
+    return log_file.parent / f"{base_name}_{next_index}{ext}"
 
 def main():
 	config_path = "typifyconfig.json"
