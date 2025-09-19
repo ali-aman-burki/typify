@@ -107,7 +107,7 @@ class ModuleMeta:
 
 			if (
 				PreCollector.UNVISITED in (preinferred, inferred)
-				or inferred == preinferred
+				or inferred == preinferred or inferred != "None"
 			):
 				return inferred
 
