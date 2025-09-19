@@ -131,7 +131,8 @@ class PreCollector(ast.NodeVisitor):
 		# imports map visible name -> original base name
 		self._imported_names: dict[str, str] = {}
 
-		# local env stack: for each function, a dict name -> guessed type
+		# local env stack: for each function, a dict expr_text -> guessed type
+		# keys are ast.unparse(expr) strings, e.g., "a", "x.y", "x.y.z"
 		self._local_env_stack: list[dict[str, str]] = []
 
 	# ---------- utilities ----------
@@ -148,7 +149,7 @@ class PreCollector(ast.NodeVisitor):
 	def _tokenize_name(self, name: str) -> list[str]:
 		toks: list[str] = []
 		for part in name.split("_"):
-			if not part: 
+			if not part:
 				continue
 			chunk = []
 			last_is_upper = part[0].isupper()
@@ -222,7 +223,28 @@ class PreCollector(ast.NodeVisitor):
 		if isinstance(value, bytes): return "bytes"
 		return None
 
-	def _guess_from_expr(self, expr: ast.AST, name_hint: str | None = None) -> str:
+	def _expr_key(self, expr: ast.AST) -> str | None:
+		"""Return a stable textual key for Names/Attributes (for env lookups)."""
+		try:
+			if isinstance(expr, (ast.Name, ast.Attribute)):
+				return ast.unparse(expr)
+		except Exception:
+			return None
+		return None
+
+	def _lookup_env(self, expr: ast.AST, env: dict[str, str]) -> str | None:
+		key = self._expr_key(expr)
+		if key and key in env:
+			return env[key]
+		return None
+
+	def _guess_from_expr(self, expr: ast.AST, name_hint: str | None = None, env: dict[str, str] | None = None) -> str:
+		# If env is provided and expr is Name/Attribute, try alias propagation first.
+		if env is not None and isinstance(expr, (ast.Name, ast.Attribute)):
+			aliased = self._lookup_env(expr, env)
+			if aliased:
+				return aliased
+
 		try:
 			if isinstance(expr, ast.Constant):
 				gt = self._guess_from_constant(expr.value)
@@ -318,7 +340,12 @@ class PreCollector(ast.NodeVisitor):
 			if node.annotation is not None:
 				ann = ast.unparse(node.annotation).strip()
 			else:
-				ann = self._guess_from_expr(node.value, name_hint=ast.unparse(node.target)) if node.value else self.DEFAULT_GUESS
+				# consult env for alias if inside a function
+				env = self._local_env_stack[-1] if (self.in_function and self._local_env_stack) else None
+				ann = (
+					self._guess_from_expr(node.value, name_hint=ast.unparse(node.target), env=env)
+					if node.value else self.DEFAULT_GUESS
+				)
 
 			self.module_meta.vslots[position] = [
 				ast.unparse(node.target),
@@ -328,7 +355,7 @@ class PreCollector(ast.NodeVisitor):
 				ReferenceSet()
 			]
 
-			# if inside a function, update local env
+			# update local env (names and attributes)
 			if self.in_function and self._local_env_stack:
 				self._assign_target_env(node.target, ann)
 
@@ -336,6 +363,7 @@ class PreCollector(ast.NodeVisitor):
 		from typify.preprocessing.instance_utils import ReferenceSet
 
 		fqn = self._format_fqn()
+		env = self._local_env_stack[-1] if (self.in_function and self._local_env_stack) else None
 
 		value_is_seq = isinstance(node.value, (ast.Tuple, ast.List))
 		elts = node.value.elts if value_is_seq else None
@@ -355,11 +383,18 @@ class PreCollector(ast.NodeVisitor):
 						if k in target_names:
 							idx = target_names.index(k)
 							if elts and idx < len(elts):
-								guess = self._guess_from_expr(elts[idx], name_hint=ast.unparse(k))
+								guess = self._guess_from_expr(elts[idx], name_hint=ast.unparse(k), env=env)
 					except Exception:
 						guess = None
 				if guess is None:
-					guess = self._guess_from_expr(node.value, name_hint=ast.unparse(k))
+					# alias propagation: if RHS is Name/Attribute and found in env, reuse that type
+					if isinstance(node.value, (ast.Name, ast.Attribute)) and env is not None:
+						aliased = self._lookup_env(node.value, env)
+						if aliased:
+							guess = aliased
+					# otherwise general guess (also consult env for nested)
+					if guess is None:
+						guess = self._guess_from_expr(node.value, name_hint=ast.unparse(k), env=env)
 
 				self.module_meta.vslots[v] = [
 					ast.unparse(k),
@@ -369,7 +404,7 @@ class PreCollector(ast.NodeVisitor):
 					ReferenceSet()
 				]
 
-				# record into local env if in function
+				# record into local env (names AND attributes) if in function
 				if self.in_function and self._local_env_stack:
 					self._assign_target_env(k, guess)
 
@@ -441,38 +476,43 @@ class PreCollector(ast.NodeVisitor):
 
 	def _gather_return_guesses(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
 		"""
-		Simple sequential walk through the function body:
-		- tracks local name -> type guesses as we see assignments
-		- collects return/yield guesses using the current env
-		- recurses into common blocks (if/for/while/try) with copied envs
+		Sequential walk with alias-aware env:
+		- tracks local name/attribute -> type guesses as we see assignments
+		- resolves return/yield expressions via env when possible
+		- explores common blocks (if/for/while/try) with copied envs
 		"""
 		returns: list[str] = []
 
 		def guess_expr_with_env(expr: ast.AST, env: dict[str, str]) -> str:
-			# if returning a name, prefer env
-			if isinstance(expr, ast.Name):
-				t = env.get(expr.id)
+			# Names/Attributes: prefer env (alias propagation)
+			if isinstance(expr, (ast.Name, ast.Attribute)):
+				t = self._lookup_env(expr, env)
 				if t:
 					return t
-			# otherwise fall back to general expr guess
-			return self._guess_from_expr(expr, name_hint=ast.unparse(expr) if hasattr(ast, "unparse") else None)
+			# Otherwise, general guess (which itself may consult env for nested bits)
+			return self._guess_from_expr(expr, name_hint=ast.unparse(expr) if hasattr(ast, "unparse") else None, env=env)
 
 		def assign_to_env(target: ast.AST, tname: str, env: dict[str, str]):
-			# mirror _assign_target_env but on a provided env
-			if isinstance(target, ast.Name):
-				env[target.id] = tname
-			elif isinstance(target, (ast.Tuple, ast.List)):
+			key = self._expr_key(target)
+			if key:
+				env[key] = tname
+			# also assign into elements when destructuring
+			if isinstance(target, (ast.Tuple, ast.List)):
 				for elt in target.elts:
 					assign_to_env(elt, tname, env)
-			elif isinstance(target, ast.Attribute):
-				# we keep only simple names in env; attributes are skipped
-				pass
 
 		def handle_assign(targets: list[ast.AST], value: ast.AST, env: dict[str, str]):
+			# alias propagation if RHS is Name/Attribute and found in env
+			aliased_t: str | None = None
+			if isinstance(value, (ast.Name, ast.Attribute)):
+				aliased_t = self._lookup_env(value, env)
+			if aliased_t is None:
+				aliased_t = self._guess_from_expr(value, env=env)
+
 			seq = isinstance(value, (ast.Tuple, ast.List))
 			elts = value.elts if seq else None
 			if seq:
-				# attempt element-wise mapping across first target list/tuple only
+				# element-wise map across flattened targets
 				flat_targets: list[ast.AST] = []
 				for t in targets:
 					if isinstance(t, (ast.Tuple, ast.List)):
@@ -481,13 +521,12 @@ class PreCollector(ast.NodeVisitor):
 						flat_targets.append(t)
 				for i, t in enumerate(flat_targets):
 					if elts and i < len(elts):
-						assign_to_env(t, self._guess_from_expr(elts[i], name_hint=ast.unparse(t)), env)
+						assign_to_env(t, self._guess_from_expr(elts[i], env=env), env)
 					else:
-						assign_to_env(t, self._guess_from_expr(value, name_hint=ast.unparse(t)), env)
+						assign_to_env(t, aliased_t, env)
 			else:
-				gt = self._guess_from_expr(value, name_hint=None)
 				for t in targets:
-					assign_to_env(t, gt, env)
+					assign_to_env(t, aliased_t, env)
 
 		def walk_block(stmts: list[ast.stmt], env: dict[str, str]):
 			for s in stmts:
@@ -504,7 +543,7 @@ class PreCollector(ast.NodeVisitor):
 					handle_assign(s.targets, s.value, env)
 				elif isinstance(s, ast.AnnAssign):
 					tname = (ast.unparse(s.annotation).strip() if s.annotation is not None
-					         else self._guess_from_expr(s.value, name_hint=ast.unparse(s.target)) if s.value else self.DEFAULT_GUESS)
+					         else self._guess_from_expr(s.value, env=env) if s.value else self.DEFAULT_GUESS)
 					assign_to_env(s.target, tname, env)
 				elif isinstance(s, ast.AugAssign):
 					name_hint = ast.unparse(s.target)
@@ -512,11 +551,9 @@ class PreCollector(ast.NodeVisitor):
 					tname = name_based if name_based in {"str", "list", "set", "dict"} else "int"
 					assign_to_env(s.target, tname, env)
 				elif isinstance(s, ast.If):
-					# copy env for branches; collect returns from both
 					walk_block(s.body, env.copy())
 					walk_block(s.orelse, env.copy())
 				elif isinstance(s, (ast.For, ast.AsyncFor)):
-					# iterate: target likely element type of iterable; we coarsely set list
 					assign_to_env(s.target, "list", env)
 					walk_block(s.body, env.copy())
 					walk_block(s.orelse, env.copy())
@@ -530,17 +567,18 @@ class PreCollector(ast.NodeVisitor):
 					walk_block(s.orelse, env.copy())
 					walk_block(s.finalbody, env.copy())
 				elif isinstance(s, (ast.With, ast.AsyncWith)):
-					# infer bound 'as' targets from call/context exprs
 					for item in s.items:
-						tname = self._guess_from_expr(item.context_expr, name_hint=ast.unparse(item.optional_vars) if item.optional_vars else None)
+						tname = self._guess_from_expr(
+							item.context_expr,
+							name_hint=ast.unparse(item.optional_vars) if item.optional_vars else None,
+							env=env
+						)
 						if item.optional_vars:
 							assign_to_env(item.optional_vars, tname, env)
 					walk_block(s.body, env.copy())
 				else:
-					# other statements ignored
 					pass
 
-		# seed env with nothing and walk
 		env0: dict[str, str] = {}
 		walk_block(node.body, env0)
 
@@ -558,18 +596,17 @@ class PreCollector(ast.NodeVisitor):
 		return "None"
 
 	def _assign_target_env(self, target: ast.AST, tname: str):
-		"""Record a guessed type for a target into the current local env (functions only)."""
+		"""Record a guessed type for a target into the current local env (names AND attributes)."""
 		if not self._local_env_stack:
 			return
 		env = self._local_env_stack[-1]
-		if isinstance(target, ast.Name):
-			env[target.id] = tname
-		elif isinstance(target, (ast.Tuple, ast.List)):
+		key = self._expr_key(target)
+		if key:
+			env[key] = tname
+		# propagate to elements on destructuring
+		if isinstance(target, (ast.Tuple, ast.List)):
 			for elt in target.elts:
 				self._assign_target_env(elt, tname)
-		elif isinstance(target, ast.Attribute):
-			# only track locals by simple name
-			pass
 
 	def visit_FunctionDef(self, node: ast.FunctionDef):
 		from typify.preprocessing.instance_utils import ReferenceSet
@@ -602,7 +639,7 @@ class PreCollector(ast.NodeVisitor):
 
 			# build a fresh local env for this function to support slot writes during visit_*
 			self._local_env_stack.append({})
-			# compute return annotation using sequential mini-walk that uses env snapshots
+			# compute return annotation using alias-aware mini-walk
 			if node.returns is not None:
 				try:
 					return_ann = ast.unparse(node.returns).strip() or self._gather_return_guesses(node)
@@ -625,7 +662,7 @@ class PreCollector(ast.NodeVisitor):
 		prev_in_function = self.in_function
 		self.in_function = True
 
-		# traverse function body (this will also update local env for var slots)
+		# traverse function body (updates local env for var slots)
 		self.generic_visit(node)
 
 		self.in_function = prev_in_function
