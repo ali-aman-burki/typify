@@ -1,15 +1,14 @@
 import ast
 import re
+
 from typing import Any
 
 from typify.preprocessing.module_meta import ModuleMeta
 
-
 class PreCollector(ast.NodeVisitor):
 	UNVISITED = "Any"
-	DEFAULT_GUESS = "str"  # final fallback; never Any/object
+	DEFAULT_GUESS = "str"
 
-	# Builtin constructor guesses (non-parametric)
 	_BUILTIN_CALL_GUESS = {
 		"int": "int",
 		"float": "float",
@@ -26,7 +25,6 @@ class PreCollector(ast.NodeVisitor):
 		"range": "range",
 	}
 
-	# --- token-aware name heuristics ---
 	_INT_TOKENS    = {"num", "count", "size", "len", "idx", "index", "step", "port", "age", "year", "day", "slot", "slots"}
 	_FLOAT_TOKENS  = {"ratio", "score", "prob", "pct", "percent", "lat", "lng", "lon"}
 	_BOOL_PREFIXES = ("is_", "has_", "can_", "should_", "use_", "enable_", "disable_", "flag_")
