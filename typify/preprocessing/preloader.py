@@ -57,7 +57,6 @@ print(json.dumps(info))
 		config: dict[str, Union[str, list[str], dict[str, str]]], 
 		project_dir: Path
 	):
-		from typify.preprocessing.precollector import PreCollector
 		from typify.logging import logger
 
 		paths = [project_dir]
