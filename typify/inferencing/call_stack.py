@@ -1,5 +1,4 @@
 from typify.preprocessing.instance_utils import ReferenceSet, Instance
-from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.commons import ArgTuple
 
 class CallSignature:
