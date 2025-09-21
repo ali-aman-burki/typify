@@ -85,10 +85,6 @@ class FunctionUtils:
 
 			GlobalContext.call_stack.pop()
 			logger.debug(f"{logger.emoji_map['pop']} Popped: {repr(signature)}")
-		else:
-			if not signature.running:
-				signature.running = True
-				signature.returns = executor.execute().copy()
 
 		return signature.returns
 

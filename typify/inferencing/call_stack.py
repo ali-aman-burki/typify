@@ -9,30 +9,22 @@ class CallSignature:
 		caller: Instance, 
 		arguments: dict[str, ArgTuple], 
 	):
-		from typify.inferencing.expression import TypeExpr
-		  
 		self.fobject = fobject
 		self.caller = caller
 		self.arguments = arguments
 		self.returns = ReferenceSet()
 		self.running = False
 
-		self.params: dict[str, TypeExpr] = {
-			k: TypeUtils.unify(v.refset).strip().remove_args()
-			for k, v in arguments.items()
-		}
-
 	def __eq__(self, other):
 		if not isinstance(other, CallSignature): return NotImplemented
 		if self.fobject != other.fobject: return False
-		return self.params == other.params
+		return True
 
 	def __hash__(self):
-		return hash((self.fobject, frozenset(self.params.items())))
+		return hash(self.fobject)
 
 	def __repr__(self):
-		parts = [f"{k}: {t}" for (k, t) in self.params.items()]
-		return self.fobject.origin.parent.fqn + "(" + ", ".join(parts) + ")"
+		return self.fobject.origin.parent.fqn + "()"
 
 class CallStack:
 	def __init__(self):
