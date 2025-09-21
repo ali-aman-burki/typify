@@ -65,29 +65,14 @@ class TypeExpr:
 
 		return TypeExpr(self.base, new_args)
 	
-	def remove_nested(self, original: TypeExpr, level: int = 0) -> TypeExpr:
-		@lru_cache(maxsize=None)
-		def _longest_chain(node: TypeExpr) -> tuple[TypeExpr, ...]:
-			if node == original:
-				return (node,)
+	def remove_args(self) -> TypeExpr:
+		from typify.inferencing.typeutils import TypeUtils
+		if Checker.match_origin(self.base, Typing.get_type("Union")):
+			new_args = [arg.remove_args() for arg in self.args]
+			return TypeUtils.unify_from_exprs([TypeExpr(self.base, new_args)])
 
-			best: tuple[TypeExpr, ...] = ()
-			for child in node.args:
-				sub = _longest_chain(child)
-				if sub:
-					cand = (node,) + sub
-					if len(cand) > len(best):
-						best = cand
-			return best
-
-		chain = _longest_chain(self)
-		if not chain:
-			return self
-
-		wrappers = len(chain) - 1
-		idx = len(chain) - 1 - level if level <= wrappers else len(chain) - 1
-		return chain[idx]
-
+		return TypeExpr(self.base, [])
+	
 	def __eq__(self, other: TypeExpr):
 		if not isinstance(other, TypeExpr):
 			return NotImplemented
