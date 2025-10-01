@@ -84,10 +84,15 @@ class Inferencer:
 		return corrected_sequences
 
 	@staticmethod
-	def infer():
+	def infer(
+		outdir,
+		relative_to,
+		normalize
+	):
 		start_time = time.time()
 		corrected_sequences = Inferencer._init_structures()
-		project_only_modules: set[ModuleMeta] = set(next(iter(GlobalContext.libs.values())).meta_map.values())
+		project_lib = next(iter(GlobalContext.libs.values()))
+		project_only_modules: set[ModuleMeta] = set(project_lib.meta_map.values())
 
 		flattened = [meta for sequence in corrected_sequences for meta in sequence]
 		total_modules = len(flattened)
@@ -100,6 +105,12 @@ class Inferencer:
 			meta = flattened[i]
 			total_counts += meta.precollect(meta in project_only_modules)
 			progress.update()
+
+		project_lib.export_types_per_file(
+			output=outdir, 
+			relative_to=relative_to, 
+			normalize=normalize
+		)
 
 		logger.debug(f"{logger.emoji_map['ok']} [Inferencer] Preprocessed {total_modules} module(s)", trail=1)
 		GlobalContext.progress_bar = ProgressBar(
@@ -209,3 +220,10 @@ class Inferencer:
 		logger.info(f"\t\tTotal Modules: {len(set(sequence_followed))}")
 		logger.info(f"\t\tTime Taken: {end_time - start_time:.4f} seconds")
 		logger.info(f"\t\tProgress: {((GlobalContext.progress_bar.iteration / GlobalContext.progress_bar.total) * 100):.2f} percent")
+
+		project_lib.export_types_per_file(
+			output=outdir, 
+			relative_to=relative_to, 
+			normalize=normalize
+		)
+		logger.info(f"{logger.emoji_map['ok']} Exported types to: {outdir.as_posix()}")

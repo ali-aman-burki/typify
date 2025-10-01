@@ -136,14 +136,11 @@ def main():
 		joined = ", ".join(repr(dep) for dep in deps)
 		logger.info(f"   {repr(meta)} ➜ [{joined}]")
 
-	Inferencer.infer()
-
-	next(iter(GlobalContext.libs.values())).export_types_per_file(
-		output=outdir, 
+	Inferencer.infer(
+		outdir=outdir, 
 		relative_to=relative_to, 
 		normalize=True
 	)
-	logger.info(f"{logger.emoji_map['ok']} Exported types to: {outdir.as_posix()}")
 
 	if GlobalCache.staged_contexts:
 		len_staged_ctxs = len(GlobalCache.staged_contexts)
