@@ -181,6 +181,7 @@ class LibraryMeta:
 			data[str(meta.src.as_posix())] = meta.typeslots()
 
 			normalized = normalize_inferred_types(data) if normalize else data
+			normalized["_source_file"] = rel_path
 
 			with json_path.open("w", encoding="utf-8") as f:
 				json.dump(normalized, f, indent="\t", ensure_ascii=False)
