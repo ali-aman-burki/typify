@@ -139,7 +139,7 @@ def main():
 	Inferencer.infer(
 		outdir=outdir, 
 		relative_to=relative_to, 
-		normalize=True
+		normalize=False
 	)
 
 	if GlobalCache.staged_contexts:
