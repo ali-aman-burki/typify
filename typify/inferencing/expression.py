@@ -97,16 +97,24 @@ class TypeExpr:
 
 	def __repr__(self):
 		fqn = self.base.parent.id if self.base else PreCollector.UNVISITED
+
 		if Checker.match_origin(self.base, Builtins.get_type("NoneType")):
 			return "None"
-		elif Checker.match_origin(self.base, Builtins.get_type("function")):
+		if Checker.match_origin(self.base, Builtins.get_type("function")):
 			return "Callable"
-		strs = []
-		for typeexpr in self.args:
-			strs.append(repr(typeexpr))
-		joined = ", ".join(strs)
-		joined = f"[{joined}]" if joined else joined
-		return fqn + f"{joined}"
+
+		if self.args:
+			any_cls = Typing.get_type("Any")
+
+			def is_any(te: TypeExpr) -> bool:
+				return Checker.match_origin(te.base, any_cls)
+
+			if all(is_any(arg) for arg in self.args):
+				return fqn
+
+		joined = ", ".join(repr(arg) for arg in self.args)
+		joined = f"[{joined}]" if joined else ""
+		return fqn + joined
 	
 class AliasParser:
 
