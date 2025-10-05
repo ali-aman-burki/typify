@@ -406,31 +406,6 @@ class PreCollector(ast.NodeVisitor):
 				if self.in_function and self._local_env_stack:
 					self._assign_target_env(k, guess)
 
-	def visit_AugAssign(self, node: ast.AugAssign):
-		from typify.preprocessing.instance_utils import ReferenceSet
-
-		fqn = self._format_fqn()
-		v = (node.target.lineno, node.target.col_offset)
-		if self.typeslots or not self.in_function:
-			self.module_meta.count_map[v] = 1
-
-		if self.typeslots:
-			name_hint = ast.unparse(node.target)
-			name_based = self._guess_from_name(name_hint) or None
-			if name_based in {"str", "list", "set", "dict"}:
-				guess = name_based
-			else:
-				guess = "int"
-			self.module_meta.vslots[v] = [
-				name_hint,
-				guess,
-				fqn,
-				type(node).__name__,
-				ReferenceSet()
-			]
-			if self.in_function and self._local_env_stack:
-				self._assign_target_env(node.target, guess)
-
 	# ---------- classes & functions ----------
 
 	def visit_ClassDef(self, node: ast.ClassDef):

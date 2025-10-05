@@ -105,10 +105,7 @@ class ModuleMeta:
 		def type_filter(refset: ReferenceSet, preinferred: str) -> str:
 			inferred = refset.typestring() if refset else preinferred
 
-			if (
-				PreCollector.UNVISITED in (preinferred, inferred)
-				or inferred == preinferred or inferred != "None"
-			):
+			if inferred == preinferred or preinferred == PreCollector.UNVISITED: 
 				return inferred
 
 			type_expr = refset.as_type()
