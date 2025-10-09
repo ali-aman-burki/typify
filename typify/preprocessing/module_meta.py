@@ -30,7 +30,10 @@ class ModuleMeta:
 
 	def precollect(self, typeslots: bool):
 		from typify.preprocessing.precollector import PreCollector
-		PreCollector(self, typeslots).visit(self.tree)
+		try:
+			PreCollector(self, typeslots).visit(self.tree)
+		except (RecursionError, UnicodeError):
+			pass	
 		return sum(self.count_map.values())
 
 	def snapshot(self) -> tuple[dict, dict]:

@@ -151,7 +151,11 @@ class Executor(ast.NodeVisitor):
 
 				return self.returns
 
-		self.visit(self.tree)
+		try:
+			self.visit(self.tree)
+		except (RecursionError, UnicodeError):
+			return self.returns
+		
 		if isinstance(self.namespace, CallFrame):
 			position = (fobject.tree.lineno, fobject.tree.col_offset)
 			if not TypeUtils.has_complete_return(self.tree.body):

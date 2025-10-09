@@ -180,8 +180,9 @@ class LibraryMeta:
 			data = OrderedDict()
 			data[str(meta.src.as_posix())] = meta.typeslots()
 
+			src_rel_path = meta.src.relative_to(relative_to.parent).as_posix()
 			normalized = normalize_inferred_types(data) if normalize else data
-			normalized["_source_file"] = rel_path
+			normalized["_source_file"] = src_rel_path
 
 			with json_path.open("w", encoding="utf-8") as f:
 				json.dump(normalized, f, indent="\t", ensure_ascii=False)

@@ -132,7 +132,10 @@ class GraphBuilder:
 			GlobalContext.dependency_graph[m] = []
 			if builtins:
 				_add_unique(GlobalContext.dependency_graph[m], builtins)
-			DependencyTracker(m).visit(m.tree)
+			try:
+				DependencyTracker(m).visit(m.tree)
+			except (RecursionError, UnicodeError):
+				continue
 			if log_files:
 				rel = Path(m.src).resolve().relative_to(lib.src.resolve())
 				logger.debug(f"\t➜ {logger.emoji_map['file']} Recomputed {rel.as_posix()}")

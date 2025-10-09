@@ -44,32 +44,34 @@ class PreCollector(ast.NodeVisitor):
 		args_node = fdef.args
 		parts: list[str] = []
 
-		# pos-only
+		# collect all positional params in order
+		pos_params = args_node.posonlyargs + args_node.args
+		pos_defaults = [None] * (len(pos_params) - len(args_node.defaults)) + list(args_node.defaults)
+
+		# --- posonly ---
 		for i, arg in enumerate(args_node.posonlyargs):
 			name = arg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
-			default_idx = i - (len(args_node.posonlyargs) - len(args_node.defaults))
-			default = args_node.defaults[default_idx] if default_idx >= 0 else None
+			default = pos_defaults[i]
 			part = f"{name}: {ann}"
 			if default is not None:
 				part += f" = {ast.unparse(default).strip()}"
 			parts.append(part)
-		if args_node.posonlyargs:
-			parts.append("/")
 
-		# regular positional
-		total_args = len(args_node.args)
-		defaults_offset = total_args - len(args_node.defaults)
-		for i, arg in enumerate(args_node.args):
+		if args_node.posonlyargs:
+			parts.append("/")   # must go *right here*
+
+		# --- regular positional ---
+		for j, arg in enumerate(args_node.args, start=len(args_node.posonlyargs)):
 			name = arg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
-			default = args_node.defaults[i - defaults_offset] if i >= defaults_offset else None
+			default = pos_defaults[j]
 			part = f"{name}: {ann}"
 			if default is not None:
 				part += f" = {ast.unparse(default).strip()}"
 			parts.append(part)
 
-		# *args / kw-only separator
+		# *args / separator
 		if args_node.vararg:
 			name = args_node.vararg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
@@ -77,7 +79,7 @@ class PreCollector(ast.NodeVisitor):
 		elif args_node.kwonlyargs:
 			parts.append("*")
 
-		# kw-only
+		# keyword-only
 		for i, arg in enumerate(args_node.kwonlyargs):
 			name = arg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
@@ -593,26 +595,30 @@ class PreCollector(ast.NodeVisitor):
 
 		if self.typeslots:
 			args_node = node.args
-			# defaults aligned with args
-			pos_defaults = [None] * (len(args_node.args) - len(args_node.defaults)) + list(args_node.defaults)
-			# crude pos-only alignment (ok for heuristic stage)
-			posonly_defaults = [None] * len(args_node.posonlyargs)
+
+			# correct alignment across posonly + args
+			pos_params = args_node.posonlyargs + args_node.args
+			pos_defaults = [None] * (len(pos_params) - len(args_node.defaults)) + list(args_node.defaults)
 			kw_defaults = list(args_node.kw_defaults)
 
+			# now iterate with aligned defaults
 			for i, arg in enumerate(args_node.posonlyargs):
-				param_slots[arg.arg] = self._infer_param_type(arg, posonly_defaults[i] if i < len(posonly_defaults) else None)
-			for i, arg in enumerate(args_node.args):
-				param_slots[arg.arg] = self._infer_param_type(arg, pos_defaults[i] if i < len(pos_defaults) else None)
+				param_slots[arg.arg] = self._infer_param_type(arg, pos_defaults[i])
+
+			for i, arg in enumerate(args_node.args, start=len(args_node.posonlyargs)):
+				param_slots[arg.arg] = self._infer_param_type(arg, pos_defaults[i])
+
 			if args_node.vararg:
 				param_slots[args_node.vararg.arg] = (self._infer_param_type(args_node.vararg, None) or "tuple")
+
 			for i, arg in enumerate(args_node.kwonlyargs):
 				param_slots[arg.arg] = self._infer_param_type(arg, kw_defaults[i])
+
 			if args_node.kwarg:
 				param_slots[args_node.kwarg.arg] = (self._infer_param_type(args_node.kwarg, None) or "dict")
 
-			# build a fresh local env for this function to support slot writes during visit_*
+			# fresh local env
 			self._local_env_stack.append({})
-			# compute return annotation using alias-aware mini-walk
 			if node.returns is not None:
 				try:
 					return_ann = ast.unparse(node.returns).strip() or self._gather_return_guesses(node)
@@ -634,14 +640,12 @@ class PreCollector(ast.NodeVisitor):
 		self.scope_stack.append(("F", node.name))
 		prev_in_function = self.in_function
 		self.in_function = True
-
-		# traverse function body (updates local env for var slots)
 		self.generic_visit(node)
-
 		self.in_function = prev_in_function
 		self.scope_stack.pop()
 		if self.typeslots and self._local_env_stack:
 			self._local_env_stack.pop()
+
 
 	def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
 		self.visit_FunctionDef(node)
