@@ -87,8 +87,14 @@ class Inferencer:
 	def infer(
 		outdir,
 		relative_to,
-		normalize
+		normalize,
+		usage_driven,
+		heur_driven,
 	):
+		if (not usage_driven) and (not heur_driven):
+			usage_driven = True
+			heur_driven = True
+
 		start_time = time.time()
 		corrected_sequences = Inferencer._init_structures()
 		project_lib = next(iter(GlobalContext.libs.values()))
@@ -103,7 +109,7 @@ class Inferencer:
 		total_counts = 0
 		for i in range(total_modules):
 			meta = flattened[i]
-			total_counts += meta.precollect(meta in project_only_modules)
+			total_counts += meta.precollect(meta in project_only_modules, heur_driven)
 			progress.update()
 
 		project_lib.export_types_per_file(
@@ -111,8 +117,11 @@ class Inferencer:
 			relative_to=relative_to, 
 			normalize=normalize
 		)
-
 		logger.debug(f"{logger.emoji_map['ok']} [Inferencer] Preprocessed {total_modules} module(s)", trail=1)
+
+		if not usage_driven:
+			return
+
 		GlobalContext.progress_bar = ProgressBar(
 			total=total_counts,
 			prefix="Performing Inference",

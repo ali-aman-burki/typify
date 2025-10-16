@@ -6,7 +6,7 @@ from collections import (
 	OrderedDict
 )
 
-from typify.normalizer import normalize_inferred_types
+from typify.normalizer import normalize_typeslots
 from typify.preprocessing.symbol_table import (
 	Library,
 	Package,
@@ -181,8 +181,7 @@ class LibraryMeta:
 			data[str(meta.src.as_posix())] = meta.typeslots()
 
 			src_rel_path = meta.src.relative_to(relative_to.parent).as_posix()
-			normalized = normalize_inferred_types(data) if normalize else data
-			normalized["_source_file"] = src_rel_path
+			normalized = normalize_typeslots(src_rel_path, data[str(meta.src.as_posix())]) if normalize else data
 
 			with json_path.open("w", encoding="utf-8") as f:
 				json.dump(normalized, f, indent="\t", ensure_ascii=False)

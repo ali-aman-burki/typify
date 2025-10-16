@@ -1,109 +1,197 @@
-import ast
-from collections import defaultdict
-from typing import Any, Dict, List, Tuple
+import ast, re
+from typing import Dict, Any, List, Tuple
 
-def normalize_inferred_types(inferred: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
-    if "variables" not in inferred and "functions" not in inferred:
-        if not inferred:
-            return {"global@global": []}
-        inferred = next(iter(inferred.values()))
+def simplify_scope(q: str) -> str:
+	if not q:
+		return ""
+	# remove locals + any lingering C:/F: markers and collapse dots
+	q = (q
+		 .replace(".<locals>.", ".")
+		 .replace("<locals>.", "")
+		 .replace(".<locals>", "")
+		 .replace("<locals>", "")
+		 .replace("C:", "")
+		 .replace("F:", ""))
+	q = re.sub(r"\.{2,}", ".", q).strip(".")
+	return q
 
-    var_entries = inferred.get("variables", {}) or {}
-    func_entries = inferred.get("functions", {}) or {}
+# -------- scope & location parsing from anotherformat keys --------
+SCOPE_RE = re.compile(
+	r"""^
+		(?P<prefix>  # e.g., "C:MainPageWidget.F:_setup_datetime.F:state_changed" or ":"
+			(?:[CF]:[^:.]+(?:\.[F]:[^:.]+)*)? | :
+		)
+		:
+		(?P<line>\d+):
+		(?P<col>\d+)
+		$
+	""",
+	re.X,
+)
 
-    collected: dict[str, dict[Tuple[str, str], set[str]]] = defaultdict(lambda: defaultdict(set))
+def parse_key_scope_and_loc(key: str) -> Tuple[str, List[List[int]]]:
+	"""
+	Convert "C:Class.F:func.F:inner:LINE:COL" → ("Class.func.inner", [[LINE, COL]])
+	":"-only prefix (e.g., ":16:0") → ("", [[16,0]])  # module/global scope
+	"""
+	m = SCOPE_RE.match(key)
+	if not m:
+		return ("", [])
+	prefix = m.group("prefix")
+	line, col = int(m.group("line")), int(m.group("col"))
 
-    collected["global@global"]
+	if prefix == ":":
+		return ("", [[line, col]])
 
-    def _unparse(ann: ast.AST | None) -> str:
-        if ann is None:
-            return "Any"
-        try:
-            return ast.unparse(ann)
-        except Exception:
-            return "Any"
+	# FIRST: strip all C:/F: tags from the raw scope string
+	prefix_clean = prefix.replace("C:", "").replace("F:", "")
+	# split + drop empties, then rejoin
+	parts = [p for p in prefix_clean.split(".") if p]
+	scope = ".".join(parts)
+	scope = simplify_scope(scope)
+	return (scope, [[line, col]])
 
-    def _func_key(func_name: str, class_stack: List[str]) -> str:
-        return f"{func_name}@{','.join(class_stack) if class_stack else 'global'}"
+# -------- AST helpers --------
+def last_name_from_expr(expr_text: str) -> str:
+	"""
+	Parse an expression like 'self.a.b' or 'obj.attr' or just 'name'
+	and return the rightmost identifier ('b', 'attr', or 'name').
+	"""
+	try:
+		node = ast.parse(expr_text, mode="eval").body
+	except Exception:
+		return expr_text
 
-    def _parse_context(encoded_key: str) -> tuple[list[str], str | None]:
-        class_stack: list[str] = []
-        func_name: str | None = None
-        for seg in encoded_key.split("."):
-            if seg.startswith("C:"):
-                class_stack.append(seg[2:].split(":")[0])
-            elif seg.startswith("F:"):
-                func_name = seg[2:].split(":")[0]
-        return class_stack, func_name
+	while True:
+		if isinstance(node, ast.Attribute):
+			return node.attr
+		if isinstance(node, ast.Name):
+			return node.id
+		if isinstance(node, ast.Subscript):
+			node = node.value
+			continue
+		if isinstance(node, ast.Call):
+			node = node.func
+			continue
+		try:
+			return ast.unparse(node)
+		except Exception:
+			return expr_text
 
-    def _var_display_name(raw_name: str) -> str:
-        if "." not in raw_name:
-            return raw_name
-        parts = raw_name.split(".")
-        root = parts[0]
-        if root == "self":
-            return parts[-1]
-        return f"{root}_"
+def parse_signature(sig_src: str) -> Tuple[str, Dict[str, str], str]:
+	"""
+	Given: "def f(self: C, x: int, *, y: str) -> None: ..."
+	Return: (func_name, {param: annotation_str_or_""}, return_annotation_or_"")
+	"""
+	try:
+		mod = ast.parse(sig_src)
+	except Exception:
+		return ("", {}, "")
+	fndef = next((n for n in mod.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))), None)
+	if not fndef:
+		return ("", {}, "")
 
-    def _ensure_class_buckets(class_stack: List[str]) -> None:
-        for i in range(1, len(class_stack) + 1):
-            collected[_func_key("class", class_stack[:i])]
+	def ann_to_str(a):
+		if a is None: return ""
+		try:
+			return ast.unparse(a)
+		except Exception:
+			return ""
 
-    for encoded_key, sig in func_entries.items():
-        class_stack, _ = _parse_context(encoded_key)
+	params: Dict[str, str] = {}
 
-        _ensure_class_buckets(class_stack)
+	for a in getattr(fndef.args, "posonlyargs", []):
+		params[a.arg] = ann_to_str(a.annotation)
+	for a in fndef.args.args:
+		params[a.arg] = ann_to_str(a.annotation)
 
-        fn_mod = ast.parse(sig)
-        fn = fn_mod.body[0]
-        assert isinstance(fn, ast.FunctionDef)
+	if fndef.args.vararg:
+		params["*"+fndef.args.vararg.arg] = ann_to_str(fndef.args.vararg.annotation)
 
-        key = _func_key(fn.name, class_stack)
+	for a in fndef.args.kwonlyargs:
+		params[a.arg] = ann_to_str(a.annotation)
 
-        def add_arg(a: ast.arg | None) -> None:
-            if a is None:
-                return
-            collected[key][("arg", a.arg)].add(_unparse(a.annotation))
+	if fndef.args.kwarg:
+		params["**"+fndef.args.kwarg.arg] = ann_to_str(fndef.args.kwarg.annotation)
 
-        for a in getattr(fn.args, "posonlyargs", []):
-            add_arg(a)
-        for a in fn.args.args:
-            add_arg(a)
-        if fn.args.vararg:
-            add_arg(fn.args.vararg)
-        for a in fn.args.kwonlyargs:
-            add_arg(a)
-        if fn.args.kwarg:
-            add_arg(fn.args.kwarg)
+	ret = ann_to_str(fndef.returns)
+	return (fndef.name, params, ret)
 
-        collected[key][("return", fn.name)].add(_unparse(fn.returns))
+# -------- buckets utilities --------
+def to_type_list(s: str) -> List[str]:
+	return [s] if s and s.strip() else []
 
-    for encoded_key, info in var_entries.items():
-        class_stack, maybe_func = _parse_context(encoded_key)
+def add_bucket(out: List[Dict[str, Any]], category: str, scope: str, name: str, t: List[str], locs: List[List[int]]):
+	out.append({
+		"category": category,
+		"scope": simplify_scope(scope) or "",
+		"name": name,
+		"type": t or [],
+		"locations": locs or []
+	})
 
-        _ensure_class_buckets(class_stack)
+# -------- main normalization --------
+def normalize_typeslots(key: str, raw: Dict[str, Any]) -> dict[str, List[Dict[str, Any]]]:
+	buckets: List[Dict[str, Any]] = []
 
-        raw_name = info.get("name", "")
-        typ = info.get("type", "Any")
+	# 1) Functions: parse signatures for args & return; use function key for locations & scope pieces
+	func_key_to_scope_loc: Dict[str, Tuple[str, List[List[int]]]] = {}
+	for fkey, sig in (raw.get("functions") or {}).items():
+		scope_from_key, fn_locs = parse_key_scope_and_loc(fkey)
+		fname, params, retann = parse_signature(sig)
 
-        if maybe_func:
-            key = _func_key(maybe_func, class_stack)
-            category = "local"
-            name = _var_display_name(raw_name)
-        else:
-            key = _func_key("class", class_stack)
-            category = "classvar"
-            name = raw_name.split(".")[-1] if raw_name else raw_name
+		if scope_from_key:
+			parts = scope_from_key.split(".")
+			fq = ".".join(parts + [fname]) if (fname and parts and parts[-1] != fname) else (scope_from_key or fname or "")
+		else:
+			fq = fname or ""
 
-        collected[key][(category, name)].add(str(typ))
+		# args
+		for p_name, p_type in params.items():
+			add_bucket(buckets, "argument", fq, p_name, to_type_list(p_type), fn_locs)
 
-    result: Dict[str, List[Dict[str, Any]]] = {}
-    order = {"arg": 0, "local": 1, "return": 2}
-    for key, slots in collected.items():
-        bucket: list[dict[str, Any]] = []
-        for (category, name), typeset in slots.items():
-            bucket.append({"category": category, "name": name, "type": sorted(typeset)})
-        bucket.sort(key=lambda d: (order.get(d["category"], 9), d["name"]))
-        result[key] = bucket
+		# return (name = function's simple name)
+		add_bucket(buckets, "return", fq, fname or "", to_type_list(retann), fn_locs)
 
-    return result
+		func_key_to_scope_loc[fkey] = (fq, fn_locs)
+
+	# 2) Variables: normalize names, parse scope; merge duplicates per (scope, name)
+	merged: Dict[Tuple[str, str], Dict[str, Any]] = {}
+
+	for vkey, vinfo in (raw.get("variables") or {}).items():
+		scope_from_key, locs = parse_key_scope_and_loc(vkey)
+		fq_scope = scope_from_key
+
+		raw_name = vinfo.get("name", "")
+		norm_name = last_name_from_expr(raw_name)
+
+		vtype = vinfo.get("type", "")
+		tlist = to_type_list(vtype)
+
+		k = (fq_scope, norm_name)
+		if k not in merged:
+			merged[k] = {
+				"category": "variable",
+				"scope": fq_scope,
+				"name": norm_name,
+				"type": [],
+				"locations": []
+			}
+		for t in tlist:
+			if t not in merged[k]["type"]:
+				merged[k]["type"].append(t)
+		merged[k]["locations"].extend(locs or [])
+
+	# collapse multiple type entries into a single Union[...] string
+	for _, payload in merged.items():
+		types = payload["type"]
+		if len(types) > 1:
+			union_str = f"Union[{', '.join(sorted(types))}]"
+			payload["type"] = [union_str]
+		elif len(types) == 1:
+			payload["type"] = [types[0]]
+		else:
+			payload["type"] = []
+		add_bucket(buckets, payload["category"], payload["scope"], payload["name"], payload["type"], payload["locations"])
+
+	return {key: buckets}

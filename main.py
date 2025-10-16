@@ -44,6 +44,8 @@ def parse_args():
 	parser.add_argument("--prune-cache", action="store_true", help="Prune stale entries from cache after setup.")
 	parser.add_argument("--dont-cache", action="store_true", help="Prevent saving results to cache.")
 	parser.add_argument("--clear-output", action="store_true", help="Clear the output directory before running.")
+	parser.add_argument("--heur", action="store_true", help="Run hueristics-driven type prediction.")
+	parser.add_argument("--usage", action="store_true", help="Run usage-driven type prediction.")
 
 	return parser.parse_args()
 
@@ -139,7 +141,9 @@ def main():
 	Inferencer.infer(
 		outdir=outdir, 
 		relative_to=relative_to, 
-		normalize=True
+		normalize=True,
+		usage_driven=args.usage,
+		heur_driven=args.heur
 	)
 
 	if GlobalCache.staged_contexts:

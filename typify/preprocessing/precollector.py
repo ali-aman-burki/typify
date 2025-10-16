@@ -7,7 +7,7 @@ from typify.preprocessing.module_meta import ModuleMeta
 
 class PreCollector(ast.NodeVisitor):
 	UNVISITED = "Any"
-	DEFAULT_GUESS = "str"
+	DEFAULT_GUESS = ""
 
 	_BUILTIN_CALL_GUESS = {
 		"int": "int",
@@ -53,7 +53,8 @@ class PreCollector(ast.NodeVisitor):
 			name = arg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
 			default = pos_defaults[i]
-			part = f"{name}: {ann}"
+			# omit annotation if empty string
+			part = f"{name}" if ann == "" else f"{name}: {ann}"
 			if default is not None:
 				part += f" = {ast.unparse(default).strip()}"
 			parts.append(part)
@@ -66,7 +67,7 @@ class PreCollector(ast.NodeVisitor):
 			name = arg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
 			default = pos_defaults[j]
-			part = f"{name}: {ann}"
+			part = f"{name}" if ann == "" else f"{name}: {ann}"
 			if default is not None:
 				part += f" = {ast.unparse(default).strip()}"
 			parts.append(part)
@@ -75,7 +76,7 @@ class PreCollector(ast.NodeVisitor):
 		if args_node.vararg:
 			name = args_node.vararg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
-			parts.append(f"*{name}: {ann}")
+			parts.append(f"*{name}" if ann == "" else f"*{name}: {ann}")
 		elif args_node.kwonlyargs:
 			parts.append("*")
 
@@ -84,7 +85,7 @@ class PreCollector(ast.NodeVisitor):
 			name = arg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
 			default = args_node.kw_defaults[i]
-			part = f"{name}: {ann}"
+			part = f"{name}" if ann == "" else f"{name}: {ann}"
 			if default is not None:
 				part += f" = {ast.unparse(default).strip()}"
 			parts.append(part)
@@ -93,9 +94,11 @@ class PreCollector(ast.NodeVisitor):
 		if args_node.kwarg:
 			name = args_node.kwarg.arg
 			ann = parameters.get(name, PreCollector.UNVISITED)
-			parts.append(f"**{name}: {ann}")
+			parts.append(f"**{name}" if ann == "" else f"**{name}: {ann}")
 
-		return f"def {fqn}({', '.join(parts)}) -> {return_annotation}: ..."
+		# omit return annotation entirely if empty string
+		ret = "" if return_annotation == "" else f" -> {return_annotation}"
+		return f"def {fqn}({', '.join(parts)}){ret}: ..."
 
 	@staticmethod
 	def collect_parameter_slots(fdef: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, str]:
@@ -122,10 +125,11 @@ class PreCollector(ast.NodeVisitor):
 		visit(expr)
 		return targets
 
-	def __init__(self, module_meta: ModuleMeta, typeslots: bool):
+	def __init__(self, module_meta: ModuleMeta, typeslots: bool, infer: bool):
 		self.module_meta = module_meta
 		self.scope_stack: list[tuple[str, str]] = []
 		self.typeslots = typeslots
+		self.infer = infer
 		self.in_function = False
 
 		# imports map visible name -> original base name
@@ -337,15 +341,19 @@ class PreCollector(ast.NodeVisitor):
 			self.module_meta.count_map[position] = 1
 
 		if self.typeslots:
-			if node.annotation is not None:
-				ann = ast.unparse(node.annotation).strip()
+			if self.infer:
+				if node.annotation is not None:
+					ann = ast.unparse(node.annotation).strip()
+				else:
+					# consult env for alias if inside a function
+					env = self._local_env_stack[-1] if (self.in_function and self._local_env_stack) else None
+					ann = (
+						self._guess_from_expr(node.value, name_hint=ast.unparse(node.target), env=env)
+						if node.value else self.DEFAULT_GUESS
+					)
 			else:
-				# consult env for alias if inside a function
-				env = self._local_env_stack[-1] if (self.in_function and self._local_env_stack) else None
-				ann = (
-					self._guess_from_expr(node.value, name_hint=ast.unparse(node.target), env=env)
-					if node.value else self.DEFAULT_GUESS
-				)
+				# infer disabled: force empty string, ignore src annotations
+				ann = ""
 
 			self.module_meta.vslots[position] = [
 				ast.unparse(node.target),
@@ -355,8 +363,8 @@ class PreCollector(ast.NodeVisitor):
 				ReferenceSet()
 			]
 
-			# update local env (names and attributes)
-			if self.in_function and self._local_env_stack:
+			# update local env (names and attributes) only if inferring
+			if self.infer and self.in_function and self._local_env_stack:
 				self._assign_target_env(node.target, ann)
 
 	def visit_Assign(self, node: ast.Assign):
@@ -376,25 +384,28 @@ class PreCollector(ast.NodeVisitor):
 				if not self.typeslots:
 					continue
 
-				guess = None
-				if value_is_seq and isinstance(k, (ast.Name, ast.Attribute)):
-					try:
-						target_names = [t for t in PreCollector.collect_targets(target).keys()]
-						if k in target_names:
-							idx = target_names.index(k)
-							if elts and idx < len(elts):
-								guess = self._guess_from_expr(elts[idx], name_hint=ast.unparse(k), env=env)
-					except Exception:
-						guess = None
-				if guess is None:
-					# alias propagation: if RHS is Name/Attribute and found in env, reuse that type
-					if isinstance(node.value, (ast.Name, ast.Attribute)) and env is not None:
-						aliased = self._lookup_env(node.value, env)
-						if aliased:
-							guess = aliased
-					# otherwise general guess (also consult env for nested)
+				if self.infer:
+					guess = None
+					if value_is_seq and isinstance(k, (ast.Name, ast.Attribute)):
+						try:
+							target_names = [t for t in PreCollector.collect_targets(target).keys()]
+							if k in target_names:
+								idx = target_names.index(k)
+								if elts and idx < len(elts):
+									guess = self._guess_from_expr(elts[idx], name_hint=ast.unparse(k), env=env)
+						except Exception:
+							guess = None
 					if guess is None:
-						guess = self._guess_from_expr(node.value, name_hint=ast.unparse(k), env=env)
+						# alias propagation: if RHS is Name/Attribute and env has it
+						if isinstance(node.value, (ast.Name, ast.Attribute)) and env is not None:
+							aliased = self._lookup_env(node.value, env)
+							if aliased:
+								guess = aliased
+						# otherwise general guess
+						if guess is None:
+							guess = self._guess_from_expr(node.value, name_hint=ast.unparse(k), env=env)
+				else:
+					guess = ""
 
 				self.module_meta.vslots[v] = [
 					ast.unparse(k),
@@ -404,8 +415,8 @@ class PreCollector(ast.NodeVisitor):
 					ReferenceSet()
 				]
 
-				# record into local env (names AND attributes) if in function
-				if self.in_function and self._local_env_stack:
+				# record into local env only when inferring
+				if self.infer and self.in_function and self._local_env_stack:
 					self._assign_target_env(k, guess)
 
 	# ---------- classes & functions ----------
@@ -594,38 +605,52 @@ class PreCollector(ast.NodeVisitor):
 			self.module_meta.count_map[position] = 2 if self.typeslots else 1
 
 		if self.typeslots:
-			args_node = node.args
+			if self.infer:
+				args_node = node.args
 
-			# correct alignment across posonly + args
-			pos_params = args_node.posonlyargs + args_node.args
-			pos_defaults = [None] * (len(pos_params) - len(args_node.defaults)) + list(args_node.defaults)
-			kw_defaults = list(args_node.kw_defaults)
+				# correct alignment across posonly + args
+				pos_params = args_node.posonlyargs + args_node.args
+				pos_defaults = [None] * (len(pos_params) - len(args_node.defaults)) + list(args_node.defaults)
+				kw_defaults = list(args_node.kw_defaults)
 
-			# now iterate with aligned defaults
-			for i, arg in enumerate(args_node.posonlyargs):
-				param_slots[arg.arg] = self._infer_param_type(arg, pos_defaults[i])
+				# now iterate with aligned defaults
+				for i, arg in enumerate(args_node.posonlyargs):
+					param_slots[arg.arg] = self._infer_param_type(arg, pos_defaults[i])
 
-			for i, arg in enumerate(args_node.args, start=len(args_node.posonlyargs)):
-				param_slots[arg.arg] = self._infer_param_type(arg, pos_defaults[i])
+				for i, arg in enumerate(args_node.args, start=len(args_node.posonlyargs)):
+					param_slots[arg.arg] = self._infer_param_type(arg, pos_defaults[i])
 
-			if args_node.vararg:
-				param_slots[args_node.vararg.arg] = (self._infer_param_type(args_node.vararg, None) or "tuple")
+				if args_node.vararg:
+					param_slots[args_node.vararg.arg] = (self._infer_param_type(args_node.vararg, None) or "tuple")
 
-			for i, arg in enumerate(args_node.kwonlyargs):
-				param_slots[arg.arg] = self._infer_param_type(arg, kw_defaults[i])
+				for i, arg in enumerate(args_node.kwonlyargs):
+					param_slots[arg.arg] = self._infer_param_type(arg, kw_defaults[i])
 
-			if args_node.kwarg:
-				param_slots[args_node.kwarg.arg] = (self._infer_param_type(args_node.kwarg, None) or "dict")
+				if args_node.kwarg:
+					param_slots[args_node.kwarg.arg] = (self._infer_param_type(args_node.kwarg, None) or "dict")
 
-			# fresh local env
-			self._local_env_stack.append({})
-			if node.returns is not None:
-				try:
-					return_ann = ast.unparse(node.returns).strip() or self._gather_return_guesses(node)
-				except Exception:
+				# fresh local env
+				self._local_env_stack.append({})
+				if node.returns is not None:
+					try:
+						return_ann = ast.unparse(node.returns).strip() or self._gather_return_guesses(node)
+					except Exception:
+						return_ann = self._gather_return_guesses(node)
+				else:
 					return_ann = self._gather_return_guesses(node)
 			else:
-				return_ann = self._gather_return_guesses(node)
+				# infer disabled: force all parameter types to "", ignore source annotations
+				for a in node.args.posonlyargs:
+					param_slots[a.arg] = ""
+				for a in node.args.args:
+					param_slots[a.arg] = ""
+				if node.args.vararg:
+					param_slots[node.args.vararg.arg] = ""
+				for a in node.args.kwonlyargs:
+					param_slots[a.arg] = ""
+				if node.args.kwarg:
+					param_slots[node.args.kwarg.arg] = ""
+				return_ann = ""
 
 			self.module_meta.fslots[position] = [
 				node,
@@ -643,7 +668,7 @@ class PreCollector(ast.NodeVisitor):
 		self.generic_visit(node)
 		self.in_function = prev_in_function
 		self.scope_stack.pop()
-		if self.typeslots and self._local_env_stack:
+		if self.typeslots and self.infer and self._local_env_stack:
 			self._local_env_stack.pop()
 
 

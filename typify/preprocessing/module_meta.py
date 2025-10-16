@@ -28,10 +28,10 @@ class ModuleMeta:
 
 		self.count_map: dict[tuple[int, int], int] = {}
 
-	def precollect(self, typeslots: bool):
+	def precollect(self, typeslots: bool, infer: bool):
 		from typify.preprocessing.precollector import PreCollector
 		try:
-			PreCollector(self, typeslots).visit(self.tree)
+			PreCollector(self, typeslots, infer).visit(self.tree)
 		except (RecursionError, UnicodeError):
 			pass	
 		return sum(self.count_map.values())
@@ -108,6 +108,12 @@ class ModuleMeta:
 		def type_filter(refset: ReferenceSet, preinferred: str) -> str:
 			inferred = refset.typestring() if refset else preinferred
 
+			if inferred == PreCollector.UNVISITED and not preinferred:
+				return ""
+
+			if not preinferred:
+				return inferred
+
 			if inferred == preinferred or preinferred == PreCollector.UNVISITED: 
 				return inferred
 
@@ -129,13 +135,11 @@ class ModuleMeta:
 		for key, value in self.vslots.items():
 			name_value = value[0] 
 			type_value = type_filter(value[4], value[1])
-			node_value = value[3]
 			
 			result_key = f"{value[2]}:{key[0]}:{key[1]}"
 			result_value = {
 				"name": name_value,
-				"type": type_value,
-				"node": node_value 
+				"type": type_value
 			}
 			data["variables"][result_key] = result_value
 
