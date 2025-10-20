@@ -178,13 +178,12 @@ class LibraryMeta:
 			json_path = output / json_name
 
 			data = OrderedDict()
-			data[str(meta.src.as_posix())] = meta.typeslots()
 
 			src_rel_path = meta.src.relative_to(relative_to.parent).as_posix()
-			normalized = normalize_typeslots(src_rel_path, data[str(meta.src.as_posix())]) if normalize else data
+			data = meta.typeslots(src_rel_path)
 
 			with json_path.open("w", encoding="utf-8") as f:
-				json.dump(normalized, f, indent="\t", ensure_ascii=False)
+				json.dump(data, f, indent="\t", ensure_ascii=False)
 
 			progress.update(i)
 

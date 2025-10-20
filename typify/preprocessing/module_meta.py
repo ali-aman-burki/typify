@@ -13,7 +13,7 @@ class ModuleMeta:
 			trust_annotations: bool,
 			last_modified: Path
 		):
-		from typify.preprocessing.instance_utils import ReferenceSet
+		from typify.preprocessing.instance_utils import VSlot, FSlot
 		
 		self.src = src
 		self.tree = tree
@@ -21,10 +21,10 @@ class ModuleMeta:
 		self.trust_annotations = trust_annotations
 		self.last_modified = last_modified
 
-		self.vslots: dict[tuple[int, int], list[str | ReferenceSet]] = {}
-		self.fslots: dict[tuple[int, int], list[ast.FunctionDef | ast.AsyncFunctionDef | str | dict[str, ReferenceSet] | ReferenceSet]] = {}
-		self.vslots_snapshots: dict[tuple[int, int], ReferenceSet] = {}
-		self.fslots_snapshots: dict[tuple[int, int], list[dict[str, ReferenceSet] | ReferenceSet]] = {}
+		self.vslots: dict[tuple[int, int], VSlot] = {}
+		self.fslots: dict[tuple[int, int], FSlot] = {}
+		self.vslots_snapshots: dict[tuple[int, int], VSlot] = {}
+		self.fslots_snapshots: dict[tuple[int, int], FSlot] = {}
 
 		self.count_map: dict[tuple[int, int], int] = {}
 
@@ -39,16 +39,16 @@ class ModuleMeta:
 	def snapshot(self) -> tuple[dict, dict]:
 		hashable_funcslots = {}
 		for position, funcstuff in self.fslots_snapshots.items():
-			h_params = {}
-			for p, r in funcstuff[0].items():
-				h_params[p] = r.as_type()
-			h_returns = funcstuff[1].as_type()
+			hashed_params = {}
+			for p, r in funcstuff.u_params.items():
+				hashed_params[p] = r.as_type()
+			hashed_returns = funcstuff.u_ret.as_type()
 
-			hashable_funcslots[position] = (h_params, h_returns)
+			hashable_funcslots[position] = (hashed_params, hashed_returns)
 		
 		hashable_varsots = {}
 		for position, varstuff in self.vslots_snapshots.items():
-			hashable_varsots[position] = varstuff.as_type()
+			hashable_varsots[position] = varstuff.u_type.as_type()
 
 		return (hashable_varsots, hashable_funcslots)
 
@@ -58,24 +58,51 @@ class ModuleMeta:
 			self.count_map[position] -= 1
 			GlobalContext.progress_bar.update()
 
+	def register_vslot(
+			self, 
+			position: tuple[int, int],
+			vslot
+		):
+		
+		if position not in self.vslots: 
+			self.vslots[position] = vslot
+	
+	def register_vslot_snapshot(
+			self, 
+			position: tuple[int, int],
+			vslot
+		):
+		
+		if position not in self.vslots_snapshots: 
+			self.vslots_snapshots[position] = vslot
+
+	def register_fslot(
+			self, 
+			position: tuple[int, int],
+			fslot
+		):
+		
+		if position not in self.fslots: 
+			self.fslots[position] = fslot
+
+	def register_fslot_snapshot(
+			self, 
+			position: tuple[int, int], 
+			fslot
+		):
+
+		if position not in self.fslots_snapshots:
+			self.fslots_snapshots[position] = fslot
+
 	def safe_update_vslot(self, position: tuple[int, int], refset):
 		from typify.preprocessing.instance_utils import ReferenceSet
 
 		refset: ReferenceSet = refset
 		
 		if self.vslots:
-			self.vslots[position][4].update(refset)
+			self.vslots[position].u_type.update(refset)
 		
-		if position in self.vslots_snapshots:
-			self.vslots_snapshots[position].update(refset)
-		else:
-			self.vslots_snapshots[position] = refset
-	
-	def register_fslot(self, position: tuple[int, int]):
-		from typify.preprocessing.instance_utils import ReferenceSet
-
-		if position not in self.fslots_snapshots:
-			self.fslots_snapshots[position] = [{}, ReferenceSet()]
+		self.vslots_snapshots[position].u_type.update(refset)
 
 	def safe_update_fslot_args(self, position: tuple[int, int], argname: str, refset):
 		from typify.preprocessing.instance_utils import ReferenceSet
@@ -83,9 +110,9 @@ class ModuleMeta:
 		refset: ReferenceSet = refset
 
 		if self.fslots:
-			self.fslots[position][5][argname] = refset
+			self.fslots[position].u_params[argname] = refset
 		
-		self.fslots_snapshots[position][0][argname] = refset
+		self.fslots_snapshots[position].u_params[argname] = refset
 
 	def safe_update_fslot_return(self, position: tuple[int, int], refset):
 		from typify.preprocessing.instance_utils import ReferenceSet
@@ -93,75 +120,50 @@ class ModuleMeta:
 		refset: ReferenceSet = refset
 
 		if self.fslots:
-			self.fslots[position][6] = refset
+			self.fslots[position].u_ret = refset
 		
-		self.fslots_snapshots[position][1] = refset
+		self.fslots_snapshots[position].u_ret = refset
 
 	def __repr__(self):
 		return self.table.fqn
 	
-	def typeslots(self):
+	def typeslots(self, key: str):
 		from typify.preprocessing.precollector import PreCollector
 		from typify.preprocessing.instance_utils import ReferenceSet
 		from typify.inferencing.commons import Typing, Checker
+		
+		buckets = []
 
-		def type_filter(refset: ReferenceSet, preinferred: str) -> str:
-			inferred = refset.typestring() if refset else preinferred
+		for position, vslot in self.vslots.items():
+			u_type = [vslot.u_type.typestring()] if vslot.u_type else []
+			buckets.append({
+				"category": "variable",
+				"scope": vslot.scope,
+				"name": vslot.name,
+				"type": u_type + vslot.h_type,
+				"locations": [[position[0], position[1]]]
+			})
+		
+		for position, fslot in self.fslots.items():
+			u_ret = [fslot.u_ret.typestring()] if fslot.u_ret else []
+			buckets.append({
+				"category": "return",
+				"scope": f"{fslot.scope + '.' if fslot.scope else ''}{fslot.name}",
+				"name": fslot.name,
+				"type": u_ret + fslot.h_ret,
+				"locations": [[position[0], position[1]]]
+			})
 
-			if inferred == PreCollector.UNVISITED and not preinferred:
-				return ""
+			for param_name, u_param in fslot.u_params.items():
+				param_type = [u_param.typestring()] if u_param else []
+				buckets.append({
+					"category": "argument",
+					"scope": f"{fslot.scope + '.' if fslot.scope else ''}{fslot.name}",
+					"name": param_name,
+					"type": param_type + fslot.h_params.get(param_name, []),
+					"locations": [[position[0], position[1]]]
+				})
 
-			if not preinferred:
-				return inferred
-
-			if inferred == preinferred or preinferred == PreCollector.UNVISITED: 
-				return inferred
-
-			type_expr = refset.as_type()
-
-			if Checker.match_origin(type_expr.base, Typing.get_type("Union")):
-				repr_args = [repr(arg) for arg in type_expr.args]
-				if preinferred in repr_args:
-					return inferred
-				return f"Union[{preinferred}, {', '.join(repr_args)}]"
-
-			return f"Union[{preinferred}, {inferred}]"
-
-		data = {
-			"variables": {},
-			"functions": {}
+		return {
+			key: buckets
 		}
-
-		for key, value in self.vslots.items():
-			name_value = value[0] 
-			type_value = type_filter(value[4], value[1])
-			
-			result_key = f"{value[2]}:{key[0]}:{key[1]}"
-			result_value = {
-				"name": name_value,
-				"type": type_value
-			}
-			data["variables"][result_key] = result_value
-
-		for key, value in self.fslots.items():
-			result_key = f"{value[4]}:{key[0]}:{key[1]}"
-
-			fdef_value = value[0]
-			fqn_value = value[1]
-
-			parameters_value = {
-				pname: type_filter(ptype, value[2][pname])
-				for pname, ptype in value[5].items()
-			}
-
-			return_type_value = type_filter(value[6], value[3])
-			
-			result_value = PreCollector.build_function_signature(
-				fdef_value, 
-				fqn_value, 
-				parameters_value, 
-				return_type_value
-			)
-			data["functions"][result_key] = result_value
-			
-		return data

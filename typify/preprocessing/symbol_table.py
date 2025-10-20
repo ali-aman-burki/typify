@@ -50,7 +50,37 @@ class Symbol:
 
 	def to_dict(self):
 		return {}
-	
+
+	def get_relative_fqn(self, relative_to: Symbol) -> str:
+		if self is relative_to:
+			return ""
+
+		if not self.fqn:
+			return self.id
+		if not relative_to or not relative_to.fqn:
+			return self.fqn
+
+		self_parts = self.fqn.split('.')
+		other_parts = relative_to.fqn.split('.')
+
+		common_length = 0
+		for a, b in zip(self_parts, other_parts):
+			if a == b:
+				common_length += 1
+			else:
+				break
+
+		if common_length == 0:
+			return self.fqn
+
+		relative_parts = self_parts[common_length:]
+
+		if not relative_parts:
+			return ""
+
+		return '.'.join(relative_parts)
+
+
 	def get_enclosing_symbol(self):
 		result = self.parent
 		if isinstance(result, (ClassDefinition, FunctionDefinition)):

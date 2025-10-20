@@ -10,7 +10,8 @@ from typify.inferencing.unpacking_utils import (
 )
 from typify.preprocessing.instance_utils import (
 	ReferenceSet,
-	Instance
+	Instance,
+	VSlot
 )
 from typify.preprocessing.symbol_table import (
 	Module,

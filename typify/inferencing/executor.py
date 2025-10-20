@@ -37,7 +37,8 @@ from typify.preprocessing.symbol_table import (
 
 from typify.preprocessing.instance_utils import (
 	Instance,
-	ReferenceSet
+	ReferenceSet,
+	VSlot
 )
 
 class Executor(ast.NodeVisitor):
@@ -370,12 +371,12 @@ class Executor(ast.NodeVisitor):
 
 	@safeguard(lambda: None, "visit_FunctionDef")
 	def visit_FunctionDef(self, func_tree: ast.FunctionDef | ast.AsyncFunctionDef):
+		from typify.preprocessing.instance_utils import FSlot
+		from typify.preprocessing.precollector import PreCollector
+		
 		position = (func_tree.lineno, func_tree.col_offset)
 		defkey = (self.module_meta.table, position)
 		name = func_tree.name
-
-		self.module_meta.register_fslot(position)
-		self.module_meta.update_count_map(position)
 
 		deftable = NameDefinition(defkey)
 		self.symbol.get_name(name).merge_definition(deftable)
@@ -383,6 +384,21 @@ class Executor(ast.NodeVisitor):
 
 		function_table = self.symbol.get_function(name)
 		function_def = function_table.merge_definition(FunctionDefinition(defkey))
+
+		h_params = PreCollector.collect_parameter_slots(func_tree)
+		scope = self.symbol.get_relative_fqn(self.module_meta.table)
+
+		fslot = FSlot(
+			scope=scope,
+			name=name,
+			u_params={ k: ReferenceSet() for k in h_params },
+			h_params=h_params,
+			u_ret=ReferenceSet(),
+			h_ret=[]
+		)
+
+		self.module_meta.register_fslot_snapshot(position, fslot)
+		self.module_meta.update_count_map(position)
 
 		if not isinstance(self.namespace, CallFrame):
 			func_obj = GlobalContext.function_object_map.setdefault(
@@ -438,11 +454,40 @@ class Executor(ast.NodeVisitor):
 	def visit_Subscript(self, node):
 		self.resolver.resolve_value(node)
 
+	def visit_Assign(self, node):
+		from typify.preprocessing.precollector import PreCollector
+
+		value_expr = node.value
+		for tgt in node.targets:
+			packs = PreCollector.collect_targets(tgt)
+			for target, position in packs.items():
+				vslot = VSlot(
+					scope=self.symbol.get_relative_fqn(self.module_meta.table), 
+					name=ast.unparse(target), 
+					u_type=ReferenceSet(),
+					h_type=[]
+				)
+
+				self.module_meta.register_vslot_snapshot(position, vslot)
+
+			self.resolver.assign(tgt, value_expr)
+		self.deferred_annotations.compute(self.resolver)
+
 	def visit_AnnAssign(self, node):
 		from typify.inferencing.generics.utils import GenericUtils
 
 		resolved_value = self.resolver.resolve_value(node.value)
 		arefset = self.resolver.resolve_value(node.annotation)
+		position = (node.lineno, node.col_offset)
+
+		vslot = VSlot(
+			scope=self.symbol.get_relative_fqn(self.module_meta.table), 
+			name=ast.unparse(node.target), 
+			u_type=ReferenceSet(),
+			h_type=[]
+		)
+
+		self.module_meta.register_vslot_snapshot(position, vslot)
 
 		if arefset:
 			annotation = arefset.ref().resolve_fully(self.resolver)
@@ -469,20 +514,25 @@ class Executor(ast.NodeVisitor):
 		resolved_target = self.resolver.resolve_target(node.target)
 		self.resolver.process_name_binding(resolved_target, resolved_value)
 		self.deferred_annotations.compute(self.resolver)
-
-	def visit_Assign(self, node):
-		value_expr = node.value
-		for tgt in node.targets:
-			self.resolver.assign(tgt, value_expr)
-		self.deferred_annotations.compute(self.resolver)
 	
 	def visit_AugAssign(self, node):
 		from typify.inferencing.desugar import Desugar
 		from typify.inferencing.call_dispatcher import CallDispatcher
 
+		position = (node.target.lineno, node.target.col_offset)
+
 		desugared = Desugar.to_dunder(node)
 		dispatcher = CallDispatcher(self.resolver, desugared)
 		refset = dispatcher.dispatch()
+
+		vslot = VSlot(
+			scope=self.symbol.get_relative_fqn(self.module_meta.table), 
+			name=ast.unparse(node.target), 
+			u_type=ReferenceSet(),
+			h_type=[]
+		)
+
+		self.module_meta.register_vslot_snapshot(position, vslot)
 
 		if not refset:
 			toAssign = ast.Assign(

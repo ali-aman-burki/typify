@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 
 import ast
 
@@ -193,3 +194,19 @@ class Instance:
 			name = Name(id)
 			self.names[id] = name
 		return name
+
+@dataclass
+class VSlot:
+	scope: str
+	name: str
+	u_type: ReferenceSet
+	h_type: list[str]
+
+@dataclass
+class FSlot:
+	scope: str
+	name: str
+	u_params: dict[str, ReferenceSet]
+	h_params: dict[str, list[str]]
+	u_ret: ReferenceSet
+	h_ret: list[str]
