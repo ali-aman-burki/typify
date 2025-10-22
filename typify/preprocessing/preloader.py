@@ -6,10 +6,8 @@ from pathlib import Path
 from typing import Union
 from dataclasses import dataclass
 
-from typify.caching import GlobalCache
-from typify.progbar import ProgressBar
+from typify.utils.caching import GlobalCache
 from typify.preprocessing.dependency_utils import GraphBuilder
-from typify.preprocessing.sequencer import Sequencer
 from typify.preprocessing.core import GlobalContext
 
 @dataclass
@@ -57,7 +55,7 @@ print(json.dumps(info))
 		config: dict[str, Union[str, list[str], dict[str, str]]], 
 		project_dir: Path
 	):
-		from typify.logging import logger
+		from typify.utils.logging import logger
 
 		paths = [project_dir]
 		inference: dict[str, Path] = {}

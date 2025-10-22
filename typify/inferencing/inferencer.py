@@ -1,9 +1,9 @@
 import time
 
-from typify.logging import logger
-from typify.progbar import ProgressBar
-from typify.utils import Utils
-from typify.caching import GlobalCache
+from typify.utils.logging import logger
+from typify.utils.progbar import ProgressBar
+from typify.utils.utils import Utils
+from typify.utils.caching import GlobalCache
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.commons import Builtins
 from typify.inferencing.typeutils import TypeUtils
@@ -109,7 +109,7 @@ class Inferencer:
 		total_counts = 0
 		for i in range(total_modules):
 			meta = flattened[i]
-			total_counts += meta.precollect(meta in project_only_modules, heur_driven)
+			total_counts += meta.precollect(typeslots=meta in project_only_modules, infer=heur_driven)
 			progress.update()
 
 		project_lib.export_types_per_file(

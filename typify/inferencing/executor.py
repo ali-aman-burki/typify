@@ -1,8 +1,6 @@
 import ast
 import copy
 
-from collections import defaultdict
-
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.inferencing.function_utils import FunctionUtils
 from typify.preprocessing.dependency_utils import DependencyUtils
@@ -10,7 +8,7 @@ from typify.inferencing.mro import MROBuilder
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import TypeUtils
 from typify.preprocessing.core import GlobalContext
-from typify.errors import safeguard
+from typify.utils.errors import safeguard
 from typify.inferencing.annotation_utils import (
 	DeferredAnnotations,
 	Varnotation,

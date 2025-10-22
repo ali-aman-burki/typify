@@ -1,6 +1,6 @@
 import ast
 
-from typify.logging import logger
+from typify.utils.logging import logger
 
 def safeguard(default_factory, phase: str):
     def deco(fn):

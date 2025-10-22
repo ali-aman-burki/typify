@@ -3,7 +3,7 @@ import ast
 
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.core import GlobalContext
-from typify.errors import safeguard
+from typify.utils.errors import safeguard
 from typify.inferencing.unpacking_utils import (
 	TargetEntry,
 	PackGroup

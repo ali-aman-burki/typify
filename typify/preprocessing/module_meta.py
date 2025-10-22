@@ -21,6 +21,13 @@ class ModuleMeta:
 		self.trust_annotations = trust_annotations
 		self.last_modified = last_modified
 
+		try:
+			self.source_text = src.read_text(encoding="utf8")
+			self.source_lines = self.source_text.splitlines()
+		except Exception:
+			self.source_text = ""
+			self.source_lines = []
+
 		self.vslots: dict[tuple[int, int], VSlot] = {}
 		self.fslots: dict[tuple[int, int], FSlot] = {}
 		self.vslots_snapshots: dict[tuple[int, int], VSlot] = {}
@@ -128,10 +135,6 @@ class ModuleMeta:
 		return self.table.fqn
 	
 	def typeslots(self, key: str):
-		from typify.preprocessing.precollector import PreCollector
-		from typify.preprocessing.instance_utils import ReferenceSet
-		from typify.inferencing.commons import Typing, Checker
-		
 		buckets = []
 
 		for position, vslot in self.vslots.items():

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import ast
 
-from typify.logging import logger
+from typify.utils.logging import logger
 from typify.preprocessing.symbol_table import (
 	Name, 
 	ClassDefinition, 

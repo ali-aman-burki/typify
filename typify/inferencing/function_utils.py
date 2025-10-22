@@ -1,6 +1,6 @@
 import ast
 
-from typify.logging import logger
+from typify.utils.logging import logger
 from typify.inferencing.resolver import Resolver
 from typify.inferencing.typeutils import TypeUtils
 from typify.inferencing.expression import TypeExpr

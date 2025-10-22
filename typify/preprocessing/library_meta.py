@@ -6,7 +6,7 @@ from collections import (
 	OrderedDict
 )
 
-from typify.normalizer import normalize_typeslots
+from typify.utils.normalizer import normalize_typeslots
 from typify.preprocessing.symbol_table import (
 	Library,
 	Package,
@@ -14,7 +14,7 @@ from typify.preprocessing.symbol_table import (
 )
 from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.module_meta import ModuleMeta
-from typify.progbar import (
+from typify.utils.progbar import (
 	ProgressBar,
 	IndeterminateProgressBar
 )
@@ -30,7 +30,7 @@ class LibraryMeta:
 		self.path_index: dict[Path, ModuleMeta] = {}
 
 	def build(self, progress_bar: IndeterminateProgressBar):
-		from typify.caching import GlobalCache
+		from typify.utils.caching import GlobalCache
 		
 		working_is_package = (self.src / "__init__.py").is_file() or (self.src / "__init__.pyi").is_file()
 

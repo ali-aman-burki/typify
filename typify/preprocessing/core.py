@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from typify.progbar import ProgressBar
+from typify.utils.progbar import ProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.instance_utils import Instance

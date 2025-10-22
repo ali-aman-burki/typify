@@ -3,7 +3,7 @@ import time
 import threading
 
 from typing import Optional, Literal
-from typify.utils import ANSIColors
+from typify.utils.utils import ANSIColors
 
 class ProgressBar:
 	def __init__(

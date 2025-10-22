@@ -1,6 +1,6 @@
 import sys
 import warnings
-from typify.utils import ANSIColors
+from typify.utils.utils import ANSIColors
 
 class LogLevel:
     TRACE = 10

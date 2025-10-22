@@ -3,7 +3,7 @@ import json
 
 from pathlib import Path
 
-from typify.progbar import ProgressBar
+from typify.utils.progbar import ProgressBar
 from typify.preprocessing.instance_utils import Instance
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.core import GlobalContext
@@ -72,7 +72,7 @@ class GraphBuilder:
 
 	@staticmethod
 	def initialize_globals():
-		from typify.logging import logger
+		from typify.utils.logging import logger
 		logger.debug(f"{logger.emoji_map['init']} [Cache] Initializing globals from libraries")
 		for lib in GlobalContext.libs.values():
 			GlobalContext.meta_map.update(lib.meta_map)
@@ -80,7 +80,7 @@ class GraphBuilder:
 
 	@staticmethod
 	def _dep_cache_file_for(lib) -> Path | None:
-		from typify.caching import GlobalCache
+		from typify.utils.caching import GlobalCache
 		lcache = GlobalCache.libs_cache.get(lib.src)
 		if lcache is None:
 			return None
@@ -123,7 +123,7 @@ class GraphBuilder:
 			progress: ProgressBar | None = None, 
 			log_files: bool = False
 		):
-		from typify.logging import logger
+		from typify.utils.logging import logger
 		builtins = GlobalContext.inference.get("builtins")
 		total = len(metas)
 		if total:
@@ -144,8 +144,8 @@ class GraphBuilder:
 
 	@staticmethod
 	def build_graph_all(use_cache: bool = True):
-		from typify.caching import GlobalCache
-		from typify.logging import logger
+		from typify.utils.caching import GlobalCache
+		from typify.utils.logging import logger
 
 		logger.debug(f"{logger.emoji_map['build']} [Cache] Starting dependency graph build")
 

@@ -10,9 +10,9 @@ import io
 from pathlib import Path
 from dataclasses import dataclass
 
-from typify.logging import logger
-from typify.utils import Utils
-from typify.progbar import ProgressBar, IndeterminateProgressBar
+from typify.utils.logging import logger
+from typify.utils.utils import Utils
+from typify.utils.progbar import ProgressBar, IndeterminateProgressBar
 from typify.preprocessing.library_meta import LibraryMeta
 from typify.preprocessing.module_meta import ModuleMeta
 from typify.preprocessing.instance_utils import Instance
