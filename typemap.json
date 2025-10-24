@@ -1,0 +1,327 @@
+{
+  "schema_version": "1.0",
+  "generated_for": "typify.preprocessing.typeexpr.TypeExpr/parse_typeexpr",
+  "notes": [
+    "All types are strings parsable by parse_typeexpr.",
+    "No scores are included; provide your own ranking using code context.",
+    "Use 'aliases' to normalize common import names before matching (e.g., np -> numpy).",
+    "Use 'name_hints' when guessing from variable/param names.",
+    "Use 'symbols.calls' and 'symbols.attrs' when you can resolve fully qualified names or attribute chains.",
+    "Multiple candidates are ordered roughly from most to least specific, but you should reorder via scoring."
+  ],
+
+  "aliases": {
+    "np": "numpy",
+    "pd": "pandas",
+    "plt": "matplotlib.pyplot",
+    "tf": "tensorflow",
+    "torch": "torch",
+    "PIL": "PIL",
+    "cv2": "cv2",
+    "sk": "sklearn",
+    "sns": "seaborn",
+    "yaml": "yaml",
+    "json": "json",
+    "re": "re",
+    "Path": "pathlib.Path"
+  },
+
+  "name_hints": {
+    "exact": {
+      "df": ["pandas.DataFrame"],
+      "series": ["pandas.Series"],
+      "arr": ["numpy.ndarray[Any]"],
+      "array": ["numpy.ndarray[Any]"],
+      "mat": ["numpy.ndarray[Any]"],
+      "img": ["PIL.Image.Image", "numpy.ndarray[Any]"],
+      "image": ["PIL.Image.Image", "numpy.ndarray[Any]"],
+      "resp": ["requests.Response"],
+      "res": ["requests.Response"],
+      "request": ["requests.PreparedRequest", "http.client.HTTPMessage"],
+      "r": ["requests.Response"],
+      "soup": ["bs4.BeautifulSoup"],
+      "cursor": ["sqlite3.Cursor"],
+      "conn": ["sqlite3.Connection"],
+      "path": ["pathlib.Path", "str"],
+      "url": ["str"],
+      "html": ["str", "bytes"],
+      "json_str": ["str"],
+      "yaml_str": ["str"],
+      "config": ["dict[str, Any]"],
+      "logger": ["logging.Logger"]
+    },
+
+    "suffix": {
+      "_df": ["pandas.DataFrame"],
+      "_series": ["pandas.Series"],
+      "_arr": ["numpy.ndarray[Any]"],
+      "_nd": ["numpy.ndarray[Any]"],
+      "_img": ["PIL.Image.Image", "numpy.ndarray[Any]"],
+      "_path": ["pathlib.Path", "str"],
+      "_dir": ["pathlib.Path", "str"],
+      "_url": ["str"],
+      "_html": ["str", "bytes"],
+      "_json": ["dict[str, Any]", "list[Any]", "Any"],
+      "_yaml": ["dict[str, Any]", "list[Any]", "Any"],
+      "_re": ["re.Pattern[str]"],
+      "_rx": ["re.Pattern[str]"],
+      "_map": ["dict[str, Any]"],
+      "_table": ["dict[str, Any]", "list[dict[str, Any]]"],
+      "_list": ["list[Any]"],
+      "_set": ["set[Any]"],
+      "_dict": ["dict[str, Any]"],
+      "_bytes": ["bytes"],
+      "_buf": ["bytes", "bytearray"],
+      "_ts": ["datetime.datetime", "float", "int"]
+    },
+
+    "tokens": {
+      "count": ["int"],
+      "num": ["int"],
+      "size": ["int"],
+      "len": ["int"],
+      "idx": ["int"],
+      "index": ["int"],
+      "step": ["int"],
+      "port": ["int"],
+      "age": ["int"],
+      "year": ["int"],
+      "day": ["int"],
+      "slot": ["int"],
+      "score": ["float"],
+      "ratio": ["float"],
+      "prob": ["float"],
+      "pct": ["float"],
+      "percent": ["float"],
+      "lat": ["float"],
+      "lng": ["float"],
+      "lon": ["float"],
+      "is": ["bool"],
+      "has": ["bool"],
+      "can": ["bool"],
+      "should": ["bool"],
+      "enable": ["bool"],
+      "disable": ["bool"],
+      "path": ["pathlib.Path", "str"],
+      "file": ["pathlib.Path", "str"],
+      "dir": ["pathlib.Path", "str"],
+      "name": ["str"],
+      "title": ["str"],
+      "msg": ["str"],
+      "text": ["str"],
+      "key": ["str", "bytes"],
+      "token": ["str", "bytes"],
+      "id": ["str", "int"],
+      "slug": ["str"],
+      "url": ["str"],
+      "uri": ["str"],
+      "email": ["str"]
+    }
+  },
+
+  "symbols": {
+    "calls": {
+      "open": ["io.IOBase", "typing.IO[str]", "typing.IO[bytes]"],
+      "os.getenv": ["Union[str, None]"],
+      "os.listdir": ["list[str]"],
+      "os.walk": ["Iterable[tuple[str, list[str], list[str]]]"],
+      "glob.glob": ["list[str]"],
+      "pathlib.Path": ["pathlib.Path"],
+      "pathlib.Path.cwd": ["pathlib.Path"],
+      "pathlib.Path.home": ["pathlib.Path"],
+      "pathlib.Path.iterdir": ["Iterable[pathlib.Path]"],
+      "pathlib.Path.glob": ["Iterable[pathlib.Path]"],
+      "pathlib.Path.read_text": ["str"],
+      "pathlib.Path.read_bytes": ["bytes"],
+      "pathlib.Path.write_text": ["int"],
+      "pathlib.Path.write_bytes": ["int"],
+
+      "datetime.datetime.now": ["datetime.datetime"],
+      "datetime.datetime.utcnow": ["datetime.datetime"],
+      "datetime.datetime.fromtimestamp": ["datetime.datetime"],
+      "datetime.date.today": ["datetime.date"],
+      "time.time": ["float"],
+
+      "re.compile": ["re.Pattern[str]"],
+      "re.match": ["Union[re.Match[str], None]"],
+      "re.search": ["Union[re.Match[str], None]"],
+      "re.findall": ["list[str]"],
+      "re.finditer": ["Iterable[re.Match[str]]"],
+      "re.sub": ["str"],
+
+      "json.load": ["Any"],
+      "json.loads": ["Any"],
+      "json.dump": ["None"],
+      "json.dumps": ["str"],
+
+      "yaml.safe_load": ["Any"],
+      "yaml.safe_load_all": ["Iterable[Any]"],
+      "yaml.dump": ["str"],
+      "yaml.safe_dump": ["str"],
+
+      "csv.reader": ["Iterable[list[str]]"],
+      "csv.DictReader": ["Iterable[dict[str, str]]"],
+      "csv.writer": ["csv._writer"],
+
+      "sqlite3.connect": ["sqlite3.Connection"],
+      "sqlite3.Connection.cursor": ["sqlite3.Cursor"],
+      "sqlite3.Cursor.execute": ["sqlite3.Cursor"],
+      "sqlite3.Cursor.fetchall": ["list[tuple[Any, ...]]"],
+      "sqlite3.Cursor.fetchone": ["Union[tuple[Any, ...], None]"],
+
+      "logging.getLogger": ["logging.Logger"],
+
+      "requests.get": ["requests.Response"],
+      "requests.post": ["requests.Response"],
+      "requests.put": ["requests.Response"],
+      "requests.delete": ["requests.Response"],
+      "requests.Session": ["requests.Session"],
+      "requests.Session.get": ["requests.Response"],
+
+      "requests.Response.json": ["Any"],
+      "requests.Response.text": ["str"],
+      "requests.Response.content": ["bytes"],
+      "requests.Response.iter_lines": ["Iterable[bytes]"],
+
+      "numpy.array": ["numpy.ndarray[Any]"],
+      "numpy.asarray": ["numpy.ndarray[Any]"],
+      "numpy.zeros": ["numpy.ndarray[float]"],
+      "numpy.ones": ["numpy.ndarray[float]"],
+      "numpy.empty": ["numpy.ndarray[Any]"],
+      "numpy.arange": ["numpy.ndarray[int]"],
+      "numpy.linspace": ["numpy.ndarray[float]"],
+      "numpy.random.rand": ["numpy.ndarray[float]"],
+      "numpy.random.randn": ["numpy.ndarray[float]"],
+      "numpy.load": ["numpy.ndarray[Any]", "dict[str, Any]"],
+      "numpy.save": ["None"],
+
+      "pandas.read_csv": ["pandas.DataFrame"],
+      "pandas.read_json": ["pandas.DataFrame"],
+      "pandas.read_parquet": ["pandas.DataFrame"],
+      "pandas.read_excel": ["pandas.DataFrame"],
+      "pandas.DataFrame.to_numpy": ["numpy.ndarray[Any]"],
+      "pandas.DataFrame.to_dict": ["dict[str, list[Any]]", "list[dict[str, Any]]"],
+      "pandas.DataFrame.iterrows": ["Iterable[tuple[int, pandas.Series]]"],
+      "pandas.DataFrame.itertuples": ["Iterable[tuple[Any, ...]]"],
+      "pandas.Series.to_numpy": ["numpy.ndarray[Any]"],
+
+      "PIL.Image.open": ["PIL.Image.Image"],
+      "PIL.Image.Image.size": ["tuple[int, int]"],
+      "PIL.Image.Image.convert": ["PIL.Image.Image"],
+      "PIL.Image.Image.tobytes": ["bytes"],
+
+      "sklearn.model_selection.train_test_split": [
+        "tuple[numpy.ndarray[Any], numpy.ndarray[Any], numpy.ndarray[Any], numpy.ndarray[Any]]",
+        "tuple[list[Any], list[Any], list[Any], list[Any]]"
+      ],
+      "sklearn.feature_extraction.text.TfidfVectorizer.fit_transform": ["scipy.sparse.csr_matrix"],
+      "sklearn.base.ClassifierMixin.predict": ["numpy.ndarray[Any]", "list[Any]"],
+      "sklearn.metrics.accuracy_score": ["float"],
+
+      "argparse.ArgumentParser": ["argparse.ArgumentParser"],
+      "argparse.ArgumentParser.parse_args": ["argparse.Namespace"],
+
+      "bs4.BeautifulSoup": ["bs4.BeautifulSoup"],
+
+      "matplotlib.pyplot.figure": ["matplotlib.figure.Figure"],
+      "matplotlib.pyplot.subplots": ["tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]"],
+
+      "torch.tensor": ["torch.Tensor"],
+      "torch.from_numpy": ["torch.Tensor"],
+      "torch.nn.Linear": ["torch.nn.modules.linear.Linear"],
+      "torch.utils.data.DataLoader": ["torch.utils.data.DataLoader"],
+
+      "typing.cast": ["Any"],
+      "typing.get_type_hints": ["dict[str, Any]"]
+    },
+
+    "attrs": {
+      "requests.Response.status_code": ["int"],
+      "requests.Response.headers": ["dict[str, str]"],
+      "requests.Response.ok": ["bool"],
+      "requests.Response.url": ["str"],
+      "requests.Response.reason": ["str"],
+
+      "pathlib.Path.name": ["str"],
+      "pathlib.Path.stem": ["str"],
+      "pathlib.Path.suffix": ["str"],
+      "pathlib.Path.parent": ["pathlib.Path"],
+      "pathlib.Path.exists": ["bool"],
+      "pathlib.Path.is_dir": ["bool"],
+      "pathlib.Path.is_file": ["bool"],
+
+      "numpy.ndarray.shape": ["tuple[int, ...]"],
+      "numpy.ndarray.dtype": ["numpy.dtype[Any]"],
+      "numpy.ndarray.ndim": ["int"],
+      "numpy.ndarray.T": ["numpy.ndarray[Any]"],
+
+      "pandas.DataFrame.shape": ["tuple[int, int]"],
+      "pandas.DataFrame.columns": ["pandas.Index"],
+      "pandas.DataFrame.index": ["pandas.Index"],
+      "pandas.DataFrame.dtypes": ["pandas.Series"],
+      "pandas.Series.dtype": ["numpy.dtype[Any]"],
+      "pandas.Series.values": ["numpy.ndarray[Any]"],
+
+      "PIL.Image.Image.size": ["tuple[int, int]"],
+      "PIL.Image.Image.mode": ["str"],
+      "PIL.Image.Image.format": ["Union[str, None]"],
+
+      "argparse.Namespace.__dict__": ["dict[str, Any]"],
+
+      "sqlite3.Cursor.lastrowid": ["Union[int, None]"]
+    }
+  },
+
+  "signatures": {
+    "params": {
+      "requests.get": {
+        "url": ["str"],
+        "params": ["Union[dict[str, Any], None]"],
+        "json": ["Union[dict[str, Any], list[Any], None]"],
+        "data": ["Union[bytes, str, dict[str, Any], None]"],
+        "headers": ["Union[dict[str, str], None]"],
+        "timeout": ["Union[float, tuple[float, float], None]"]
+      },
+
+      "pandas.read_csv": {
+        "filepath_or_buffer": ["Union[str, pathlib.Path]"],
+        "sep": ["str"],
+        "dtype": ["Union[dict[str, Any], str, None]"],
+        "usecols": ["Union[list[str], None]"]
+      },
+
+      "numpy.arange": {
+        "start": ["Union[int, float]"],
+        "stop": ["Union[int, float]"],
+        "step": ["Union[int, float]"]
+      },
+
+      "re.compile": {
+        "pattern": ["str", "re.Pattern[str]"],
+        "flags": ["int"]
+      },
+
+      "argparse.ArgumentParser.add_argument": {
+        "name": ["str"],
+        "dest": ["Union[str, None]"],
+        "type": ["Union[Callable[[str], Any], None]"],
+        "default": ["Any"],
+        "action": ["Union[str, None]"]
+      }
+    },
+
+    "returns": {
+      "pathlib.Path.exists": ["bool"],
+      "pathlib.Path.is_dir": ["bool"],
+      "pathlib.Path.is_file": ["bool"],
+      "numpy.ndarray.astype": ["numpy.ndarray[Any]"],
+      "pandas.DataFrame.head": ["pandas.DataFrame"],
+      "pandas.DataFrame.iloc": ["pandas.Series", "pandas.DataFrame"],
+      "pandas.DataFrame.loc": ["pandas.Series", "pandas.DataFrame"],
+      "pandas.DataFrame.sample": ["pandas.DataFrame"],
+      "pandas.Series.head": ["pandas.Series"],
+      "re.Pattern[str].match": ["Union[re.Match[str], None]"],
+      "re.Pattern[str].search": ["Union[re.Match[str], None]"]
+    }
+  }
+}

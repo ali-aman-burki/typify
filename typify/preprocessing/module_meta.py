@@ -35,10 +35,10 @@ class ModuleMeta:
 
 		self.count_map: dict[tuple[int, int], int] = {}
 
-	def precollect(self, typeslots: bool, infer: bool):
+	def precollect(self, typeslots: bool, infer: bool, topn: int):
 		from typify.preprocessing.precollector import PreCollector
 		try:
-			PreCollector(self, typeslots, infer).visit(self.tree)
+			PreCollector(self, typeslots, infer, topn).visit(self.tree)
 		except (RecursionError, UnicodeError):
 			pass	
 		return sum(self.count_map.values())

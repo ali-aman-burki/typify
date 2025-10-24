@@ -107,9 +107,14 @@ class Inferencer:
 		progress.display()
 
 		total_counts = 0
+
 		for i in range(total_modules):
 			meta = flattened[i]
-			total_counts += meta.precollect(typeslots=meta in project_only_modules, infer=heur_driven)
+			total_counts += meta.precollect(
+				typeslots=meta in project_only_modules, 
+				infer=heur_driven,
+				topn=4,
+			)
 			progress.update()
 
 		project_lib.export_types_per_file(

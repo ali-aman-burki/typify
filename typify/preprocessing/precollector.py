@@ -2,24 +2,26 @@ import ast
 import re
 from typing import Any
 from typify.preprocessing.module_meta import ModuleMeta
+from typify.preprocessing.typeexpr import TypeExpr, parse_typeexpr
+
 
 class PreCollector(ast.NodeVisitor):
-	DEFAULT_GUESS = "str"
+	DEFAULT_GUESS = TypeExpr("str")
 
 	_BUILTIN_CALL_GUESS = {
-		"int": "int",
-		"float": "float",
-		"complex": "complex",
-		"str": "str",
-		"bytes": "bytes",
-		"bool": "bool",
-		"list": "list",
-		"tuple": "tuple",
-		"set": "set",
-		"dict": "dict",
-		"bytearray": "bytearray",
-		"memoryview": "memoryview",
-		"range": "range",
+		"int": TypeExpr("int"),
+		"float": TypeExpr("float"),
+		"complex": TypeExpr("complex"),
+		"str": TypeExpr("str"),
+		"bytes": TypeExpr("bytes"),
+		"bool": TypeExpr("bool"),
+		"list": TypeExpr("list"),
+		"tuple": TypeExpr("tuple"),
+		"set": TypeExpr("set"),
+		"dict": TypeExpr("dict"),
+		"bytearray": TypeExpr("bytearray"),
+		"memoryview": TypeExpr("memoryview"),
+		"range": TypeExpr("range"),
 	}
 
 	_INT_TOKENS    = {"num", "count", "size", "len", "idx", "index", "step", "port", "age", "year", "day", "slot", "slots"}
@@ -63,18 +65,22 @@ class PreCollector(ast.NodeVisitor):
 		visit(expr)
 		return targets
 
-	def __init__(self, module_meta: ModuleMeta, typeslots: bool, infer: bool):
+	def __init__(
+			self, 
+			module_meta: ModuleMeta, 
+			typeslots: bool, 
+			infer: bool,
+			topn: int,
+		):
 		self.module_meta = module_meta
 		self.scope_stack: list[str] = []
 		self.typeslots = typeslots
 		self.infer = infer
+		self.topn = topn
 		self.in_function = False
 
-		# imports map visible name -> original base name
 		self._imported_names: dict[str, str] = {}
-
-		# local env stack for functions: expr_text -> guessed type
-		self._local_env_stack: list[dict[str, str]] = []
+		self._local_env_stack: list[dict[str, TypeExpr]] = []
 
 	# ---------- utilities ----------
 
@@ -99,14 +105,14 @@ class PreCollector(ast.NodeVisitor):
 			toks.extend(tok.lower() for tok in chunk if tok)
 		return toks
 
-	def _guess_from_name(self, name: str) -> str | None:
+	def _guess_from_name(self, name: str) -> TypeExpr | None:
 		low = name.lower()
 		for p in self._BOOL_PREFIXES:
 			if low.startswith(p):
-				return "bool"
+				return TypeExpr("bool")
 		# Camel/Pascal looks like a class/type
 		if re.match(r"^[A-Z][A-Za-z0-9_]*$", name):
-			return name
+			return TypeExpr(name)
 
 		toks = self._tokenize_name(name)
 		score = {"int": 0, "float": 0, "bool": 0, "str": 0, "bytes": 0, "list": 0, "set": 0, "dict": 0}
@@ -123,7 +129,7 @@ class PreCollector(ast.NodeVisitor):
 			score["list"] += 1
 
 		best_type, best_val = max(score.items(), key=lambda kv: kv[1])
-		return best_type if best_val > 0 else None
+		return TypeExpr(best_type) if best_val > 0 else None
 
 	def _call_target_name(self, call: ast.Call) -> str | None:
 		if isinstance(call.func, ast.Name):
@@ -132,30 +138,30 @@ class PreCollector(ast.NodeVisitor):
 			return call.func.attr
 		return None
 
-	def _guess_from_call(self, call: ast.Call, name_hint: str | None = None) -> str | None:
+	def _guess_from_call(self, call: ast.Call, name_hint: str | None = None) -> TypeExpr | None:
 		target = self._call_target_name(call)
 		if not target:
 			return None
 		if target in self._BUILTIN_CALL_GUESS:
 			return self._BUILTIN_CALL_GUESS[target]
 		if target in self._imported_names:
-			return self._imported_names[target]
+			return TypeExpr(self._imported_names[target])
 		if re.match(r"[A-Z][A-Za-z0-9_]*$", target):
-			return target
+			return TypeExpr(target)
 		if name_hint:
 			n = self._guess_from_name(name_hint)
 			if n:
 				return n
 		return None
 
-	def _guess_from_constant(self, value: Any) -> str | None:
-		if value is None: return "None"
-		if isinstance(value, bool): return "bool"
-		if isinstance(value, int): return "int"
-		if isinstance(value, float): return "float"
-		if isinstance(value, complex): return "complex"
-		if isinstance(value, str): return "str"
-		if isinstance(value, bytes): return "bytes"
+	def _guess_from_constant(self, value: Any) -> TypeExpr | None:
+		if value is None: return TypeExpr("None")
+		if isinstance(value, bool): return TypeExpr("bool")
+		if isinstance(value, int): return TypeExpr("int")
+		if isinstance(value, float): return TypeExpr("float")
+		if isinstance(value, complex): return TypeExpr("complex")
+		if isinstance(value, str): return TypeExpr("str")
+		if isinstance(value, bytes): return TypeExpr("bytes")
 		return None
 
 	def _expr_key(self, expr: ast.AST) -> str | None:
@@ -166,13 +172,13 @@ class PreCollector(ast.NodeVisitor):
 			return None
 		return None
 
-	def _lookup_env(self, expr: ast.AST, env: dict[str, str]) -> str | None:
+	def _lookup_env(self, expr: ast.AST, env: dict[str, TypeExpr]) -> TypeExpr | None:
 		key = self._expr_key(expr)
 		if key and key in env:
 			return env[key]
 		return None
 
-	def _guess_from_expr(self, expr: ast.AST, name_hint: str | None = None, env: dict[str, str] | None = None) -> str:
+	def _guess_from_expr(self, expr: ast.AST, name_hint: str | None = None, env: dict[str, TypeExpr] | None = None) -> TypeExpr:
 		if env is not None and isinstance(expr, (ast.Name, ast.Attribute)):
 			aliased = self._lookup_env(expr, env)
 			if aliased:
@@ -184,15 +190,15 @@ class PreCollector(ast.NodeVisitor):
 				return gt or self.DEFAULT_GUESS
 
 			if isinstance(expr, (ast.List, ast.ListComp)):
-				return "list"
+				return TypeExpr("list")
 			if isinstance(expr, (ast.Tuple,)):
-				return "tuple"
+				return TypeExpr("tuple")
 			if isinstance(expr, (ast.Set, ast.SetComp)):
-				return "set"
+				return TypeExpr("set")
 			if isinstance(expr, (ast.Dict, ast.DictComp)):
-				return "dict"
+				return TypeExpr("dict")
 			if isinstance(expr, ast.GeneratorExp):
-				return "generator"
+				return TypeExpr("generator")
 
 			if isinstance(expr, ast.Call):
 				gt = self._guess_from_call(expr, name_hint=name_hint)
@@ -202,8 +208,8 @@ class PreCollector(ast.NodeVisitor):
 
 			if isinstance(expr, (ast.BinOp, ast.UnaryOp, ast.Compare)):
 				if isinstance(expr, ast.Compare):
-					return "bool"
-				return "int"
+					return TypeExpr("bool")
+				return TypeExpr("int")
 
 			if isinstance(expr, ast.Name):
 				gn = self._guess_from_name(expr.id)
@@ -213,22 +219,23 @@ class PreCollector(ast.NodeVisitor):
 				last = expr.attr
 				if isinstance(last, str):
 					if last in self._imported_names:
-						return self._imported_names[last]
+						return TypeExpr(self._imported_names[last])
 					if re.match(r"[A-Z][A-Za-z0-9_]*$", last):
-						return last
+						return TypeExpr(last)
 				return self.DEFAULT_GUESS
 
 		except Exception:
 			pass
 		return self.DEFAULT_GUESS
 
-	def _infer_param_type(self, arg: ast.arg, default_expr: ast.AST | None) -> str:
+	def _infer_param_type(self, arg: ast.arg, default_expr: ast.AST | None) -> TypeExpr:
 		# annotation wins
 		if arg.annotation is not None:
 			try:
-				return ast.unparse(arg.annotation).strip() or self.DEFAULT_GUESS
+				ann = ast.unparse(arg.annotation).strip()
 			except Exception:
 				return self.DEFAULT_GUESS
+			return parse_typeexpr(ann)
 
 		name = arg.arg
 
@@ -236,9 +243,10 @@ class PreCollector(ast.NodeVisitor):
 		if self.scope_stack:
 			enclosing = self.scope_stack[-1] if self.scope_stack else None
 			if name == "self" and enclosing:
-				return enclosing
+				return TypeExpr(enclosing)
 			if name == "cls" and enclosing:
-				return f"type[{enclosing}]"
+				# type[Enclosing]
+				return parse_typeexpr(f"type[{enclosing}]")
 
 		# default expression
 		if default_expr is not None:
@@ -246,7 +254,7 @@ class PreCollector(ast.NodeVisitor):
 
 		# import-similarity: crude heuristic
 		low = name.lower()
-		best = None
+		best: str | None = None
 		for alias, orig in self._imported_names.items():
 			base = orig.split(".")[-1]
 			low_base = base.lower()
@@ -254,7 +262,7 @@ class PreCollector(ast.NodeVisitor):
 				if best is None or len(base) > len(best):
 					best = base
 		if best:
-			return best
+			return TypeExpr(best)
 
 		# name heuristics
 		byname = self._guess_from_name(name)
@@ -263,40 +271,40 @@ class PreCollector(ast.NodeVisitor):
 
 		return self.DEFAULT_GUESS
 
-	def _assign_target_env(self, target: ast.AST, tname: str):
+	def _assign_target_env(self, target: ast.AST, texpr: TypeExpr):
 		if not self._local_env_stack:
 			return
 		env = self._local_env_stack[-1]
 		key = self._expr_key(target)
 		if key:
-			env[key] = tname
+			env[key] = texpr
 		if isinstance(target, (ast.Tuple, ast.List)):
 			for elt in target.elts:
-				self._assign_target_env(elt, tname)
+				self._assign_target_env(elt, texpr)
 
-	def _gather_return_guesses(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-		returns: list[str] = []
+	def _gather_return_guesses(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> TypeExpr:
+		returns: list[TypeExpr] = []
 
-		def guess_expr_with_env(expr: ast.AST, env: dict[str, str]) -> str:
+		def guess_expr_with_env(expr: ast.AST, env: dict[str, TypeExpr]) -> TypeExpr:
 			if isinstance(expr, (ast.Name, ast.Attribute)):
 				t = self._lookup_env(expr, env)
 				if t:
 					return t
 			return self._guess_from_expr(expr, name_hint=ast.unparse(expr) if hasattr(ast, "unparse") else None, env=env)
 
-		def assign_to_env(target: ast.AST, tname: str, env: dict[str, str]):
+		def assign_to_env(target: ast.AST, texpr: TypeExpr, env: dict[str, TypeExpr]):
 			try:
 				key = ast.unparse(target) if isinstance(target, (ast.Name, ast.Attribute)) else None
 			except Exception:
 				key = None
 			if key:
-				env[key] = tname
+				env[key] = texpr
 			if isinstance(target, (ast.Tuple, ast.List)):
 				for elt in target.elts:
-					assign_to_env(elt, tname, env)
+					assign_to_env(elt, texpr, env)
 
-		def handle_assign(targets: list[ast.AST], value: ast.AST, env: dict[str, str]):
-			aliased_t: str | None = None
+		def handle_assign(targets: list[ast.AST], value: ast.AST, env: dict[str, TypeExpr]):
+			aliased_t: TypeExpr | None = None
 			if isinstance(value, (ast.Name, ast.Attribute)):
 				aliased_t = self._lookup_env(value, env)
 			if aliased_t is None:
@@ -320,33 +328,38 @@ class PreCollector(ast.NodeVisitor):
 				for t in targets:
 					assign_to_env(t, aliased_t, env)
 
-		def walk_block(stmts: list[ast.stmt], env: dict[str, str]):
+		def walk_block(stmts: list[ast.stmt], env: dict[str, TypeExpr]):
 			for s in stmts:
 				if isinstance(s, ast.Return):
 					if s.value is None:
-						returns.append("None")
+						returns.append(TypeExpr("None"))
 					else:
 						returns.append(guess_expr_with_env(s.value, env))
 				elif isinstance(s, ast.Yield):
-					returns.append("generator")
+					returns.append(TypeExpr("generator"))
 				elif isinstance(s, ast.YieldFrom):
-					returns.append("generator")
+					returns.append(TypeExpr("generator"))
 				elif isinstance(s, ast.Assign):
 					handle_assign(s.targets, s.value, env)
 				elif isinstance(s, ast.AnnAssign):
-					tname = (ast.unparse(s.annotation).strip() if s.annotation is not None
-					         else self._guess_from_expr(s.value, env=env) if s.value else self.DEFAULT_GUESS)
-					assign_to_env(s.target, tname, env)
+					if s.annotation is not None:
+						try:
+							t = parse_typeexpr(ast.unparse(s.annotation).strip())
+						except Exception:
+							t = self._guess_from_expr(s.value, env=env) if s.value else self.DEFAULT_GUESS
+					else:
+						t = self._guess_from_expr(s.value, env=env) if s.value else self.DEFAULT_GUESS
+					assign_to_env(s.target, t, env)
 				elif isinstance(s, ast.AugAssign):
 					name_hint = ast.unparse(s.target)
 					name_based = self._guess_from_name(name_hint) or None
-					tname = name_based if name_based in {"str", "list", "set", "dict"} else "int"
-					assign_to_env(s.target, tname, env)
+					texpr = name_based if (name_based and name_based.base in {"str", "list", "set", "dict"}) else TypeExpr("int")
+					assign_to_env(s.target, texpr, env)
 				elif isinstance(s, ast.If):
 					walk_block(s.body, env.copy())
 					walk_block(s.orelse, env.copy())
 				elif isinstance(s, (ast.For, ast.AsyncFor)):
-					assign_to_env(s.target, "list", env)
+					assign_to_env(s.target, TypeExpr("list"), env)
 					walk_block(s.body, env.copy())
 					walk_block(s.orelse, env.copy())
 				elif isinstance(s, ast.While):
@@ -371,26 +384,28 @@ class PreCollector(ast.NodeVisitor):
 				else:
 					pass
 
-		env0: dict[str, str] = {}
+		env0: dict[str, TypeExpr] = {}
 		walk_block(node.body, env0)
 
 		if returns:
-			# dominant type heuristic
+			# dominant type heuristic (by base-string equality to mirror prior behavior)
 			counts: dict[str, int] = {}
 			for c in returns:
-				counts[c] = counts.get(c, 0) + 1
+				key = str(c.canonical())
+				counts[key] = counts.get(key, 0) + 1
 			items = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0] == "None"))
-			return items[0][0] if items else self.DEFAULT_GUESS
+			# return TypeExpr of the winning key
+			return parse_typeexpr(items[0][0]) if items else self.DEFAULT_GUESS
 
 		# No explicit returns observed; use name hints
 		lowname = node.name.lower()
 		if lowname.startswith(("is_", "has_", "can_", "should_")):
-			return "bool"
+			return TypeExpr("bool")
 		if lowname.startswith(("iter_", "gen_", "yield_")):
-			return "generator"
+			return TypeExpr("generator")
 		if lowname.startswith(("get_", "find_", "read_", "load_", "fetch_")):
 			return self.DEFAULT_GUESS
-		return "None"
+		return TypeExpr("None")
 
 	# ---------- import collection ----------
 
@@ -411,6 +426,9 @@ class PreCollector(ast.NodeVisitor):
 
 	# ---------- variable slots ----------
 
+	def _to_canon_str(self, te: TypeExpr) -> str:
+		return str(te.canonical())
+
 	def visit_AnnAssign(self, node: ast.AnnAssign):
 		from typify.preprocessing.instance_utils import ReferenceSet, VSlot
 		fqn = self._format_fqn()
@@ -424,16 +442,17 @@ class PreCollector(ast.NodeVisitor):
 		if self.typeslots and self.infer:
 			if node.annotation is not None:
 				try:
-					ann = ast.unparse(node.annotation).strip()
+					ann_str = ast.unparse(node.annotation).strip()
+					ann_te = parse_typeexpr(ann_str)
 				except Exception:
-					ann = self.DEFAULT_GUESS
+					ann_te = self.DEFAULT_GUESS
 			else:
 				env = self._local_env_stack[-1] if (self.in_function and self._local_env_stack) else None
 				if node.value is not None:
-					ann = self._guess_from_expr(node.value, name_hint=ast.unparse(node.target), env=env)
+					ann_te = self._guess_from_expr(node.value, name_hint=ast.unparse(node.target), env=env)
 				else:
-					ann = self.DEFAULT_GUESS
-			h_type = [ann]
+					ann_te = self.DEFAULT_GUESS
+			h_type = [self._to_canon_str(ann_te)]
 
 		vslot = VSlot(
 			scope=fqn,
@@ -448,7 +467,7 @@ class PreCollector(ast.NodeVisitor):
 
 		# update local env if inside function
 		if self.in_function and self._local_env_stack and h_type:
-			self._assign_target_env(node.target, h_type[0])
+			self._assign_target_env(node.target, parse_typeexpr(h_type[0]))
 
 	def visit_AugAssign(self, node: ast.AugAssign):
 		from typify.preprocessing.instance_utils import ReferenceSet, VSlot
@@ -462,8 +481,8 @@ class PreCollector(ast.NodeVisitor):
 		if self.typeslots and self.infer:
 			name_hint = ast.unparse(node.target)
 			name_based = self._guess_from_name(name_hint) or None
-			guess = name_based if name_based in {"str", "list", "set", "dict"} else "int"
-			h_type = [guess]
+			guess_te = name_based if (name_based and name_based.base in {"str", "list", "set", "dict"}) else TypeExpr("int")
+			h_type = [self._to_canon_str(guess_te)]
 
 		vslot = VSlot(
 			scope=fqn,
@@ -476,7 +495,7 @@ class PreCollector(ast.NodeVisitor):
 		self.module_meta.register_vslot_snapshot(position, vslot)
 
 		if self.in_function and self._local_env_stack and h_type:
-			self._assign_target_env(node.target, h_type[0])
+			self._assign_target_env(node.target, parse_typeexpr(h_type[0]))
 
 	def visit_Assign(self, node: ast.Assign):
 		from typify.preprocessing.instance_utils import ReferenceSet, VSlot
@@ -491,7 +510,7 @@ class PreCollector(ast.NodeVisitor):
 
 				h_type: list[str] = []
 				if self.typeslots and self.infer:
-					guess: str | None = None
+					guess_te: TypeExpr | None = None
 					# destructuring support
 					if isinstance(bigtarget, (ast.Tuple, ast.List)) and isinstance(node.value, (ast.Tuple, ast.List)):
 						try:
@@ -500,17 +519,17 @@ class PreCollector(ast.NodeVisitor):
 								idx = target_names.index(target)
 								elts = node.value.elts
 								if elts and idx < len(elts):
-									guess = self._guess_from_expr(elts[idx], name_hint=ast.unparse(target), env=env)
+									guess_te = self._guess_from_expr(elts[idx], name_hint=ast.unparse(target), env=env)
 						except Exception:
-							guess = None
-					if guess is None:
+							guess_te = None
+					if guess_te is None:
 						if isinstance(node.value, (ast.Name, ast.Attribute)) and env is not None:
 							aliased = self._lookup_env(node.value, env)
 							if aliased:
-								guess = aliased
-					if guess is None:
-						guess = self._guess_from_expr(node.value, name_hint=ast.unparse(target), env=env)
-					h_type = [guess]
+								guess_te = aliased
+					if guess_te is None:
+						guess_te = self._guess_from_expr(node.value, name_hint=ast.unparse(target), env=env)
+					h_type = [self._to_canon_str(guess_te)]
 
 				vslot = VSlot(
 					scope=fqn,
@@ -524,7 +543,7 @@ class PreCollector(ast.NodeVisitor):
 				self.module_meta.register_vslot_snapshot(position, vslot)
 
 				if self.in_function and self._local_env_stack and h_type:
-					self._assign_target_env(target, h_type[0])
+					self._assign_target_env(target, parse_typeexpr(h_type[0]))
 
 	# ---------- classes & functions ----------
 
@@ -554,27 +573,33 @@ class PreCollector(ast.NodeVisitor):
 			kw_defaults = list(args_node.kw_defaults)
 
 			for i, arg in enumerate(args_node.posonlyargs):
-				h_params[arg.arg] = [self._infer_param_type(arg, posonly_defaults[i] if i < len(posonly_defaults) else None)]
+				te = self._infer_param_type(arg, posonly_defaults[i] if i < len(posonly_defaults) else None)
+				h_params[arg.arg] = [self._to_canon_str(te)]
 			for i, arg in enumerate(args_node.args):
-				h_params[arg.arg] = [self._infer_param_type(arg, pos_defaults[i] if i < len(pos_defaults) else None)]
+				te = self._infer_param_type(arg, pos_defaults[i] if i < len(pos_defaults) else None)
+				h_params[arg.arg] = [self._to_canon_str(te)]
 			if args_node.vararg:
-				h_params[args_node.vararg.arg] = [self._infer_param_type(args_node.vararg, None) or "tuple"]
+				te = self._infer_param_type(args_node.vararg, None) or TypeExpr("tuple")
+				h_params[args_node.vararg.arg] = [self._to_canon_str(te)]
 			for i, arg in enumerate(args_node.kwonlyargs):
-				h_params[arg.arg] = [self._infer_param_type(arg, kw_defaults[i])]
+				te = self._infer_param_type(arg, kw_defaults[i])
+				h_params[arg.arg] = [self._to_canon_str(te)]
 			if args_node.kwarg:
-				h_params[args_node.kwarg.arg] = [self._infer_param_type(args_node.kwarg, None) or "dict"]
+				te = self._infer_param_type(args_node.kwarg, None) or TypeExpr("dict")
+				h_params[args_node.kwarg.arg] = [self._to_canon_str(te)]
 
 			# prepare local env for body analysis
 			self._local_env_stack.append({})
 			# compute return annotation using alias-aware walk
 			if node.returns is not None:
 				try:
-					return_ann = ast.unparse(node.returns).strip() or self._gather_return_guesses(node)
+					return_ann_str = ast.unparse(node.returns).strip()
+					return_ann_te = parse_typeexpr(return_ann_str) if return_ann_str else self._gather_return_guesses(node)
 				except Exception:
-					return_ann = self._gather_return_guesses(node)
+					return_ann_te = self._gather_return_guesses(node)
 			else:
-				return_ann = self._gather_return_guesses(node)
-			h_ret = [return_ann]
+				return_ann_te = self._gather_return_guesses(node)
+			h_ret = [self._to_canon_str(return_ann_te)]
 		else:
 			# still push empty env to allow visit_* to check stack presence
 			self._local_env_stack.append({}) if self.infer else None
