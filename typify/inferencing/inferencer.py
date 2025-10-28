@@ -113,7 +113,7 @@ class Inferencer:
 			total_counts += meta.precollect(
 				typeslots=meta in project_only_modules, 
 				infer=heur_driven,
-				topn=4,
+				topn=5,
 			)
 			progress.update()
 

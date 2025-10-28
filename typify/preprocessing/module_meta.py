@@ -135,38 +135,43 @@ class ModuleMeta:
 		return self.table.fqn
 	
 	def typeslots(self, key: str):
+		def move_nones_to_end(lst):
+			"""Move all 'None' strings to the end without disturbing other order."""
+			return [x for x in lst if x != "None"] + [x for x in lst if x == "None"]
+
 		buckets = []
 
 		for position, vslot in self.vslots.items():
 			u_type = [vslot.u_type.typestring()] if vslot.u_type else []
+			type_list = move_nones_to_end(u_type + vslot.h_type)
 			buckets.append({
 				"category": "variable",
 				"scope": vslot.scope,
 				"name": vslot.name,
-				"type": u_type + vslot.h_type,
+				"type": type_list,
 				"locations": [[position[0], position[1]]]
 			})
-		
+
 		for position, fslot in self.fslots.items():
 			u_ret = [fslot.u_ret.typestring()] if fslot.u_ret else []
+			ret_type_list = move_nones_to_end(u_ret + fslot.h_ret)
 			buckets.append({
 				"category": "return",
 				"scope": f"{fslot.scope + '.' if fslot.scope else ''}{fslot.name}",
 				"name": fslot.name,
-				"type": u_ret + fslot.h_ret,
+				"type": ret_type_list,
 				"locations": [[position[0], position[1]]]
 			})
 
 			for param_name, u_param in fslot.u_params.items():
 				param_type = [u_param.typestring()] if u_param else []
+				param_type_list = move_nones_to_end(param_type + fslot.h_params.get(param_name, []))
 				buckets.append({
 					"category": "argument",
 					"scope": f"{fslot.scope + '.' if fslot.scope else ''}{fslot.name}",
 					"name": param_name,
-					"type": param_type + fslot.h_params.get(param_name, []),
+					"type": param_type_list,
 					"locations": [[position[0], position[1]]]
 				})
 
-		return {
-			key: buckets
-		}
+		return {key: buckets}

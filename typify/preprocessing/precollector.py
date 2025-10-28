@@ -8,6 +8,14 @@ from typify.preprocessing.typeexpr import TypeExpr, parse_typeexpr
 class PreCollector(ast.NodeVisitor):
 	DEFAULT_GUESS = TypeExpr("str")
 
+	_PRIORITY_TYPE_STRS = [
+		"builtins.str",
+		"builtins.int",
+		"builtins.bool",
+		"logging.Logger",
+		"builtins.float",
+	]
+
 	_BUILTIN_CALL_GUESS = {
 		"int": TypeExpr("int"),
 		"float": TypeExpr("float"),
@@ -82,10 +90,42 @@ class PreCollector(ast.NodeVisitor):
 		self._imported_names: dict[str, str] = {}
 		self._local_env_stack: list[dict[str, TypeExpr]] = []
 
+		# Pre-parse priority types once to canonical strings
+		self._priority_types_canon = []
+		for s in self._PRIORITY_TYPE_STRS:
+			try:
+				self._priority_types_canon.append(str(parse_typeexpr(s).canonical()))
+			except Exception:
+				# Fallback: keep given string if parsing fails
+				self._priority_types_canon.append(s)
+
 	# ---------- utilities ----------
 
 	def _format_fqn(self) -> str:
 		return ".".join(self.scope_stack)
+
+	def _looks_like_type(self, name: str) -> bool:
+		"""
+		Only consider PascalCase or camelCase as plausible type identifiers.
+		Rules:
+		  - No underscores.
+		  - Must contain at least one uppercase letter.
+		  - Must not be ALL_CAPS.
+		Examples accepted: 'Request', 'HttpRequest', 'someType', 'X'
+		Rejected: 'SOME_VAR', 'some_imported_function', 'value', 'snake_case'
+		"""
+		if "_" in name:
+			return False
+		if not any(c.isalpha() for c in name):
+			return False
+		has_upper = any(c.isupper() for c in name)
+		has_lower = any(c.islower() for c in name)
+		if not has_upper:
+			return False
+		# Reject pure ALL_CAPS like 'LOGGER' or 'ID'
+		if has_upper and not has_lower:
+			return False
+		return True
 
 	def _tokenize_name(self, name: str) -> list[str]:
 		toks: list[str] = []
@@ -110,8 +150,8 @@ class PreCollector(ast.NodeVisitor):
 		for p in self._BOOL_PREFIXES:
 			if low.startswith(p):
 				return TypeExpr("bool")
-		# Camel/Pascal looks like a class/type
-		if re.match(r"^[A-Z][A-Za-z0-9_]*$", name):
+		# Only Pascal/camel are considered plausible user-defined/class types
+		if self._looks_like_type(name):
 			return TypeExpr(name)
 
 		toks = self._tokenize_name(name)
@@ -145,8 +185,14 @@ class PreCollector(ast.NodeVisitor):
 		if target in self._BUILTIN_CALL_GUESS:
 			return self._BUILTIN_CALL_GUESS[target]
 		if target in self._imported_names:
-			return TypeExpr(self._imported_names[target])
-		if re.match(r"[A-Z][A-Za-z0-9_]*$", target):
+			orig = self._imported_names[target]
+			base = orig.split(".")[-1]
+			# Only treat imported symbol as a type if it looks like Pascal/camel
+			if self._looks_like_type(base):
+				return TypeExpr(orig)
+			# otherwise fall through to other heuristics
+		# Camel/Pascal or camel-case callable name → treat as type constructor
+		if self._looks_like_type(target):
 			return TypeExpr(target)
 		if name_hint:
 			n = self._guess_from_name(name_hint)
@@ -218,9 +264,13 @@ class PreCollector(ast.NodeVisitor):
 			if isinstance(expr, ast.Attribute):
 				last = expr.attr
 				if isinstance(last, str):
+					# If this attribute matches an imported name, only accept if it looks like a type
 					if last in self._imported_names:
-						return TypeExpr(self._imported_names[last])
-					if re.match(r"[A-Z][A-Za-z0-9_]*$", last):
+						base = self._imported_names[last].split(".")[-1]
+						if self._looks_like_type(base):
+							return TypeExpr(self._imported_names[last])
+					# Otherwise accept only if the attribute itself looks like a type (Pascal/camel)
+					if self._looks_like_type(last):
 						return TypeExpr(last)
 				return self.DEFAULT_GUESS
 
@@ -261,7 +311,7 @@ class PreCollector(ast.NodeVisitor):
 			if low == low_base or low in low_base or low_base in low:
 				if best is None or len(base) > len(best):
 					best = base
-		if best:
+		if best and self._looks_like_type(best):
 			return TypeExpr(best)
 
 		# name heuristics
@@ -407,6 +457,31 @@ class PreCollector(ast.NodeVisitor):
 			return self.DEFAULT_GUESS
 		return TypeExpr("None")
 
+	# ---------- helpers to build ordered type lists ----------
+
+	def _to_canon_str(self, te: TypeExpr) -> str:
+		return str(te.canonical())
+
+	def _build_type_list(self, primary: TypeExpr) -> list[str]:
+		"""
+		Keep existing primary first, then append prioritized common types
+		in the requested order, without duplicates, capped by self.topn.
+		"""
+		out: list[str] = []
+		first = self._to_canon_str(primary)
+		out.append(first)
+
+		for canon in self._priority_types_canon:
+			if canon not in out:
+				out.append(canon)
+			if len(out) >= max(1, self.topn):
+				break
+
+		# In case topn is smaller than list size, truncate.
+		if len(out) > max(1, self.topn):
+			out = out[:max(1, self.topn)]
+		return out
+
 	# ---------- import collection ----------
 
 	def visit_Import(self, node: ast.Import):
@@ -425,9 +500,6 @@ class PreCollector(ast.NodeVisitor):
 			self._imported_names[export] = alias.name
 
 	# ---------- variable slots ----------
-
-	def _to_canon_str(self, te: TypeExpr) -> str:
-		return str(te.canonical())
 
 	def visit_AnnAssign(self, node: ast.AnnAssign):
 		from typify.preprocessing.instance_utils import ReferenceSet, VSlot
@@ -452,7 +524,7 @@ class PreCollector(ast.NodeVisitor):
 					ann_te = self._guess_from_expr(node.value, name_hint=ast.unparse(node.target), env=env)
 				else:
 					ann_te = self.DEFAULT_GUESS
-			h_type = [self._to_canon_str(ann_te)]
+			h_type = self._build_type_list(ann_te)
 
 		vslot = VSlot(
 			scope=fqn,
@@ -482,7 +554,7 @@ class PreCollector(ast.NodeVisitor):
 			name_hint = ast.unparse(node.target)
 			name_based = self._guess_from_name(name_hint) or None
 			guess_te = name_based if (name_based and name_based.base in {"str", "list", "set", "dict"}) else TypeExpr("int")
-			h_type = [self._to_canon_str(guess_te)]
+			h_type = self._build_type_list(guess_te)
 
 		vslot = VSlot(
 			scope=fqn,
@@ -529,7 +601,7 @@ class PreCollector(ast.NodeVisitor):
 								guess_te = aliased
 					if guess_te is None:
 						guess_te = self._guess_from_expr(node.value, name_hint=ast.unparse(target), env=env)
-					h_type = [self._to_canon_str(guess_te)]
+					h_type = self._build_type_list(guess_te)
 
 				vslot = VSlot(
 					scope=fqn,
@@ -574,19 +646,19 @@ class PreCollector(ast.NodeVisitor):
 
 			for i, arg in enumerate(args_node.posonlyargs):
 				te = self._infer_param_type(arg, posonly_defaults[i] if i < len(posonly_defaults) else None)
-				h_params[arg.arg] = [self._to_canon_str(te)]
+				h_params[arg.arg] = self._build_type_list(te)
 			for i, arg in enumerate(args_node.args):
 				te = self._infer_param_type(arg, pos_defaults[i] if i < len(pos_defaults) else None)
-				h_params[arg.arg] = [self._to_canon_str(te)]
+				h_params[arg.arg] = self._build_type_list(te)
 			if args_node.vararg:
 				te = self._infer_param_type(args_node.vararg, None) or TypeExpr("tuple")
-				h_params[args_node.vararg.arg] = [self._to_canon_str(te)]
+				h_params[args_node.vararg.arg] = self._build_type_list(te)
 			for i, arg in enumerate(args_node.kwonlyargs):
 				te = self._infer_param_type(arg, kw_defaults[i])
-				h_params[arg.arg] = [self._to_canon_str(te)]
+				h_params[arg.arg] = self._build_type_list(te)
 			if args_node.kwarg:
 				te = self._infer_param_type(args_node.kwarg, None) or TypeExpr("dict")
-				h_params[args_node.kwarg.arg] = [self._to_canon_str(te)]
+				h_params[args_node.kwarg.arg] = self._build_type_list(te)
 
 			# prepare local env for body analysis
 			self._local_env_stack.append({})
@@ -599,7 +671,7 @@ class PreCollector(ast.NodeVisitor):
 					return_ann_te = self._gather_return_guesses(node)
 			else:
 				return_ann_te = self._gather_return_guesses(node)
-			h_ret = [self._to_canon_str(return_ann_te)]
+			h_ret = self._build_type_list(return_ann_te)
 		else:
 			# still push empty env to allow visit_* to check stack presence
 			self._local_env_stack.append({}) if self.infer else None
