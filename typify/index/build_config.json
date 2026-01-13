@@ -1,0 +1,11 @@
+{
+  "max_features": 20000,
+  "ngram_range": [
+    1,
+    2
+  ],
+  "min_df": 1,
+  "use_sublinear_tf": false,
+  "lowercase": true,
+  "norm": "l2"
+}
