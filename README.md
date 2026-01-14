@@ -35,7 +35,7 @@ git clone https://github.com/typify-contributor/typify.git
 cd typify
 
 # Install in editable mode
-pip install -e typify
+pip install -e .
 ```
 
 ---
@@ -162,7 +162,7 @@ Options:
   --topn INTEGER         Number of top-ranked predictions
 ```
 
-A small example project (`sample_project`) is included in this repository:
+Example of running it:
 
 ```bash
 typify project sample_project
