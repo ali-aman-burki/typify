@@ -31,7 +31,7 @@ conda create -n typify-env python=3.9 -y
 conda activate typify-env
 
 # Clone the repository
-git clone https://github.com/typify-contributor/typify.git
+git clone https://github.com/AliAman500/typify.git
 cd typify
 
 # Install in editable mode
